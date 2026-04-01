@@ -1,0 +1,122 @@
+.home-wrapper {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.full-image-bg {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+
+.home-content {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+}
+
+
+.logo-title-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 30px;
+  gap: 15px;
+}
+
+.sticker-letter {
+  font-size: 7.5rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -4px;
+  position: relative;
+  z-index: 1;
+  text-shadow:
+    -4px -4px 0 #fff,  4px -4px 0 #fff,
+    -4px  4px 0 #fff,  4px  4px 0 #fff,
+     0px  4px 0 #fff,  0px -4px 0 #fff,
+     4px  0px 0 #fff, -4px  0px 0 #fff,
+     10px 15px 30px rgba(0, 0, 0, 0.4);
+}
+
+.yellow-text { color: #FFC20E !important; }
+.green-text { color: #95b508 !important; }
+
+.sticker-logo-img {
+  height: 200px;
+  width: auto;
+  object-fit: contain;
+  margin-left: -63px;
+  margin-right: -63px;
+  transform: rotate(-10deg) translateY(-10px);
+  position: relative;
+  z-index: 9999 !important;
+  filter: drop-shadow(0 15px 25px rgba(0,0,0,0.5));
+}
+
+.story-text {
+  font-size: 2.2rem;
+  font-weight: 400;
+  line-height: 1.3;
+  color: #ffffff;
+  text-shadow: 3px 6px 15px rgba(0, 0, 0, 0.9);
+  margin-bottom: 0;
+  max-width: 900px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .story-text {
+    font-size: 1.1rem;
+    line-height: 1.4;
+  }
+}
+
+.button-section {
+  display: none !important;
+}
+
+.btn-view, .btn-order {
+  text-decoration: none;
+  padding: 14px 40px;
+  border-radius: 50px;
+  font-weight: 900;
+  font-size: 1rem;
+  transition: 0.3s;
+}
+
+.btn-view { background-color: #FFC20E; color: #1a1a1a; }
+.btn-order { background-color: #fff; color: #1a1a1a; }
+
+.home-footer {
+  position: absolute !important;
+  bottom: 0;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2) !important;
+  z-index: 1000;
+}
+
+.general-footer {
+  position: relative !important;
+  background-color: #FFC20E !important;
+  margin-top: auto;
+  z-index: 100;
+}

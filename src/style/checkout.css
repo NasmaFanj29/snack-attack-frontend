@@ -1,0 +1,149 @@
+.checkout-page {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: 100px 20px 40px 20px;
+    font-family: 'Arial', sans-serif;
+    box-sizing: border-box;
+    background: url('../assets/menupage.jpg') no-repeat center center fixed;
+    background-size: cover;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.checkout-page .overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.15);
+    z-index: 0;
+}
+
+.checkout-container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.info-form-card {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 35px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    width: 100%;
+    max-width: 450px;
+    border-top: 8px solid #95b508;
+}
+
+.checkout-title {
+    color: #FFC20E;
+    text-align: center;
+    font-weight: 900;
+    text-transform: uppercase;
+    margin-bottom: 25px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+}
+
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    display: block;
+    font-weight: 800;
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.input-group input, 
+.input-group textarea, 
+.input-group select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.place-order-btn {
+    width: 100%;
+    background-color: #FFC20E;
+    color: white;
+    border: none;
+    padding: 15px;
+    font-size: 1.2rem;
+    font-weight: 900;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+    text-transform: uppercase;
+}
+
+.place-order-btn:hover {
+    background-color: #e6a100;
+}
+
+.receipt-overlay {
+    position: relative;
+    z-index: 2;
+    padding: 20px;
+}
+
+.receipt-paper {
+    background: white;
+    width: 340px; 
+    padding: 25px;
+    box-shadow: 5px 5px 20px rgba(0,0,0,0.4);
+    font-family: 'Courier New', Courier, monospace; 
+    color: #000;
+    text-align: center;
+}
+
+.receipt-logo-bw {
+    width: 200px;
+    margin-bottom: 15px;
+    filter: grayscale(100%) contrast(150%);
+}
+
+.receipt-branch-tag {
+    background: #000;
+    color: #fff;
+    padding: 6px;
+    margin: 15px 0;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.receipt-item-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 5px 0;
+    font-weight: bold;
+}
+
+.final-total {
+    font-size: 1.4rem;
+    font-weight: 900;
+    border-top: 2px solid #000;
+    padding-top: 10px;
+    margin-top: 10px;
+}
+
+
+.back-btn {
+    background-color: #333;
+    color: white;
+    border: none;
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    cursor: pointer;
+    border-radius: 5px;
+}
