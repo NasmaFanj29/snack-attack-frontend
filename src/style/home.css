@@ -1,10 +1,14 @@
 .home-wrapper {
   width: 100vw;
   height: 100vh;
-  overflow: hidden;
+  overflow-x: hidden;
   position: relative;
   display: flex;
   flex-direction: column;
+}
+
+body{
+  overflow-x: hidden;
 }
 
 .full-image-bg {
@@ -29,7 +33,7 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 20px;
+  padding: 20px ;
 }
 
 
@@ -38,8 +42,8 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  margin-bottom: 30px;
-  gap: 15px;
+  margin-bottom: 20px ;
+  gap: 5px;
 }
 
 .sticker-letter {
@@ -84,11 +88,58 @@
 }
 
 @media (max-width: 768px) {
-  .story-text {
-    font-size: 1.1rem;
-    line-height: 1.4;
+
+.home-content {
+    padding-top: 100px !important; /* Masefe mnel Navbar */
+    justify-content: flex-start !important;
   }
-}
+
+  .sticker-letter {
+    font-size: 2.8rem !important; 
+    letter-spacing: -2px !important;
+  }
+
+  .sticker-logo-img {
+    height: 75px !important; 
+    margin-left: -25px !important; 
+    margin-right: -25px !important;
+    transform: rotate(-10deg) translate(-5px) !important;
+  }
+
+  .story-text {
+    font-size: 1.1rem !important; 
+    line-height: 1.5 !important;
+    letter-spacing: normal !important;
+    padding: 0 15px;
+    max-width: 95%;
+    margin: 15px !important; /* Kirmal y-koun fi masefe shway */
+  }
+
+  .logo-title-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px !important; /* Sogherna el-gap kirmal el-kelme ten-damm */
+    margin-left: 0px !important; /* Hayda bi-zee7 el-kelme kella "Manual" la-jiit el-shmeel */
+  }
+  .sticker-letter {
+    font-size: 2.6rem !important; 
+    letter-spacing: -1px !important;
+  }
+
+
+  .home-wrapper {
+    overflow-x: hidden;
+  }
+
+
+  .story-text {
+    
+    line-height: 1.4;
+    letter-spacing: -2px;
+  }
+
 
 .button-section {
   display: none !important;
@@ -119,4 +170,5 @@
   background-color: #FFC20E !important;
   margin-top: auto;
   z-index: 100;
+}
 }

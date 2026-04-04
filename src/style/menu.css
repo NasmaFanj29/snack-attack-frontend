@@ -1,3 +1,4 @@
+/* --- Global & Page Setup --- */
 html, body {
   margin: 0;
   padding: 0;
@@ -7,8 +8,7 @@ html, body {
 .menu-page {
   width: 100%;
   min-height: 100vh;
-  margin: 0 auto;
-  padding: 160px 20px 60px 20px; 
+  padding: 160px 20px 60px 20px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -19,19 +19,13 @@ html, body {
 
 .menu-page::before {
   content: "";
-  position: fixed; 
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.15); 
-  z-index: 0; 
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  z-index: 0;
 }
 
-.overlay {
-  display: none !important;
-}
-
+/* --- Search & Title --- */
 .menu-title, .menu-search, .menu-content {
   position: relative;
   z-index: 10;
@@ -39,80 +33,49 @@ html, body {
 
 .menu-title {
   text-align: center;
-  font-size: 48px;
+  font-size: 42px;
   font-weight: 900;
   color: #FFC20E;
-  margin-bottom: 20px;
   text-transform: uppercase;
-  text-shadow: 2px 2px 10px rgba(0,0,0,0.15);
+  margin-bottom: 20px;
 }
 
 .menu-search {
   display: block;
-  width: 400px;
-  max-width: 100%;
+  width: 90%;
+  max-width: 400px;
   padding: 12px 20px;
-  margin: 0 auto 40px auto;
-  font-size: 16px;
-  border-radius: 30px;
+  margin: 0 auto 30px auto;
+  border-radius: 25px;
   border: 2px solid #FFC20E;
   outline: none;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
+/* --- Layout Grid --- */
 .menu-content {
-  flex: 1; 
   display: flex;
-  gap: 40px;
+  gap: 30px;
   align-items: flex-start;
-}
-
-.menu-sidebar {
-  flex: 0 0 220px;
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-}
-
-.menu-categories-vertical button, 
-.burger-type-buttons-vertical button {
-  width: 100%;
-  padding: 15px;
-  margin-bottom: 10px;
-  font-size: 20px;
-  font-weight: 800;
-  text-align: center;
-  border-radius: 12px;
-  border: none;
-  cursor: pointer;
-  background-color: #f8f8f8;
-  color: #FFC20E;
-  transition: 0.3s;
-}
-
-.menu-categories-vertical button.active {
-  background-color: #FFC20E;
-  color: white;
-}
-
-.menu-list-wrapper {
-  flex: 1;
 }
 
 .menu-list {
   display: grid;
-  grid-template-columns: repeat(4, 1fr); 
-  gap: 15px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  flex: 1;
 }
 
+/* --- The Card --- */
 .menu-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 15px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  height: 380px; 
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease;
   z-index: 11;
 }
 
@@ -122,52 +85,175 @@ html, body {
 
 .menu-img {
   width: 100%;
-  height: 160px; 
-  background-color: #fff;
+  height: 180px;
   overflow: hidden;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 5px;
 }
 
 .menu-img img {
   width: 100%;
   height: 100%;
-  object-fit: contain; 
+  object-fit: cover;
 }
 
+/* --- THE DYNAMIC BUTTON (In Title Row) --- */
 .menu-info {
-  padding: 12px;
-  text-align: center;
-  flex-grow: 1;
+  padding: 15px;
+  text-align: left; /* Alignment left kirmal el-row look */
+}
+
+.title-row {
   display: flex;
-  flex-direction: column;
   justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.title-row h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #333;
+}
+
+.dynamic-add-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: #FFC20E; /* Yellow default (+) */
+  color: white;
+  border: none;
+  font-size: 22px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+
+/* Lamma y-sir fiyo ra2am (1, 2, 3...) */
+.dynamic-add-btn.has-items {
+  background-color: #95b508; /* Green Snack Attack */
+  transform: scale(1.1);
+  font-size: 16px;
+}
+
+.dynamic-add-btn:active {
+  transform: scale(0.9);
+}
+
+.menu-description {
+  font-size: 13px;
+  color: #777;
+  margin-bottom: 10px;
+  line-height: 1.4;
 }
 
 .price {
-  font-weight: 800;
+  font-weight: 900;
   color: #95b508;
   font-size: 18px;
 }
 
-.add-cart-btn {
+/* --- Sidebar Buttons --- */
+.menu-sidebar {
+  flex: 0 0 200px;
+}
+
+.menu-categories-vertical button,
+.burger-type-buttons-vertical button {
   width: 100%;
   padding: 12px;
-  border: none;
-  background-color: #95b508;
-  color: white;
-  font-weight: 800;
-  text-transform: uppercase;
+  margin-bottom: 10px;
+  border-radius: 30px;
+  border: 2px solid #B5CF45;
+  background: white;
+  color: #95b508;
+  font-weight: 700;
   cursor: pointer;
-  margin-top: auto; 
+  transition: 0.3s;
 }
 
-.add-cart-btn:hover {
-  background-color: #7a9406;
+.menu-categories-vertical button.active,
+.burger-type-buttons-vertical button.active {
+  background: #FFC20E;
+  border-color: #FFC20E;
+  color: white;
 }
 
+/* --- MOBILE VIEW --- */
+@media (max-width: 600px) {
+  .menu-page {
+    padding: 100px 15px 40px 15px;
+  }
+
+  .menu-content {
+    flex-direction: column;
+  }
+
+  .menu-list {
+    grid-template-columns: 1fr; /* Card wa7de bel-saff */
+  }
+
+  .menu-img {
+    height: 220px;
+  }
+
+  .menu-sidebar {
+    display: flex !important;
+    flex-direction: column !important; /* Categories saff, w Beef/Chicken saff ta7to */
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  .menu-categories-vertical, 
+  .burger-type-buttons-vertical {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    gap: 10px;
+    padding: 5px 0;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .menu-categories-vertical button, 
+  .burger-type-buttons-vertical button {
+    display: inline-block !important;
+    width: auto !important;
+    min-width: 100px; /* Thabbeti el-3ard */
+    height: 50px !important; /* EL-HEIGHT EL-MRATAB */
+    padding: 0 20px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    border-radius: 12px !important; /* Rectangle rounded metel awal mara */
+    border: 2px solid #B5CF45 !important;
+    background-color: #fdfdfd !important;
+    color: #95b508 !important;
+    margin-bottom: 0 !important;
+    flex-shrink: 0;
+    line-height: 50px; /* Kirmal el-text ykoun centered vertical */
+    text-align: center;
+  }
+  .menu-categories-vertical button.active, 
+  .burger-type-buttons-vertical button.active {
+    background-color: #FFC20E !important;
+    border-color: #FFC20E !important;
+    color: #fff !important;
+    box-shadow: 0 4px 10px rgba(255, 194, 14, 0.3);
+  }
+
+  /* Shīli el-scrollbar kirmal ykoun clean */
+  .menu-categories-vertical::-webkit-scrollbar,
+  .burger-type-buttons-vertical::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* --- Footer --- */
 .footer {
   width: 100%;
   height: 70px;
@@ -178,63 +264,4 @@ html, body {
   margin-top: 40px;
   position: relative;
   z-index: 100;
-}
-
-@media (max-width: 1400px) {
-  .menu-list { grid-template-columns: repeat(3, 1fr); }
-}
-
-@media (max-width: 1000px) {
-  .menu-list { grid-template-columns: repeat(2, 1fr); }
-  .menu-content { flex-direction: column; }
-}
-
-.menu-page .footer {
-  position: relative;
-  background-color: #FFC20E;
-  margin-top: 40px;
-  width: 100%;
-  height: 70px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 100;
-}
-
-/* --- Quantity Selector --- */
-.quantity-selector {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin: 10px 0;
-}
-
-.qty-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: 2px solid #FFC20E;
-  background-color: white;
-  color: #FFC20E;
-  font-size: 20px;
-  font-weight: 900;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: all 0.2s ease;
-}
-
-.qty-btn:hover {
-  background-color: #FFC20E;
-  color: white;
-}
-
-.qty-display {
-  font-size: 18px;
-  font-weight: 800;
-  color: #333;
-  min-width: 25px;
-  text-align: center;
 }

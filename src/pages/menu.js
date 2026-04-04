@@ -6,8 +6,8 @@ function Menu({ addToCart, setMenuItems }) {
   const [activeCategory, setActiveCategory] = useState("");
   const [search, setSearch] = useState("");
   const [burgerType, setBurgerType] = useState("All");
-  const [counter, setCounter] = useState({});
   const [menuData, setMenuData] = useState([]);
+  const [counter, setCounter] = useState({}); // Kirmal el-dynamic button numbers
 
   useEffect(() => {
     axios
@@ -37,17 +37,21 @@ function Menu({ addToCart, setMenuItems }) {
       item.name.toLowerCase().includes(search.toLowerCase())
     );
 
-  const handleUpdateCounter = (name, delta) => {
+  // Handle Quick Add & Counter
+  const handleAddClick = (item) => {
+    // 1. Update Local Counter (1, 2, 3...)
     setCounter((prev) => ({
       ...prev,
-      [name]: Math.max((prev[name] || 0) + delta, 0),
+      [item.name]: (prev[item.name] || 0) + 1,
     }));
+
+    // 2. Add to Global Cart
+    addToCart(item.name, item.price, item.image, 1);
   };
 
   return (
     <div className="menu-page">
       <div className="overlay"></div>
-
       <h1 className="menu-title">OUR MENU</h1>
 
       <input
@@ -98,57 +102,25 @@ function Menu({ addToCart, setMenuItems }) {
                   <img
                     src={`http://localhost:5000/images/${item.image}`}
                     alt={item.name}
-                    onError={(e) => {
-                      e.target.src = "https://via.placeholder.com/150";
-                    }}
+                    onError={(e) => { e.target.src = "https://via.placeholder.com/150"; }}
                   />
                 </div>
 
                 <div className="menu-info">
-                  <h3>{item.name}</h3>
-                  <p className="price">${item.price.toFixed(2)}</p>
-
-                  <div className="quantity-selector">
-                    <button
-                      className="qty-btn"
-                      onClick={() =>
-                        handleUpdateCounter(item.name, -1)
-                      }
+                  <div className="title-row">
+                    <h3>{item.name}</h3>
+                    <button 
+                      className={`dynamic-add-btn ${counter[item.name] > 0 ? "has-items" : ""}`} 
+                      onClick={() => handleAddClick(item)}
                     >
-                      −
-                    </button>
-                    <span className="qty-display">
-                      {counter[item.name] || 0}
-                    </span>
-                    <button
-                      className="qty-btn"
-                      onClick={() =>
-                        handleUpdateCounter(item.name, 1)
-                      }
-                    >
-                      +
+                      {counter[item.name] > 0 ? counter[item.name] : "+"}
                     </button>
                   </div>
-
-                  <button
-                    className="add-cart-btn"
-                    onClick={() => {
-                      if ((counter[item.name] || 0) > 0) {
-                        addToCart(
-                          item.name,
-                          item.price,
-                          item.image,
-                          counter[item.name]
-                        );
-                        setCounter({
-                          ...counter,
-                          [item.name]: 0,
-                        });
-                      }
-                    }}
-                  >
-                    Add to Cart
-                  </button>
+                  
+                  <p className="menu-description">
+                    {item.description || "Fresh and delicious!"}
+                  </p>
+                  <p className="price">${item.price.toFixed(2)}</p>
                 </div>
               </div>
             ))}
