@@ -26,8 +26,8 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
     if (!isJoinMode) setDisplayCart(Array.isArray(cart) ? cart : []);
   }, [cart, isJoinMode]);
 
-  const qrValue = `${window.location.origin}/split/${activeOrderId || 'table/' + activeTable}`;
-    
+  const productionURL = "https://snackattacknasma.netlify.app";
+  const qrValue = `${productionURL}/split/${activeOrderId || 'table/' + activeTable}`; 
   // --- Financial Logic ---
   const subtotal = (displayCart || []).reduce((acc, item) => acc + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0);
   const vat = subtotal * 0.11;
