@@ -147,3 +147,58 @@
     cursor: pointer;
     border-radius: 5px;
 }
+/* --- NEW: POINTS BOX --- */
+.points-box {
+    background: #fff9e6;
+    border: 2px dashed #FFC20E;
+    padding: 12px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    cursor: pointer;
+}
+.points-text p { margin: 0; font-weight: 800; color: #333; }
+.points-text span { font-size: 11px; color: #666; }
+
+/* --- NEW: PAYMENT OPTIONS --- */
+.method-label { display: block; font-weight: 800; margin: 15px 0 8px; color: #333; }
+.payment-methods {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.pay-option {
+    padding: 12px;
+    border: 2px solid #eee;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: 800;
+    transition: 0.3s;
+}
+.pay-option.active {
+    border-color: #95b508;
+    background: #f1f8e9;
+    color: #333;
+}
+
+/* --- NEW: CARD DETAILS --- */
+.card-details-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+.card-details-form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.card-details-form input { padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+
+.animate-fade-in {
+    animation: fadeIn 0.4s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }

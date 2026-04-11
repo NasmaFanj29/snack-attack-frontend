@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../style/customBurger.css';
 
+// --- ASSETS IMPORT ---
 import burgerBunImg from "../assets/bun1.jpg";
 import miniBunImg from "../assets/bunmini.jpg";
 import noSesameImg from "../assets/bunwithoutsesame.jpg";
@@ -24,22 +25,37 @@ import chickenImg from "../assets/chicken.jpg";
 
 function CustomBurger({ addToCart }) {
   const navigate = useNavigate();
-  const [bread, setBread] = useState({ name: 'Burger Bun', price: 0.50 });
-  const [protein, setProtein] = useState({ name: 'Beef Patty', price: 5.00 });
+  
+  // 1. Sidebar Tab State - Starts as null (nothing opened)
+  const [activeTab, setActiveTab] = useState(null);
+
+  // 2. Selection States
+  const [bread, setBread] = useState({ name: 'Burger Bun', price: 0.50, img: burgerBunImg });
+  const [protein, setProtein] = useState({ name: 'Beef Patty', price: 5.00, img: beefImg });
   const [sauces, setSauces] = useState([]);
   const [toppings, setToppings] = useState([]);
+  const [visualLayers, setVisualLayers] = useState([]);
 
-  const breadOptions = {
-    buns: [
-      { name: 'Burger Bun', price: 0.50, img: burgerBunImg },
-      { name: 'Burger Bun Mini', price: 0.50, img: miniBunImg },
-      { name: 'Burger Without Sesame', price: 0.50, img: noSesameImg }
-    ],
-    baguette: [
-      { name: 'Submarine', price: 0.50, img: submarineImg },
-      { name: 'Fajita Sandwich', price: 0.50, img: fajitaImg }
-    ]
-  };
+  // --- Visual Sync (The Stack) ---
+  useEffect(() => {
+    const newStack = [
+      { id: 'bread-bottom', img: bread.img },
+      { id: 'protein', img: protein.img },
+      ...sauces.map((s, i) => ({ id: `sauce-${i}`, img: s.img })),
+      ...toppings.map((t, i) => ({ id: `topping-${i}`, img: t.img })),
+      { id: 'bread-top', img: bread.img } 
+    ];
+    setVisualLayers(newStack);
+  }, [bread, protein, sauces, toppings]);
+
+  // Options Data
+  const breadOptions = [
+    { name: 'Burger Bun', price: 0.50, img: burgerBunImg },
+    { name: 'Burger Bun Mini', price: 0.50, img: miniBunImg },
+    { name: 'Burger Without Sesame', price: 0.50, img: noSesameImg },
+    { name: 'Submarine', price: 0.50, img: submarineImg },
+    
+  ];
 
   const proteinOptions = [
     { name: "Beef Patty", price: 5.00, img: beefImg },
@@ -47,19 +63,19 @@ function CustomBurger({ addToCart }) {
   ];
 
   const sauceOptions = [
-    { name: "Pesto Sauce", price: 0.70, img: pestoImg },
-    { name: "Ranch Sauce", price: 0.70, img: ranchImg },
-    { name: "Garlic Mayo Sauce", price: 0.70, img: garlicMayoImg },
-    { name: "Mayo Avocado Sauce", price: 0.70, img: avocadoImg },
-    { name: "Cheddar Sauce", price: 0.70, img: cheddarImg },
-    { name: "BBQ Sauce", price: 0.70, img: bbqImg },
-    { name: "Cocktail Sauce", price: 0.70, img: cocktailImg }
+    { name: "Pesto", price: 0.70, img: pestoImg },
+    { name: "Ranch", price: 0.70, img: ranchImg },
+    { name: "Garlic Mayo", price: 0.70, img: garlicMayoImg },
+    { name: "Mayo Avocado", price: 0.70, img: avocadoImg },
+    { name: "Cheddar", price: 0.70, img: cheddarImg },
+    { name: "BBQ", price: 0.70, img: bbqImg },
+    { name: "Cocktail", price: 0.70, img: cocktailImg }
   ];
 
   const toppingOptions = [
     { name: "Pickles", price: 0.70, img: picklesImg },
     { name: "Tomatoes", price: 0.60, img: tomatoImg },
-    { name: "Cucumber", price: 0.60, img: cucumberImg },
+   
     { name: "Iceberg", price: 0.60, img: icebergImg },
     { name: "Jalapeños", price: 0.80, img: jalapenoImg }
   ];
@@ -73,14 +89,22 @@ function CustomBurger({ addToCart }) {
   };
 
   const finalPrice =
-    protein.price +
-    bread.price +
+    protein.price + bread.price +
     sauces.reduce((a, b) => a + b.price, 0) +
     toppings.reduce((a, b) => a + b.price, 0);
 
   const handleAdd = () => {
-    const desc = `Custom: ${protein.name} (${sauces.map(s => s.name).join(', ')})`;
-    addToCart(desc, finalPrice, null, 1);
+    const extrasNames = [...sauces, ...toppings].map(item => item.name).join(", ");
+    const customItem = {
+      id: Date.now(), 
+      name: "Custom Mix",
+      description: `${protein.name} on ${bread.name} + [${extrasNames || 'No Extras'}]`,
+      price: finalPrice,
+      image: bread.img,
+      quantity: 1,
+      selectedExtras: [...sauces, ...toppings] 
+    };
+    addToCart(customItem); 
     navigate('/cart');
   };
 
@@ -89,95 +113,102 @@ function CustomBurger({ addToCart }) {
       <div className="overlay"></div>
       <div className="custom-content">
         <h1 className="custom-title">CREATE YOUR MIX</h1>
-        <div className="custom-grid">
-          <div className="selection-area">
-            <div className="custom-card">
-              <h3 className="section-header">🍞 1. Bread (+$0.5)</h3>
-              <div className="item-grid">
-                {[...breadOptions.buns, ...breadOptions.baguette].map((b, i) => (
-                  <div
-                    key={i}
-                    className={`item-box ${bread.name === b.name ? 'active' : ''}`}
-                    onClick={() => setBread(b)}
-                  >
-                    <img src={b.img} alt={b.name} />
-                    <p>{b.name}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="custom-card">
-              <h3 className="section-header">🥩 2. Protein</h3>
-              <div className="item-grid">
-                {proteinOptions.map((p, i) => (
-                  <div
-                    key={i}
-                    className={`item-box ${protein.name === p.name ? 'active' : ''}`}
-                    onClick={() => setProtein(p)}
-                  >
-                    <img src={p.img} alt={p.name} />
-                    <p>{p.name} (${p.price.toFixed(2)})</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="custom-card">
-              <h3 className="section-header">🍯 3. Sauces (+$0.7)</h3>
-              <div className="item-grid">
-                {sauceOptions.map((s, i) => (
-                  <div
-                    key={i}
-                    className={`item-box ${
-                      sauces.find(sel => sel.name === s.name) ? 'active' : ''
-                    }`}
-                    onClick={() => toggleSelection(s, sauces, setSauces)}
-                  >
-                    <img src={s.img} alt={s.name} />
-                    <p>{s.name}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="custom-card">
-              <h3 className="section-header">🥗 4. Toppings</h3>
-              <div className="item-grid">
-                {toppingOptions.map((t, i) => (
-                  <div
-                    key={i}
-                    className={`item-box ${
-                      toppings.find(sel => sel.name === t.name) ? 'active' : ''
-                    }`}
-                    onClick={() => toggleSelection(t, toppings, setToppings)}
-                  >
-                    <img src={t.img} alt={t.name} />
-                    <p>{t.name} (+${t.price.toFixed(1)})</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+        
+        <div className="custom-main-container">
+          
+          {/* --- LEFT: SIDEBAR NAVIGATION --- */}
+          <div className="sidebar-nav">
+            <button className={`nav-btn ${activeTab === 'bread' ? 'active' : ''}`} onClick={() => setActiveTab('bread')}>
+              🍞 CHOOSE BREAD
+            </button>
+            <button className={`nav-btn ${activeTab === 'protein' ? 'active' : ''}`} onClick={() => setActiveTab('protein')}>
+              🥩 CHOOSE PROTEIN
+            </button>
+            <button className={`nav-btn ${activeTab === 'sauces' ? 'active' : ''}`} onClick={() => setActiveTab('sauces')}>
+              🍯 CHOOSE SAUCES
+            </button>
+            <button className={`nav-btn ${activeTab === 'toppings' ? 'active' : ''}`} onClick={() => setActiveTab('toppings')}>
+              🥗 CHOOSE TOPPINGS
+            </button>
           </div>
 
+          {/* --- CENTER: THE OPTIONS GLASS PANEL --- */}
+          <div className="selection-area glass-panel-active">
+            {/* If no tab is selected, show a welcome message */}
+            {!activeTab ? (
+              <div className="empty-selection-msg slide-in">
+                <div className="msg-icon">🍔</div>
+                <h3>Start Your Creation!</h3>
+                <p>Select a category from the left to begin building your custom burger.</p>
+              </div>
+            ) : (
+              <div className="tab-content slide-in">
+                {activeTab === 'bread' && (
+                  <>
+                    <h3 className="section-header">Select Your Bread</h3>
+                    <div className="item-grid">
+                      {breadOptions.map((b, i) => (
+                        <div key={i} className={`item-box ${bread.name === b.name ? 'active' : ''}`} onClick={() => setBread(b)}>
+                          <img src={b.img} alt={b.name} />
+                          <p>{b.name}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {activeTab === 'protein' && (
+                  <>
+                    <h3 className="section-header">Pick Your Protein</h3>
+                    <div className="item-grid">
+                      {proteinOptions.map((p, i) => (
+                        <div key={i} className={`item-box ${protein.name === p.name ? 'active' : ''}`} onClick={() => setProtein(p)}>
+                          <img src={p.img} alt={p.name} />
+                          <p>{p.name} (${p.price.toFixed(2)})</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {activeTab === 'sauces' && (
+                  <>
+                    <h3 className="section-header">Add Tasty Sauces (+$0.7)</h3>
+                    <div className="item-grid">
+                      {sauceOptions.map((s, i) => (
+                        <div key={i} className={`item-box ${sauces.find(sel => sel.name === s.name) ? 'active' : ''}`} onClick={() => toggleSelection(s, sauces, setSauces)}>
+                          <img src={s.img} alt={s.name} />
+                          <p>{s.name}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {activeTab === 'toppings' && (
+                  <>
+                    <h3 className="section-header">Fresh Toppings</h3>
+                    <div className="item-grid">
+                      {toppingOptions.map((t, i) => (
+                        <div key={i} className={`item-box ${toppings.find(sel => sel.name === t.name) ? 'active' : ''}`} onClick={() => toggleSelection(t, toppings, setToppings)}>
+                          <img src={t.img} alt={t.name} />
+                          <p>{t.name} (+${t.price.toFixed(1)})</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* --- RIGHT: LIVE BURGER PREVIEW --- */}
           <div className="summary-area">
-            <div className="summary-box">
-              <h3>YOUR CART SUMMARY</h3>
-              <div className="summary-line">
-                Selection: <span>{protein.name} on {bread.name}</span>
-              </div>
-              <div className="summary-line">
-                Extras: <span>{sauces.length + toppings.length} items</span>
-              </div>
-              <hr />
-              <div className="price-display">
-                Total: ${finalPrice.toFixed(2)}
-              </div>
-              <button className="add-btn" onClick={handleAdd}>
-                ADD TO CART
-              </button>
-            </div>
+            
+
+           
           </div>
+
         </div>
       </div>
     </div>

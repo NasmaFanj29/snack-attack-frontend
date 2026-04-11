@@ -3,57 +3,65 @@ import axios from 'axios';
 import logo from "../assets/logo.png"; 
 import '../style/checkout.css';
 
-function Checkout({ cart, setCart , tableId }) {
+function Checkout({ cart, setCart, tableId }) {
     const [isOrdered, setIsOrdered] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState('cash'); 
+    const [usePoints, setUsePoints] = useState(false); 
+    const [userPoints, setUserPoints] = useState(150); 
+    const [orderedItems, setOrderedItems] = useState([]); 
+    
     const [customerInfo, setCustomerInfo] = useState({
         name: '',
-        phone: ''
+        phone: '',
+        cardNumber: '', 
+        expiry: '',      
+        cvv: ''           
     });
 
     const cartItems = Array.isArray(cart) ? cart : [];
 
-    // Calculations
-    const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const vat = subtotal * 0.11;
-    const finalTotal = subtotal + vat; 
-    const totalProductCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+    // --- 💰 MATH: VAT & TOTALS ---
+    const getItemBasePrice = (item) => {
+        const extrasTotal = item.selectedExtras ? item.selectedExtras.reduce((sum, e) => sum + Number(e.price), 0) : 0;
+        return Number(item.price) + extrasTotal;
+    };
+
+    const subtotal = cartItems.reduce((acc, item) => acc + (getItemBasePrice(item) * item.quantity), 0);
+    const totalVAT = subtotal * 0.11;
+    const baseTotal = subtotal + totalVAT;
+    const pointsDiscount = usePoints ? (userPoints / 100) : 0;
+    const finalTotal = Math.max(0, baseTotal - pointsDiscount); 
 
     const handlePlaceOrder = async (e) => {
         e.preventDefault();
-        
-        if (cartItems.length === 0) {
-            alert("Your cart is empty!");
-            return;
-        }
+        if (cartItems.length === 0) { alert("Your cart is empty!"); return; }
 
         setLoading(true);
 
-        // Change this in Checkout.js
         const orderData = {
             customer: customerInfo,
             items: cartItems.map(item => ({
                 id: item.databaseId || item.id,
+                name: item.name,
                 quantity: item.quantity,
-                price: item.price
+                price: item.price, 
+                extras: item.selectedExtras || [] 
             })),
-            total_price: finalTotal.toFixed(2),
-            table_id: tableId // Halla2 sar dynamic!
+            total_price: finalTotal.toFixed(2), 
+            table_id: tableId 
         };
 
         try {
-            const response = await axios.post('http://192.168.0.195:5000/place-order', orderData);
-            
+            const response = await axios.post('https://snack-attack-backend.onrender.com/place-order', orderData);
             if (response.data.success) {
+                setOrderedItems([...cartItems]); 
                 setIsOrdered(true);
-                setCart([]); // Clear cart after success
-                localStorage.removeItem('snackAttackCart'); // Clear storage
-                
-                alert(`Mabrouk! Order placed successfully. You earned ${response.data.pointsEarned} Hearts ❤️`);
+                setCart([]); 
+                localStorage.removeItem('snackAttackCart'); 
             }
         } catch (error) {
-            console.error("Checkout Error:", error);
-            alert(error.response?.data?.error || "Error connecting to server. Check if backend is running!");
+            alert(error.response?.data?.error || "Error connecting to server.");
         } finally {
             setLoading(false);
         }
@@ -70,67 +78,141 @@ function Checkout({ cart, setCart , tableId }) {
             {!isOrdered ? (
                 <div className="checkout-container">
                     <div className="info-form-card">
-                        <h2 className="checkout-title">Complete Your Order</h2>
+                        <h2 className="checkout-title">Checkout</h2>
                         <form onSubmit={handlePlaceOrder}>
+                            <div className={`points-box ${usePoints ? 'selected' : ''}`} onClick={() => setUsePoints(!usePoints)}>
+                                <div className="points-text">
+                                    <p>Redeem <strong>{userPoints} Hearts ❤️</strong></p>
+                                    <span>Get ${(userPoints/100).toFixed(2)} off your bill</span>
+                                </div>
+                                <input type="checkbox" checked={usePoints} readOnly />
+                            </div>
+
                             <div className="input-group">
                                 <label>Full Name</label>
-                                <input 
-                                    type="text" 
-                                    name="name" 
-                                    placeholder="Enter your name"
-                                    value={customerInfo.name} 
-                                    onChange={handleChange} 
-                                    required 
-                                />
+                                <input type="text" name="name" value={customerInfo.name} onChange={handleChange} required placeholder="Nasma Fanj" />
                             </div>
                             <div className="input-group">
                                 <label>Phone Number</label>
-                                <input 
-                                    type="tel" 
-                                    name="phone" 
-                                    placeholder="e.g. 70123456"
-                                    value={customerInfo.phone} 
-                                    onChange={handleChange} 
-                                    required 
-                                />
+                                <input type="tel" name="phone" value={customerInfo.phone} onChange={handleChange} required placeholder="70 123 456" />
                             </div>
+
+                            <label className="method-label">Payment Method</label>
+                            <div className="payment-methods">
+                                <div className={`pay-option ${paymentMethod === 'cash' ? 'active' : ''}`} onClick={() => setPaymentMethod('cash')}>💵 Cash</div>
+                                <div className={`pay-option ${paymentMethod === 'card' ? 'active' : ''}`} onClick={() => setPaymentMethod('card')}>💳 Card</div>
+                            </div>
+
+                            {paymentMethod === 'card' && (
+                                <div className="card-details-form">
+                                    <input type="text" name="cardNumber" placeholder="Card Number" maxLength="16" onChange={handleChange} required />
+                                    <div className="row">
+                                        <input type="text" name="expiry" placeholder="MM/YY" onChange={handleChange} required />
+                                        <input type="text" name="cvv" placeholder="CVV" maxLength="3" onChange={handleChange} required />
+                                    </div>
+                                </div>
+                            )}
                             
                             <div className="checkout-summary-mini">
-                                <p>Total Items: {totalProductCount}</p>
-                                <p>Final Amount: <strong>${finalTotal.toFixed(2)}</strong></p>
+                                <div className="summary-row"><span>Subtotal:</span> <span>${subtotal.toFixed(2)}</span></div>
+                                <div className="summary-row"><span>Total VAT:</span> <span>${totalVAT.toFixed(2)}</span></div>
+                                {usePoints && <div className="summary-row discount"><span>Hearts Discount:</span> <span>-${pointsDiscount.toFixed(2)}</span></div>}
+                                <hr />
+                                <div className="summary-row final"><span>Total:</span> <strong>${finalTotal.toFixed(2)}</strong></div>
                             </div>
 
                             <button type="submit" className="place-order-btn" disabled={loading}>
-                                {loading ? "Processing..." : "Place Order"}
+                                {loading ? "PROCESSING..." : "Place Order"}
                             </button>
                         </form>
                     </div>
                 </div>
             ) : (
+                /* --- ✨ THE REWRITTEN PRO RECEIPT WITH LOGO FIX --- */
                 <div className="receipt-overlay">
-                    <div className="receipt-paper">
+                    <div className="receipt-paper" style={{ textAlign: 'left', padding: '30px', fontFamily: 'monospace', maxWidth: '400px' }}>
+                        
+                        {/* 🛠️ LOGO CENTERED REGARDLESS OF TEXT ALIGNMENT */}
                         <img src={logo} alt="Logo" className="receipt-logo-bw" />
-                        <h3>ORDER CONFIRMED!</h3>
-                        <p>Thank you, {customerInfo.name}!</p>
-                        <div className="receipt-divider">------------------------------------------</div>
+                                                    
+                        <h2 style={{ textAlign: 'center', marginBottom: '5px', fontSize: '18px' }}>RECEIPT</h2>
+                        <h3 style={{ textAlign: 'center', marginTop: '0', color: '#555', fontSize: '24px', fontWeight: 'bold' }}>SNACK ATTACK</h3>
+                        
+                        <div className="receipt-header-info" style={{ fontSize: '14px', marginBottom: '5px', lineHeight: '0.8' }}>
+                            <p><strong>Customer:</strong> {customerInfo.name || "Guest"}</p>
+                            <p><strong>Date:</strong> {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</p>
+                            <p><strong>Order Number:</strong> #SA-{Math.floor(1000 + Math.random() * 9000)}</p>
+                            <p><strong>Order Type:</strong> DINE-IN</p>
+                            <div style={{ display: 'flex', gap: '150px', fontSize: '14px', marginBottom: '10px' }}>
+                                <span><strong>Table:</strong> #{tableId}</span>
+                                <span><strong>Paid:</strong> {paymentMethod.toUpperCase()}</span>
+                            </div>
+                            <p><strong>Server:</strong> Mohammd S.</p>
+                        </div>
+
+                        <div className="receipt-divider">-----------------------------------------------</div>
+                        
                         <div className="receipt-items">
-                            {cartItems.map((item, index) => (
-                                <div key={index} className="receipt-item">
-                                    <span>{item.quantity}x {item.name}</span>
-                                    <span>${(item.quantity * item.price).toFixed(2)}</span>
-                                </div>
-                            ))}
+                            {orderedItems.map((item, index) => {
+                                const itemBaseWithExtras = getItemBasePrice(item);
+                                const itemTotalWithVAT = itemBaseWithExtras * 1.11 * item.quantity;
+
+                                return (
+                                    <div key={index} className="receipt-item-group" style={{ marginBottom: '12px' }}>
+                                        <div className="receipt-item" style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+                                            <span>{item.quantity}x {item.name}</span>
+                                            <span>${itemTotalWithVAT.toFixed(2)}</span>
+                                        </div>
+                                        
+                                        {/* --- 🍟 SHOW ADD-ONS (EXTRAS) --- */}
+                                        {item.selectedExtras && item.selectedExtras.length > 0 && (
+                                            <div className="receipt-extras" style={{ marginLeft: '15px', fontSize: '12px', color: '#555', fontStyle: 'italic' }}>
+                                                {item.selectedExtras.map((extra, idx) => (
+                                                    <div key={idx}>+ {extra.name} (${Number(extra.price).toFixed(2)})</div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
-                        <div className="receipt-divider">------------------------------------------</div>
-                        <div className="receipt-summary">
-                            <p>Subtotal: ${subtotal.toFixed(2)}</p>
-                            <p>VAT (11%): ${vat.toFixed(2)}</p>
-                            <p className="final-total">TOTAL: ${finalTotal.toFixed(2)}</p>
+                        
+                        <div className="receipt-divider">-----------------------------------------------</div>
+                        
+                        <div className="receipt-summary" style={{ fontSize: '14px' }}>
+                            {(() => {
+                                const finalSub = orderedItems.reduce((acc, item) => acc + (getItemBasePrice(item) * item.quantity), 0);
+                                const finalTax = finalSub * 0.11;
+                                const finalGrand = finalSub + finalTax - (usePoints ? (userPoints/100) : 0);
+
+                                return (
+                                    <>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                            <span>Subtotal:</span>
+                                            <span>${finalSub.toFixed(2)}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                            <span>Sales Tax (11%):</span>
+                                            <span>${finalTax.toFixed(2)}</span>
+                                        </div>
+                                        {usePoints && (
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#e74c3c' }}>
+                                                <span>Hearts Discount:</span>
+                                                <span>-${(userPoints/100).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                        <div className="receipt-divider">--------------------------------------------</div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', color: '#000000' }}>
+                                            <span>TOTAL:</span>
+                                            <span>${finalGrand.toFixed(2)}</span>
+                                        </div>
+                                    </>
+                                );
+                            })()}
                         </div>
-                        <div className="product-count-box" style={{marginTop: '10px', fontSize: '12px'}}>
-                            TOTAL PRODUCTS: {totalProductCount}
-                        </div>
-                        <button className="back-btn" onClick={() => (window.location.href = '/')}>
+
+                        <button className="back-btn" onClick={() => (window.location.href = '/')} style={{ marginTop: '20px', width: '100%', padding: '12px', background: '#333',
+                             color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
                             New Order
                         </button>
                     </div>

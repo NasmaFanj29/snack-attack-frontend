@@ -37,14 +37,7 @@ function Home() {
           </p>
         </div>
 
-        <div className="button-section">
-          <Link to="/menu" className="btn-view">
-            View Menu
-          </Link>
-          <Link to="/order" className="btn-order">
-            Order Now
-          </Link>
-        </div>
+       
       </div>
     </div>
   );

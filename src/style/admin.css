@@ -1,0 +1,238 @@
+/* --- 0. GLOBAL SETUP --- */
+.admin-dashboard-page {
+  background: #f8f9fa; /* Light grey background kirmal el-cards y-pop */
+  min-height: 100vh;
+  padding: 40px 20px;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  color: #1a1a1a;
+}
+
+/* --- 1. TOP BAR & STATS --- */
+.admin-top-bar {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.admin-top-bar h1 {
+  font-size: 36px;
+  font-weight: 900;
+  margin-bottom: 5px;
+  letter-spacing: -1px;
+}
+
+.admin-top-bar span {
+  color: #95b508; /* Snack Attack Green */
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+}
+
+.admin-stats-summary {
+  margin-top: 15px;
+  font-weight: 700;
+  color: #666;
+  background: white;
+  display: inline-block;
+  padding: 8px 20px;
+  border-radius: 50px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+/* --- 2. THE ORDERS GRID --- */
+.orders-masonry {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 30px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* --- 3. ORDER CARD STYLING --- */
+.admin-order-card {
+  background: white;
+  border-radius: 24px;
+  padding: 25px;
+  position: relative;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.admin-order-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+}
+
+/* --- 4. PAYMENT & STATUS BORDERS (The "Check" Feature) --- */
+.admin-order-card.unpaid-border {
+  border-left: 10px solid #ff4d4d; /* Red: Needs Payment */
+}
+
+.admin-order-card.paid-border {
+  border-left: 10px solid #95b508; /* Green: Already Paid */
+}
+
+/* Status Colors for Header Badges */
+.status-pending { border-top: 5px solid #ffc107; }
+.status-preparing { border-top: 5px solid #2196F3; }
+.status-ready { border-top: 5px solid #9c27b0; }
+.status-rejected { border-top: 5px solid #444; opacity: 0.7; }
+
+/* --- 5. CARD HEADER & BADGES --- */
+.admin-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.order-id { font-weight: 900; font-size: 18px; color: #111; }
+
+.table-badge {
+  background: #111;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.payment-badge {
+  font-size: 11px;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+.payment-badge.pending { background: #ffebeb; color: #ff4d4d; }
+.payment-badge.paid { background: #eef7e6; color: #95b508; }
+
+/* --- 6. CARD BODY & FINANCIALS --- */
+.admin-card-body {
+  border-top: 1px dashed #eee;
+  border-bottom: 1px dashed #eee;
+  padding: 15px 0;
+}
+
+.customer-info p { margin: 5px 0; font-size: 15px; color: #444; }
+
+.total-amount {
+  margin: 15px 0 5px;
+  font-size: 22px;
+  font-weight: 900;
+  color: #111;
+}
+
+.total-amount span {
+  color: #f2ba2c; /* Gold Whish Color */
+}
+
+.order-time { font-size: 13px; color: #999; font-weight: 600; }
+.reject-reason { color: #ff4d4d; font-size: 14px; font-weight: 700; margin-top: 10px; }
+
+/* --- 7. ACTION BUTTONS --- */
+.admin-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.btn-action {
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  font-weight: 900;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.2s;
+  text-transform: uppercase;
+}
+
+.btn-action:active { transform: scale(0.96); }
+
+.btn-action.start { background: #ffc107; color: #111; box-shadow: 0 4px 12px rgba(255,193,7,0.3); }
+.btn-action.ready { background: #2196F3; color: white; box-shadow: 0 4px 12px rgba(33,150,243,0.3); }
+.btn-action.serve { background: #95b508; color: white; box-shadow: 0 4px 12px rgba(149,181,8,0.3); }
+.btn-action.pay { background: #111; color: white; }
+.btn-action.reject { background: transparent; border: 2px solid #ff4d4d; color: #ff4d4d; }
+
+.order-completed-label {
+  text-align: center;
+  font-weight: 900;
+  color: #95b508;
+  padding: 15px;
+  background: #f0f9eb;
+  border-radius: 14px;
+}
+
+/* --- ANIMATION --- */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.admin-order-card { animation: slideDown 0.4s ease-out; }
+
+.admin-payment-info-box {
+  margin: 15px 0;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 15px;
+}
+
+.payment-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #888;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.splits-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-split-pill {
+  background: white;
+  border: 1px solid #eee;
+  padding: 8px 12px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  min-width: 100px;
+}
+
+.split-method-tag {
+  font-size: 13px;
+  font-weight: 800;
+  color: #333;
+}
+
+.split-amt {
+  font-size: 15px;
+  font-weight: 900;
+  color: #95b508; /* Snack Attack Green */
+}
+
+.split-user-name {
+  font-size: 11px;
+  color: #FFC20E; /* Snack Attack Yellow */
+  font-weight: 800;
+  background: #fff9e6;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px dashed #FFC20E;
+}

@@ -5,18 +5,17 @@ import Footer from './components/footer';
 import Home from './pages/home';
 import MenuPage from './pages/menu'; 
 import CustomBurger from './pages/CustomBurger';
-import LocateUs from './pages/locateUs';
 import Cart from './pages/cart';
 import Checkout from './pages/Checkout';
+import Admin from './pages/admin';
 
-function AppContent({ cart, setCart, addToCart, setMenuItems }) {
+function AppContent({ cart, setCart, addToCart, removeFromCart, setMenuItems }) {
   const location = useLocation();
   const isHomePage = location.pathname === "/";
   const queryParams = new URLSearchParams(location.search);
   const tableFromQR = queryParams.get('table') || localStorage.getItem('activeTable') || 1;
 
   useEffect(() => {
-    // --- 2. HON BAS SHIGHLTO Y-SEIVE ---
     const tableId = queryParams.get('table');
     if (tableId) {
       localStorage.setItem('activeTable', tableId);
@@ -29,11 +28,18 @@ function AppContent({ cart, setCart, addToCart, setMenuItems }) {
       <main>
         <Routes>
           <Route path='/' element={<Home />} />
-          <Route path='/menu' element={<MenuPage addToCart={addToCart} setMenuItems={setMenuItems} />} />
-          <Route path='/locate-us' element={<LocateUs />} />
-          <Route path='/custom' element={<CustomBurger addToCart={addToCart} />} />
-          <Route path='/cart' element={<Cart cart={cart} setCart={setCart} />} />
+          <Route path='/menu' element={<MenuPage addToCart={addToCart} removeFromCart={removeFromCart} setMenuItems={setMenuItems} cartItems={cart}/>} />
+          <Route path='/customize' element={<CustomBurger addToCart={addToCart} />} />
+          <Route path='/cart' element={<Cart 
+            cart={cart} 
+            setCart={setCart} 
+            addToCart={addToCart} 
+            removeFromCart={removeFromCart} 
+          />} />
           <Route path="/checkout" element={<Checkout cart={cart} setCart={setCart} tableId={tableFromQR} />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/split/table/:tableId" element={<Cart isJoinMode={true} addToCart={addToCart} removeFromCart={removeFromCart} />} />
+          <Route path="/split/:orderId" element={<Cart isJoinMode={true} addToCart={addToCart} removeFromCart={removeFromCart} />} />
         </Routes>
       </main>
       <Footer className={isHomePage ? "home-footer" : "general-footer"} />
@@ -59,24 +65,54 @@ function App() {
     localStorage.setItem('snackAttackCart', JSON.stringify(cart));
   }, [cart]);
 
-  const addToCart = (name, price, image = null, quantity = 1, databaseId = null) => {
+  const addToCart = (nameOrItem, price, image = null, quantity = 1, selectedExtras = [], databaseId = null) => {
+    // ✅ Fix: Extract name safely to prevent .includes crash
+    const name = typeof nameOrItem === 'object' ? nameOrItem.name : nameOrItem;
+    const itemPrice = typeof nameOrItem === 'object' ? nameOrItem.price : price;
+    const itemExtras = typeof nameOrItem === 'object' ? (nameOrItem.selectedExtras || []) : selectedExtras;
+
     setCart((prevCart) => {
       const currentCart = Array.isArray(prevCart) ? prevCart : [];
-      const existingItem = currentCart.find(item => item.name === name);
-      
-      if (existingItem && !name.includes("Custom:")) { 
+      const existingItem = currentCart.find(item => 
+        item.name === name && 
+        JSON.stringify(item.selectedExtras || []) === JSON.stringify(itemExtras)
+      );
+
+      if (existingItem && !String(name).includes("Custom:")) { 
         return currentCart.map(item => 
-          item.name === name ? { ...item, quantity: item.quantity + quantity } : item
+          item === existingItem ? { ...item, quantity: item.quantity + (typeof nameOrItem === 'object' ? 1 : quantity) } : item
         );
       }
+
       return [...currentCart, { 
         id: Date.now() + Math.random(), 
-        databaseId: databaseId, 
-        name, 
-        price, 
-        image, 
-        quantity 
+        databaseId: typeof nameOrItem === 'object' ? nameOrItem.databaseId : databaseId, 
+        name: name, 
+        price: itemPrice, 
+        image: typeof nameOrItem === 'object' ? nameOrItem.image : image, 
+        quantity: typeof nameOrItem === 'object' ? 1 : quantity,
+        selectedExtras: itemExtras
       }];
+    });
+  };
+
+  const removeFromCart = (nameOrItem) => {
+    const name = typeof nameOrItem === 'object' ? nameOrItem.name : nameOrItem;
+    const extras = typeof nameOrItem === 'object' ? (nameOrItem.selectedExtras || []) : [];
+
+    setCart((prevCart) => {
+      const existingItem = prevCart.find(item => 
+        item.name === name && 
+        JSON.stringify(item.selectedExtras || []) === JSON.stringify(extras)
+      );
+      if (!existingItem) return prevCart;
+
+      if (existingItem.quantity > 1) {
+        return prevCart.map(item =>
+          item === existingItem ? { ...item, quantity: item.quantity - 1 } : item
+        );
+      }
+      return prevCart.filter(item => item !== existingItem);
     });
   };
 
@@ -86,6 +122,7 @@ function App() {
         cart={cart} 
         setCart={setCart} 
         addToCart={addToCart} 
+        removeFromCart={removeFromCart}
         setMenuItems={setMenuItems} 
       />
     </BrowserRouter>

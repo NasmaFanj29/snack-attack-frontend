@@ -5,22 +5,27 @@ html, body {
   min-height: 100%;
 }
 
+/* --- 1. THE PAGE SETUP --- */
 .menu-page {
   width: 100%;
   min-height: 100vh;
-  padding: 160px 20px 60px 20px;
-  box-sizing: border-box;
+  padding: 160px 20px 0 20px; /* 0 ta7et kirmal el-gap */
   display: flex;
   flex-direction: column;
   position: relative;
   background: url('../assets/menupage.jpg') no-repeat center center fixed;
   background-size: cover;
+  background-color: #1a1a1a;
+  overflow-x: hidden;
 }
 
 .menu-page::before {
   content: "";
   position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%; 
+  height: 100%;
   background: rgba(0, 0, 0, 0.2);
   z-index: 0;
 }
@@ -58,6 +63,13 @@ html, body {
   display: flex;
   gap: 30px;
   align-items: flex-start;
+  flex: 1;
+  width: 100%;
+  justify-content: center; 
+  padding: 0 40px; 
+  box-sizing: border-box;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 .menu-list {
@@ -65,6 +77,9 @@ html, body {
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
   flex: 1;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 /* --- The Card --- */
@@ -109,10 +124,20 @@ html, body {
 }
 
 .title-row h3 {
+  /* 1. EL-GRADIENT COLORS (#95b508 to #FFC20E) */
+  background: linear-gradient(90deg, #95b508 0%, #FFC20E 100%);
+  
+  /* 2. APPLY GRADIENT TO TEXT */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  
+  /* 3. STYLING */
+  font-size: 1.2rem;
+  font-weight: 900;
+  text-transform: capitalize; /* Aw uppercase eza baddik yehon kbar */
   margin: 0;
-  font-size: 1.1rem;
-  font-weight: 800;
-  color: #333;
+  display: inline-block;
 }
 
 .dynamic-add-btn {
@@ -157,9 +182,11 @@ html, body {
   font-size: 18px;
 }
 
-/* --- Sidebar Buttons --- */
 .menu-sidebar {
-  flex: 0 0 200px;
+  flex: 0 0 220px; /* Thabbeti el-3ard kirmal ma y-fouto b-ba3d */
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
 .menu-categories-vertical button,
@@ -183,14 +210,358 @@ html, body {
   color: white;
 }
 
+.counter-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.qty-btn.minus {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #95b508;
+  background: white;
+  color: #95b508;
+  font-size: 20px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* --- Hidden Logic --- */
+  opacity: 0;
+  transform: translateX(15px); /* Bi-koun mkhabba wara el-plus */
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.qty-btn.minus.show {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.qty-btn.minus.hidden {
+  display: none; /* Optional: eza ma baddek animation, bas slide a7la */
+}
+
+/* --- Modal Background --- */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(5px);
+}
+
+/* --- Modal Container --- */
+.modal-content {
+  background: white;
+  width: 90%;
+  max-width: 450px;
+  max-height: 85vh; /* Lezim ykoun fī max height kirmal el-scroll */
+  border-radius: 25px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+}
+/* --- THE MODERN MINI CART --- */
+.mini-sidebar-cart {
+  width: 100%;
+  margin-top: 20px;
+  background: rgba(255, 255, 255, 0.9); /* Lon abyaḍ nā3im */
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  
+}
+
+.mini-cart-header {
+  padding: 15px;
+  background: #FFC20E; /* Lon Snack Attack */
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mini-cart-header h4 {
+  margin: 0;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+
+.mini-cart-header button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none; color: white;
+  width: 24px; height: 24px; border-radius: 50%;
+  cursor: pointer; font-size: 16px;
+}
+.mini-cart-body {
+  padding: 10px 15px;
+  max-height: 200px;
+  overflow-y: auto;
+  
+}
+.mini-cart-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.item-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: #333;
+}
+
+.item-qty {
+  font-size: 11px;
+  color: #95b508; /* Green Snack Attack */
+  font-weight: 800;
+}
+
+.mini-checkout-btn {
+  width: calc(100% - 20px);
+  margin: 10px;
+  padding: 12px;
+  background: #95b508;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.mini-checkout-btn:hover {
+  background: #84a207;
+  transform: scale(1.02);
+}
+.mini-cart-total-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px;
+  background: #f9f9f9; /* Lon khafif kirmal yfasil */
+  border-top: 1px solid #eee;
+  font-weight: 900;
+  font-size: 15px;
+  color: #333;
+}
+
+.mini-cart-total-row span:last-child {
+  color: #95b508; /* Lon el-price akhdar metel Snack Attack */
+}
+
+.mini-cart-body p { font-size: 13px; color: #888; margin: 0; }
+.mini-checkout-btn {
+  width: 100%;
+  padding: 12px;
+  background: #95b508;
+  color: white;
+  border: none;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-size: 13px;
+}
+@keyframes slideUp {
+  from { transform: translateY(100px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-scroll-area {
+  padding: 20px;
+  overflow-y: auto; /* HAYDE LI B-TA3MEL SCROLL */
+  flex: 1;
+}
+
+.close-modal {
+  position: absolute;
+  top: 15px; right: 20px;
+  font-size: 30px;
+  background: none; border: none;
+  cursor: pointer; z-index: 10;
+}
+
+.modal-header img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 15px;
+  margin-bottom: 15px;
+}
+
+.extras-section h3 {
+  color: #FFC20E; /* Aswad ḍābet */
+  font-size: 20px;
+  font-weight: 900;
+  border-bottom: 2px solid #FFC20E; /* Khaṭ asfar taḥet-ha */
+  padding-bottom: 10px;
+  margin: 20px 0 15px;
+}
+
+.extra-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f9f9f9;
+  cursor: pointer;
+}
+
+.extra-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.extra-info input[type="checkbox"] {
+  width: 20px; height: 20px;
+  accent-color: #95b508;
+}
+
+/* --- Footer Sticky Button --- */
+.modal-footer {
+  padding: 20px;
+  background: white;
+  box-shadow: 0 -5px 15px rgba(0,0,0,0.05);
+}
+
+.add-btn-final {
+  width: 100%;
+  padding: 15px;
+  border-radius: 15px;
+  background: #FFC20E;
+  border: none;
+  font-weight: 900;
+  font-size: 18px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.add-btn-final:hover { background: #eab10d; }
+
+.extra-group {
+  margin-bottom: 20px;
+}
+
+.extra-group-title {
+  
+  color: #95b508; /* Green Snack Attack */
+  font-size: 15px;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  border-bottom: 1px dashed #ddd;
+  padding-bottom: 5px;
+}
+/* --- MODAL HEADER ITEM NAME --- */
+.modal-header h2 {
+  /* 1. EL-GRADIENT COLORS (#95b508 to #FFC20E) */
+  background: linear-gradient(90deg, #95b508 0%, #FFC20E 100%);
+  
+  /* 2. CLIP THE BACKGROUND TO THE TEXT */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  
+  /* 3. STYLING THE TEXT */
+  font-size: 28px;
+  font-weight: 900;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  display: inline-block; /* Daroure kirmal el-gradient y-bayyen mazzbout */
+  letter-spacing: -0.5px;
+}
+
+/* Optional: Eza baddik el-description ta7to ykoun clean */
+.modal-header p {
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-top: 5px;
+}
+
+.other-items {
+  border-top: 4px solid #FFC20E; /* Thick Orange/Yellow line */
+  margin-top: 25px;              /* Space above the line */
+  padding-top: 20px;             /* Space below the line before items start */
+  position: relative;
+}
+.other-items::before {
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  background: white;             /* Matches modal background */
+  padding: 0 10px;
+  color: #FFC20E;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+/* --- THE FLOATING SIDE CART --- */
+.side-cart {
+  position: fixed !important; /* Force it to stay fixed to the screen */
+  top: 0;
+  right: -100%; /* Hidden by default */
+  width: 400px;
+  height: 100vh;
+  background: white;
+  box-shadow: -10px 0 30px rgba(0,0,0,0.2);
+  transition: all 0.4s ease-in-out;
+  z-index: 9999 !important; /* A3la shi bel-shashe kalla */
+  display: flex;
+  flex-direction: column;
+}
+
+.side-cart.open {
+  right: 0; /* Slide in on Desktop */
+}
+
+
+.cart-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  z-index: 2500; /* Ta7et el-cart deghre */
+}
+
+
+
 /* --- MOBILE VIEW --- */
 @media (max-width: 600px) {
   .menu-page {
-    padding: 100px 15px 40px 15px;
+    padding: 100px 0 0 0 !important;
   }
 
   .menu-content {
     flex-direction: column;
+    align-items: center;
+    width: 100% !important;
+    padding: 0 15px !important; /* El-masefe t-koun jawwa mesh barra */
+    box-sizing: border-box;
   }
 
   .menu-list {
@@ -213,18 +584,19 @@ html, body {
   .burger-type-buttons-vertical {
     display: flex !important;
     flex-direction: row !important;
-    overflow-x: auto !important;
+    overflow-x: auto ;
     gap: 10px;
     padding: 5px 0;
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
+    
   }
 
   .menu-categories-vertical button, 
   .burger-type-buttons-vertical button {
     display: inline-block !important;
     width: auto !important;
-    min-width: 100px; /* Thabbeti el-3ard */
+    min-width: 110px; /* Thabbeti el-3ard */
     height: 50px !important; /* EL-HEIGHT EL-MRATAB */
     padding: 0 20px !important;
     font-size: 15px !important;
@@ -251,17 +623,44 @@ html, body {
   .burger-type-buttons-vertical::-webkit-scrollbar {
     display: none;
   }
-}
 
-/* --- Footer --- */
+  .menu-page { padding: 100px 0 0 0 !important; }
+  
+  .menu-content {
+    flex-direction: column;
+    align-items: center;
+    width: 100% !important;
+    padding: 0 15px !important;
+  }
+
+  .menu-list { grid-template-columns: 1fr; width: 100%; }
+
+  .menu-sidebar { width: 100%; margin-bottom: 20px; }
+
+  .menu-categories-vertical, .burger-type-buttons-vertical {
+    display: flex !important; flex-direction: row !important;
+    overflow-x: auto; gap: 10px; padding: 5px 0;
+  }
+
+  .mini-sidebar-cart {
+    width: 95%; align-self: center; margin-top: 10px;
+  }
+  
+}
 .footer {
-  width: 100%;
-  height: 70px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #FFC20E;
-  margin-top: 40px;
+  width: 100% !important;
+  padding: 12px 0;
+  display: flex; justify-content: center; align-items: center;
+  background: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(10px);
   position: relative;
   z-index: 100;
 }
+
+.cart-header { padding: 20px; background: #FFC20E; color: white; display: flex; justify-content: space-between; align-items: center; }
+.cart-header h3 { margin: 0; font-weight: 900; }
+.close-cart { background: none; border: none; color: white; font-size: 30px; cursor: pointer; }
+.cart-footer { padding: 20px; border-top: 1px solid #eee; }
+.checkout-btn { width: 100%; padding: 15px; background: #95b508; color: white; border: none; border-radius: 12px; font-weight: 900; cursor: pointer; }
+
+

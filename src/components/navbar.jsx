@@ -31,8 +31,9 @@ function Navbar({ cart = {} }) {
       <div className="nav-links desktop">
         <Link to="/">Home</Link>
         <Link to="/menu">Menu</Link>
-        <Link to="/custom">Customize Your Own Burger</Link>
-        <Link to="/locate-us">Locate Us</Link>
+        <Link to="/customize">Customize Your Own Burger</Link>
+        
+        
         
         <span className="nav-phone">03 231 506</span>
 
@@ -54,7 +55,7 @@ function Navbar({ cart = {} }) {
         </button>
         <Link to="/" onClick={toggleMenu}>Home</Link>
         <Link to="/menu" onClick={toggleMenu}>Menu</Link>
-        <Link to="/contact-us" onClick={toggleMenu}>Contact Us</Link>
+        <Link to="/customize" onClick={toggleMenu}> Customize Your Burger </Link>
         <Link to="/cart" onClick={toggleMenu}>Cart</Link>
       </div>
     </nav>
