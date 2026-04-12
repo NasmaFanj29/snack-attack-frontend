@@ -137,6 +137,39 @@
   cursor: pointer;
   font-weight: 900;
 }
+/* ✅ Zidi hol la ta7et khalis */
+.payer-block {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 15px;
+  border-radius: 20px;
+  margin-bottom: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.g-sub-input {
+  width: 92%; 
+  margin: 8px auto 0 auto; 
+  display: block; 
+  padding: 8px 15px; 
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.2);
+  color: #333;
+  font-size: 15px;
+  font-weight: 600;
+  outline: none;
+  transition: all 0.3s;
+}
+.g-sub-input:focus {
+  border-color: #FFC20E;
+  width: 85%; /* Byikbar shway bas tekbsi fiyo (Animation 7elwe) */
+}
+
+.g-sub-input::placeholder {
+  color: #777;
+  font-size: 12px;
+}
+
 
 /* --- ORDER LIST --- */
 .glass-items-list {

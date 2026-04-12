@@ -1,11 +1,12 @@
+/* --- 1. PAGE SETUP WITH DYNAMIC OVERLAY --- */
 .checkout-page {
     width: 100%;
     min-height: 100vh;
     margin: 0 auto;
-    padding: 100px 20px 40px 20px;
-    font-family: 'Arial', sans-serif;
+    padding: 80px 20px 40px 20px;
+    font-family: 'Arial Rounded MT Bold', 'Inter', sans-serif;
     box-sizing: border-box;
-    background: url('../assets/menupage.jpg') no-repeat center center fixed;
+    background: url('../assets/burger_fries_bg.jpg') no-repeat center center fixed;
     background-size: cover;
     position: relative;
     display: flex;
@@ -19,186 +20,210 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(103, 103, 103, 0.4); 
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 0;
 }
 
-.checkout-container {
+/* --- 2. THE MAIN FROSTY GLASS CARD --- */
+.info-form-card {
     position: relative;
     z-index: 1;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-}
-
-.info-form-card {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.12) !important; 
+    backdrop-filter: blur(25px) saturate(180%);
+    -webkit-backdrop-filter: blur(25px) saturate(180%);
+    
     padding: 35px;
-    border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    border-radius: 40px;
+    box-shadow: 0 20px 50px rgba(162, 162, 162, 0.4);
     width: 100%;
-    max-width: 450px;
-    border-top: 8px solid #95b508;
+    max-width: 460px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-top: 10px solid #95b508;
+    text-align: center;
 }
 
 .checkout-title {
-    color: #FFC20E;
-    text-align: center;
+    color: #ffffff;
+    font-size: 32px;
     font-weight: 900;
     text-transform: uppercase;
     margin-bottom: 25px;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    text-shadow: 0 4px 10px rgba(132, 131, 131, 0.3);
 }
 
-.input-group {
-    margin-bottom: 15px;
+/* --- 3. INNER GLASS SECTIONS --- */
+.group-split-box {
+    background: rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(10px);
+    padding: 20px;
+    border-radius: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 20px;
 }
 
-.input-group label {
-    display: block;
-    font-weight: 800;
-    margin-bottom: 5px;
-    color: #333;
-}
-
-.input-group input, 
-.input-group textarea, 
-.input-group select {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+/* --- 4. GLASSY INPUTS - THE FIX --- */
+.glass-input-main, .glass-input-small, .glass-select {
+    width: 100% !important; 
+    box-sizing: border-box !important; /* ✅ MANDATORY: keeps padding inside */
+    
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 15px;
+    padding: 12px 15px;
+    
+    color: #ffffff !important; 
+    font-weight: 700;
     font-size: 1rem;
+    outline: none;
+    display: block;
+    margin: 12px 0;
+    transition: 0.3s ease;
+}
+
+.glass-input-main:focus {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-color: #FFC20E !important;
+    box-shadow: 0 0 15px rgba(255, 194, 14, 0.3);
+}
+
+.glass-input-main::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* --- 5. QR POPUP MODAL (NEW) --- */
+.qr-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.qr-popup-content {
+    background: white;
+    padding: 30px;
+    border-radius: 30px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(149, 149, 149, 0.5);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.close-popup-btn {
+    margin-top: 20px;
+    background: #95b508;
+    color: white;
+    border: none;
+    padding: 10px 30px;
+    border-radius: 50px;
+    font-weight: 900;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+/* --- 6. SPLIT ACTIONS & PAYER ROW --- */
+.payer-row-checkout {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    align-items: center;
+    width: 100%;
     box-sizing: border-box;
 }
 
-.place-order-btn {
-    width: 100%;
-    background-color: #FFC20E;
-    color: white;
-    border: none;
-    padding: 15px;
-    font-size: 1.2rem;
-    font-weight: 900;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: 0.3s;
-    text-transform: uppercase;
-}
-
-.place-order-btn:hover {
-    background-color: #e6a100;
-}
-
-.receipt-overlay {
-    position: relative;
-    z-index: 2;
-    padding: 20px;
-}
-
-.receipt-paper {
-    background: white;
-    width: 340px; 
-    padding: 25px;
-    box-shadow: 5px 5px 20px rgba(0,0,0,0.4);
-    font-family: 'Courier New', Courier, monospace; 
-    color: #000;
+.glass-input-small {
+    width: 90px !important;
     text-align: center;
 }
 
-.receipt-logo-bw {
-    width: 200px;
-    margin-bottom: 15px;
-    filter: grayscale(100%) contrast(150%);
-}
-
-.receipt-branch-tag {
-    background: #000;
+.manual-add-btn-glass, .add-payer-btn-glass {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     color: #fff;
-    padding: 6px;
-    margin: 15px 0;
-    font-weight: bold;
-    font-size: 14px;
-}
-
-.receipt-item-row {
-    display: flex;
-    justify-content: space-between;
-    margin: 5px 0;
-    font-weight: bold;
-}
-
-.final-total {
-    font-size: 1.4rem;
-    font-weight: 900;
-    border-top: 2px solid #000;
-    padding-top: 10px;
-    margin-top: 10px;
-}
-
-
-.back-btn {
-    background-color: #333;
-    color: white;
-    border: none;
-    width: 100%;
-    padding: 10px;
-    margin-top: 10px;
-    cursor: pointer;
-    border-radius: 5px;
-}
-/* --- NEW: POINTS BOX --- */
-.points-box {
-    background: #fff9e6;
-    border: 2px dashed #FFC20E;
-    padding: 12px;
+    padding: 10px 16px;
     border-radius: 12px;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    transition: 0.3s;
+    margin: 5px;
+}
+
+/* --- 7. BUTTONS --- */
+.place-order-btn-final {
+    width: 100%;
+    background: #FFC20E;
+    color: #000;
+    border: none;
+    padding: 18px;
+    font-size: 1.4rem;
+    font-weight: 950;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: 0.3s ease;
+    text-transform: uppercase;
+    box-shadow: 0 10px 25px rgba(255, 194, 14, 0.4);
+    margin-top: 15px;
+}
+
+.place-order-btn-final:hover:not(:disabled) {
+    transform: translateY(-3px);
+    background: #e6a100;
+}
+
+/* --- 8. SUMMARY SECTION --- */
+.checkout-summary-mini-glass {
+    background: rgba(162, 161, 161, 0.3) !important;
+    padding: 15px;
+    border-radius: 20px;
+    margin: 20px 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.summary-row {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    cursor: pointer;
-}
-.points-text p { margin: 0; font-weight: 800; color: #333; }
-.points-text span { font-size: 11px; color: #666; }
-
-/* --- NEW: PAYMENT OPTIONS --- */
-.method-label { display: block; font-weight: 800; margin: 15px 0 8px; color: #333; }
-.payment-methods {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-.pay-option {
-    padding: 12px;
-    border: 2px solid #eee;
-    border-radius: 10px;
-    text-align: center;
-    cursor: pointer;
-    font-weight: 800;
-    transition: 0.3s;
-}
-.pay-option.active {
-    border-color: #95b508;
-    background: #f1f8e9;
-    color: #333;
+    color: #fff;
+    font-weight: 700;
 }
 
-/* --- NEW: CARD DETAILS --- */
-.card-details-form {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 15px;
-    background: #f9f9f9;
-    border-radius: 10px;
-    margin-bottom: 20px;
-}
-.card-details-form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.card-details-form input { padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+/* --- 9. MOBILE RESPONSIVE --- */
+@media (max-width: 600px) {
+    .info-form-card {
+        padding: 25px 20px;
+        width: 95%;
+    }
+    
+    .checkout-title {
+        font-size: 26px;
+    }
 
-.animate-fade-in {
-    animation: fadeIn 0.4s ease;
+    .glass-input-main {
+        margin-bottom: 15px !important;
+    }
+    
+    .group-split-box {
+        padding: 15px;
+        gap: 15px !important;
+    }
 }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Animations */
+.slide-down {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import logo from "../assets/logo.png"; 
 import '../style/checkout.css';
+import { QRCodeCanvas } from "qrcode.react";
 
 function Checkout({ cart, setCart, tableId }) {
     const [isOrdered, setIsOrdered] = useState(false);
@@ -10,6 +11,7 @@ function Checkout({ cart, setCart, tableId }) {
     const [usePoints, setUsePoints] = useState(false); 
     const [userPoints, setUserPoints] = useState(150); 
     const [orderedItems, setOrderedItems] = useState([]); 
+    const [showQR, setShowQR] = useState(false);
     
     const [customerInfo, setCustomerInfo] = useState({
         name: '',
@@ -20,8 +22,13 @@ function Checkout({ cart, setCart, tableId }) {
     });
 
     const cartItems = Array.isArray(cart) ? cart : [];
+    
+    // --- 👥 GROUP SPLIT STATE ---
+    const [payers, setPayers] = useState([
+        { id: 1, name: "Me", amount: 0, method: 'cash' }
+    ]);
 
-    // --- 💰 MATH: VAT & TOTALS ---
+    // --- 💰 MATH LOGIC ---
     const getItemBasePrice = (item) => {
         const extrasTotal = item.selectedExtras ? item.selectedExtras.reduce((sum, e) => sum + Number(e.price), 0) : 0;
         return Number(item.price) + extrasTotal;
@@ -31,14 +38,42 @@ function Checkout({ cart, setCart, tableId }) {
     const totalVAT = subtotal * 0.11;
     const baseTotal = subtotal + totalVAT;
     const pointsDiscount = usePoints ? (userPoints / 100) : 0;
-    const finalTotal = Math.max(0, baseTotal - pointsDiscount); 
+    const finalTotal = Math.max(0, baseTotal - pointsDiscount);
 
+    // Sync first payer with total automatically
+    useEffect(() => {
+        if (payers.length === 1) {
+            setPayers([{ ...payers[0], amount: finalTotal.toFixed(2) }]);
+        }
+    }, [finalTotal]);
+
+    const addPayer = () => {
+        setPayers([...payers, { id: Date.now(), name: `Friend ${payers.length + 1}`, amount: 0, method: 'cash' }]);
+    };
+
+    const updatePayer = (id, field, value) => {
+        const updated = payers.map(p => p.id === id ? { ...p, [field]: value } : p);
+        setPayers(updated);
+    };
+
+    const removePayer = (id) => {
+        if (payers.length > 1) setPayers(payers.filter(p => p.id !== id));
+    };
+
+    const totalPaidSoFar = payers.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+    const remainingBalance = finalTotal - totalPaidSoFar;
+    const qrValue = `https://snackattacknasma.netlify.app/split/table/${tableId}`;
+
+    // --- 🚀 PLACE ORDER ---
     const handlePlaceOrder = async (e) => {
         e.preventDefault();
         if (cartItems.length === 0) { alert("Your cart is empty!"); return; }
+        if (Math.abs(remainingBalance) > 0.01) { 
+            alert(`Please split the remaining $${remainingBalance.toFixed(2)}!`); 
+            return; 
+        }
 
         setLoading(true);
-
         const orderData = {
             customer: customerInfo,
             items: cartItems.map(item => ({
@@ -49,7 +84,8 @@ function Checkout({ cart, setCart, tableId }) {
                 extras: item.selectedExtras || [] 
             })),
             total_price: finalTotal.toFixed(2), 
-            table_id: tableId 
+            table_id: tableId,
+            payment_splits: payers
         };
 
         try {
@@ -75,146 +111,106 @@ function Checkout({ cart, setCart, tableId }) {
         <div className="checkout-page">
             <div className="overlay"></div>
 
+            {/* ✅ QR Pop-up Modal (Zide hayda el-block) */}
+            {showQR && (
+                <div className="qr-popup-overlay">
+                    <div className="qr-popup-content slide-down">
+                        <h3 style={{ color: '#000', marginBottom: '15px' }}>Scan to Join Split</h3>
+                        <QRCodeCanvas value={qrValue} size={200} />
+                        <button type="button" className="close-popup-btn" onClick={() => setShowQR(false)}>
+                            DONE
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {!isOrdered ? (
                 <div className="checkout-container">
-                    <div className="info-form-card">
+                    <div className="info-form-card glass-effect">
                         <h2 className="checkout-title">Checkout</h2>
-                        <form onSubmit={handlePlaceOrder}>
-                            <div className={`points-box ${usePoints ? 'selected' : ''}`} onClick={() => setUsePoints(!usePoints)}>
-                                <div className="points-text">
-                                    <p>Redeem <strong>{userPoints} Hearts ❤️</strong></p>
-                                    <span>Get ${(userPoints/100).toFixed(2)} off your bill</span>
-                                </div>
-                                <input type="checkbox" checked={usePoints} readOnly />
-                            </div>
-
-                            <div className="input-group">
-                                <label>Full Name</label>
-                                <input type="text" name="name" value={customerInfo.name} onChange={handleChange} required placeholder="Nasma Fanj" />
-                            </div>
-                            <div className="input-group">
-                                <label>Phone Number</label>
-                                <input type="tel" name="phone" value={customerInfo.phone} onChange={handleChange} required placeholder="70 123 456" />
-                            </div>
-
-                            <label className="method-label">Payment Method</label>
-                            <div className="payment-methods">
-                                <div className={`pay-option ${paymentMethod === 'cash' ? 'active' : ''}`} onClick={() => setPaymentMethod('cash')}>💵 Cash</div>
-                                <div className={`pay-option ${paymentMethod === 'card' ? 'active' : ''}`} onClick={() => setPaymentMethod('card')}>💳 Card</div>
-                            </div>
-
-                            {paymentMethod === 'card' && (
-                                <div className="card-details-form">
-                                    <input type="text" name="cardNumber" placeholder="Card Number" maxLength="16" onChange={handleChange} required />
-                                    <div className="row">
-                                        <input type="text" name="expiry" placeholder="MM/YY" onChange={handleChange} required />
-                                        <input type="text" name="cvv" placeholder="CVV" maxLength="3" onChange={handleChange} required />
-                                    </div>
-                                </div>
-                            )}
+                        
+                        <div className="checkout-section group-split-box glass-panel-inner">
+                            <h3 className="section-subtitle">Split Payment</h3>
                             
-                            <div className="checkout-summary-mini">
-                                <div className="summary-row"><span>Subtotal:</span> <span>${subtotal.toFixed(2)}</span></div>
-                                <div className="summary-row"><span>Total VAT:</span> <span>${totalVAT.toFixed(2)}</span></div>
-                                {usePoints && <div className="summary-row discount"><span>Hearts Discount:</span> <span>-${pointsDiscount.toFixed(2)}</span></div>}
-                                <hr />
-                                <div className="summary-row final"><span>Total:</span> <strong>${finalTotal.toFixed(2)}</strong></div>
+                            <div className="payers-list">
+                                {payers.map((payer) => (
+                                    <div key={payer.id} className="payer-row-checkout slide-down">
+                                        <input 
+                                            type="number" 
+                                            value={payer.amount} 
+                                            className="glass-input-small" 
+                                            onChange={(e) => updatePayer(payer.id, 'amount', e.target.value)} 
+                                        />
+                                        <select 
+                                            className="glass-select" 
+                                            value={payer.method} 
+                                            onChange={(e) => updatePayer(payer.id, 'method', e.target.value)}
+                                        >
+                                            <option value="cash">💵 Cash</option>
+                                            <option value="card">💳 Card</option>
+                                        </select>
+                                        {payers.length > 1 && (
+                                            <button type="button" className="remove-btn-checkout" onClick={() => removePayer(payer.id)}>×</button>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
 
-                            <button type="submit" className="place-order-btn" disabled={loading}>
+                            <div className="customer-info-inputs">
+                                <input type="text" name="name" value={customerInfo.name} onChange={handleChange} required placeholder="Full Name" className="glass-input-main" />
+                                <input type="tel" name="phone" value={customerInfo.phone} onChange={handleChange} required placeholder="Phone Number" className="glass-input-main" />
+                            </div>
+
+                            <div className="split-actions">
+                                <button type="button" className="add-payer-btn-glass" onClick={() => setShowQR(true)}>
+                                    ➕ Add Person (Scan QR)
+                                </button>
+                                <button type="button" className="manual-add-btn-glass" onClick={addPayer}>
+                                    Manual Add
+                                </button>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handlePlaceOrder}>
+                            <div className="checkout-summary-mini-glass">
+                                <div className="summary-row"><span>Total:</span> <span>${finalTotal.toFixed(2)}</span></div>
+                                <div className="summary-row" style={{ color: Math.abs(remainingBalance) > 0.01 ? '#ff4d4d' : '#95b508' }}>
+                                    <span>Remaining:</span> <strong>${remainingBalance.toFixed(2)}</strong>
+                                </div>
+                            </div>
+
+                            <button type="submit" className="place-order-btn-final" disabled={loading || Math.abs(remainingBalance) > 0.01}>
                                 {loading ? "PROCESSING..." : "Place Order"}
                             </button>
                         </form>
                     </div>
                 </div>
             ) : (
-                /* --- ✨ THE REWRITTEN PRO RECEIPT WITH LOGO FIX --- */
                 <div className="receipt-overlay">
-                    <div className="receipt-paper" style={{ textAlign: 'left', padding: '30px', fontFamily: 'monospace', maxWidth: '400px' }}>
-                        
-                        {/* 🛠️ LOGO CENTERED REGARDLESS OF TEXT ALIGNMENT */}
+                    <div className="receipt-paper">
                         <img src={logo} alt="Logo" className="receipt-logo-bw" />
-                                                    
-                        <h2 style={{ textAlign: 'center', marginBottom: '5px', fontSize: '18px' }}>RECEIPT</h2>
-                        <h3 style={{ textAlign: 'center', marginTop: '0', color: '#555', fontSize: '24px', fontWeight: 'bold' }}>SNACK ATTACK</h3>
-                        
-                        <div className="receipt-header-info" style={{ fontSize: '14px', marginBottom: '5px', lineHeight: '0.8' }}>
+                        <h2 className="r-title">RECEIPT</h2>
+                        <h3 className="r-brand">SNACK ATTACK</h3>
+                        <div className="receipt-header-info">
                             <p><strong>Customer:</strong> {customerInfo.name || "Guest"}</p>
-                            <p><strong>Date:</strong> {new Date().toLocaleDateString()} {new Date().toLocaleTimeString()}</p>
-                            <p><strong>Order Number:</strong> #SA-{Math.floor(1000 + Math.random() * 9000)}</p>
-                            <p><strong>Order Type:</strong> DINE-IN</p>
-                            <div style={{ display: 'flex', gap: '150px', fontSize: '14px', marginBottom: '10px' }}>
-                                <span><strong>Table:</strong> #{tableId}</span>
-                                <span><strong>Paid:</strong> {paymentMethod.toUpperCase()}</span>
-                            </div>
-                            <p><strong>Server:</strong> Mohammd S.</p>
+                            <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
+                            <p><strong>Table:</strong> #{tableId}</p>
                         </div>
-
-                        <div className="receipt-divider">-----------------------------------------------</div>
-                        
+                        <div className="receipt-divider">------------------------------------------</div>
                         <div className="receipt-items">
-                            {orderedItems.map((item, index) => {
-                                const itemBaseWithExtras = getItemBasePrice(item);
-                                const itemTotalWithVAT = itemBaseWithExtras * 1.11 * item.quantity;
-
-                                return (
-                                    <div key={index} className="receipt-item-group" style={{ marginBottom: '12px' }}>
-                                        <div className="receipt-item" style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                                            <span>{item.quantity}x {item.name}</span>
-                                            <span>${itemTotalWithVAT.toFixed(2)}</span>
-                                        </div>
-                                        
-                                        {/* --- 🍟 SHOW ADD-ONS (EXTRAS) --- */}
-                                        {item.selectedExtras && item.selectedExtras.length > 0 && (
-                                            <div className="receipt-extras" style={{ marginLeft: '15px', fontSize: '12px', color: '#555', fontStyle: 'italic' }}>
-                                                {item.selectedExtras.map((extra, idx) => (
-                                                    <div key={idx}>+ {extra.name} (${Number(extra.price).toFixed(2)})</div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                            {orderedItems.map((item, index) => (
+                                <div key={index} className="r-item-row">
+                                    <span>{item.quantity}x {item.name}</span>
+                                    <span>${(getItemBasePrice(item) * item.quantity).toFixed(2)}</span>
+                                </div>
+                            ))}
                         </div>
-                        
-                        <div className="receipt-divider">-----------------------------------------------</div>
-                        
-                        <div className="receipt-summary" style={{ fontSize: '14px' }}>
-                            {(() => {
-                                const finalSub = orderedItems.reduce((acc, item) => acc + (getItemBasePrice(item) * item.quantity), 0);
-                                const finalTax = finalSub * 0.11;
-                                const finalGrand = finalSub + finalTax - (usePoints ? (userPoints/100) : 0);
-
-                                return (
-                                    <>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                            <span>Subtotal:</span>
-                                            <span>${finalSub.toFixed(2)}</span>
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                            <span>Sales Tax (11%):</span>
-                                            <span>${finalTax.toFixed(2)}</span>
-                                        </div>
-                                        {usePoints && (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#e74c3c' }}>
-                                                <span>Hearts Discount:</span>
-                                                <span>-${(userPoints/100).toFixed(2)}</span>
-                                            </div>
-                                        )}
-                                        <div className="receipt-divider">--------------------------------------------</div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', color: '#000000' }}>
-                                            <span>TOTAL:</span>
-                                            <span>${finalGrand.toFixed(2)}</span>
-                                        </div>
-                                    </>
-                                );
-                            })()}
+                        <div className="receipt-divider">------------------------------------------</div>
+                        <div className="receipt-total-row">
+                            <span>TOTAL:</span>
+                            <span>${finalTotal.toFixed(2)}</span>
                         </div>
-
-                        <button className="back-btn" onClick={() => (window.location.href = '/')} style={{ marginTop: '20px', width: '100%', padding: '12px', background: '#333',
-                             color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
-                            New Order
-                        </button>
+                        <button className="back-btn-new" onClick={() => (window.location.href = '/')}>New Order</button>
                     </div>
                 </div>
             )}

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useSearchParams } from "react-router-dom"; // ✅ Added useSearchParams
 import axios from "axios";
 import "../style/cart.css";
-import { QRCodeCanvas } from "qrcode.react";
+
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 
 function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
+  const navigate = useNavigate();
   const { orderId: urlOrderId } = useParams();
   const [searchParams] = useSearchParams(); // ✅ Initialize searchParams
+  
   
   const [isOrdered, setIsOrdered] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
@@ -148,6 +150,16 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
               );
             })}
           </div>
+          {!isJoinMode && (
+            <div className="glass-form-wrapper" style={{ marginTop: '20px' }}>
+             <button 
+      className="glass-complete-btn-final" 
+      onClick={() => navigate('/checkout')}
+      style={{ background: '#95b508', color: '#fff' }} /* Green Snack Attack */
+    >
+      PROCEED TO PAYMENT <span>▶</span>
+    </button></div>
+          )}
           <div className="glass-total-section">
             <div className="total-row final-total">
               <div className="g-total-label">TOTAL AMOUNT</div>
@@ -156,46 +168,9 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
           </div>
         </div>
 
-        <div className="glass-panel details-panel">
-          <h2 className="glass-title-left">GROUP SPLIT</h2>
-          <div className="group-split-container">
-            {payers.map((payer) => (
-              <div key={String(payer.id)} className="payer-mixed-row slide-down">
-                <input type="number" value={payer.amount} className="neon-input-small" onChange={(e) => updatePayer(payer.id, 'amount', e.target.value)} />
-                <select className="method-select" value={payer.method} onChange={(e) => updatePayer(payer.id, 'method', e.target.value)}>
-                  <option value="cash">💵 CASH</option>
-                  <option value="card">💳 CARD</option>
-                </select>
-              </div>
-            ))}
-            
-            <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-              {showQR ? (
-                <div className="qr-box slide-down" style={{ background: '#fff', padding: '15px', borderRadius: '20px', display: 'inline-block' }}>
-                  <QRCodeCanvas value={qrValue} size={130} />
-                  <button onClick={() => setShowQR(false)} style={{ display: 'block', margin: '10px auto 0', color: 'red', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}>CLOSE QR</button>
-                </div>
-              ) : (
-                <button className="add-payer-btn" onClick={() => setShowQR(true)} style={{ border: '2px dashed #FFC20E' }}>➕ ADD PERSON (SCAN QR)</button>
-              )}
-            </div>
-            
-            <div className="split-summary-box">
-              <p style={{textAlign: 'right', fontWeight: '800'}}>Remaining: <span style={{ color: Math.abs(remainingBalance) > 0.01 ? '#ff4d4d' : '#95b508' }}>${remainingBalance.toFixed(2)}</span></p>
-            </div>
-          </div>
-
-          {!isJoinMode && (
-            <div className="glass-form-wrapper">
-              <input type="text" placeholder="Full Name" className="g-full-width-input" onChange={(e) => setFormData({...formData, fullName: e.target.value})} />
-              <input type="text" placeholder="Phone Number" className="g-full-width-input" onChange={(e) => setFormData({...formData, phone: e.target.value})} />
-              <button className={`glass-complete-btn-final ${(!formData.fullName || !formData.phone || Math.abs(remainingBalance) > 0.01) ? 'disabled-btn' : ''}`} onClick={handleCompleteOrder}>FINALIZE ORDER <span>▶</span></button>
-            </div>
-          )}
         </div>
-      </div>
-    </div>
-  );
+        </div>
+  )
 }
 
 export default Cart;
