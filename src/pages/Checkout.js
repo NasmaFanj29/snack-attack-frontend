@@ -165,9 +165,7 @@ function Checkout({ cart, setCart, tableId }) {
                                 <button type="button" className="add-payer-btn-glass" onClick={() => setShowQR(true)}>
                                     ➕ Add Person (Scan QR)
                                 </button>
-                                <button type="button" className="manual-add-btn-glass" onClick={addPayer}>
-                                    Manual Add
-                                </button>
+                               
                             </div>
                         </div>
 
