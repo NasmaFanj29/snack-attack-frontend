@@ -114,12 +114,12 @@ const handleProceedToPayment = async () => {
         customer: { name: "Guest", phone: "000000" },
         // ✅ IMPORTANT: Map item.id correctly so Backend finds it
         items: displayCart.map((item) => ({
-          id: item.id || item.menu_id || item.databaseId, 
-          name: item.name,
-          price: Number(item.price),
-          quantity: Number(item.quantity),
-        })),
-        total_price: Number(totalPrice.toFixed(2)),
+        id: item.id || item.menu_id || item.databaseId || 0,
+        name: item.name,
+        price: Number(item.price),
+        quantity: Number(item.quantity),
+      })),
+        total_price: totalPrice.toFixed(2),
         table_id: activeTable,
         payment_splits: [],
         status: "Requested",
