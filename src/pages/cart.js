@@ -137,6 +137,8 @@ const handleProceedToPayment = async () => {
       });
     }
   } catch (err) {
+    console.log("BACKEND ERROR:", err.response?.data);
+    console.log("STATUS:", err.response?.status);
     console.error("ORDER ERROR:", err.response ? err.response.data : err.message);
     alert("Error sending order. Check backend on Render.");
   } finally {
