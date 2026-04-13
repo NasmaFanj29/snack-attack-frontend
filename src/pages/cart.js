@@ -18,19 +18,26 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
 
   const [formData, setFormData] = useState({ fullName: "", phone: "" });
 
-  const activeTable = searchParams.get("table") || localStorage.getItem("activeTable") || "1";
+  const activeTable =
+    searchParams.get("table") ||
+    localStorage.getItem("activeTable") ||
+    "1";
 
-  const [displayCart, setDisplayCart] = useState(Array.isArray(cart) ? cart : []);
+  const [displayCart, setDisplayCart] = useState([]);
 
   useEffect(() => {
-    if (!isJoinMode) setDisplayCart(Array.isArray(cart) ? cart : []);
-  }, [cart, isJoinMode]);
+  if (!isJoinMode && Array.isArray(cart)) {
+    setDisplayCart(cart);
+  }
+}, [cart, isJoinMode]);
 
   // --- Financial Logic ---
   const subtotal = (displayCart || []).reduce(
-    (acc, item) => acc + (Number(item.price) || 0) * (Number(item.quantity) || 0),
+    (acc, item) =>
+      acc + (Number(item.price) || 0) * (Number(item.quantity) || 0),
     0
   );
+
   const vat = subtotal * 0.11;
   const totalPrice = subtotal + vat;
 
@@ -38,11 +45,15 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
   useEffect(() => {
     if (isJoinMode && urlOrderId) {
       axios
-        .get(`https://snack-attack-backend.onrender.com/order-details/${urlOrderId}`)
+        .get(
+          `https://snack-attack-backend.onrender.com/order/${urlOrderId}`
+        )
         .then((res) => {
           if (res.data) {
-            setDisplayCart(Array.isArray(res.data.items) ? res.data.items : []);
-            setOrderStatus(res.data.status || "");
+            setDisplayCart(
+              Array.isArray(res.data.items) ? res.data.items : []
+            );
+            setOrderStatus(res.data.order?.status || "");
             setIsWaiting(true);
           }
         })
@@ -50,22 +61,29 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
     }
   }, [isJoinMode, urlOrderId]);
 
-  // --- Real-time Sync (join mode only) ---
+  // --- Real-time Sync ---
   useEffect(() => {
     let interval;
     const activeId = orderId || urlOrderId;
+
     if (activeId && (isWaiting || isJoinMode)) {
       interval = setInterval(async () => {
         try {
           const res = await axios.get(
             `https://snack-attack-backend.onrender.com/order-status/${activeId}`
           );
+
           setOrderStatus(res.data.status);
+
           const statusLower = String(res.data.status).toLowerCase();
-          if (["preparing", "paid", "served", "ready"].includes(statusLower)) {
+
+          if (
+            ["preparing", "paid", "served", "ready"].includes(statusLower)
+          ) {
             setIsWaiting(false);
             setIsOrdered(true);
           }
+
           if (statusLower === "rejected") {
             setIsRejected(true);
             clearInterval(interval);
@@ -75,93 +93,148 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
         }
       }, 3000);
     }
+
     return () => clearInterval(interval);
   }, [isWaiting, orderId, urlOrderId, isJoinMode]);
 
-  // ✅ Place a "Requested" order and navigate to checkout/waiting
-  const handleProceedToPayment = async () => {
-    if (displayCart.length === 0) {
-      alert("Your cart is empty!");
-      return;
-    }
+ // ✅ PLACE ORDER (FIXED)
+const handleProceedToPayment = async () => {
+  if (displayCart.length === 0) {
+    alert("Your cart is empty!");
+    return;
+  }
 
-    setPlacingOrder(true);
-    try {
-      const res = await axios.post(
-     "https://snack-attack-backend.onrender.com/place-order",
-        {
-          customer: { name: "Guest", phone: "000000" }, // Initial placeholder for approval
-          items: displayCart,
-          total_price: totalPrice.toFixed(2),
-          table_id: activeTable,
-          payment_splits: [], // Crucial: must be an array for Backend
-          status: "Requested",
-        }
-      );
+  setPlacingOrder(true);
 
-      if (res.data.success) {
-        // ✅ Navigate directly to Checkout for the waiting screen logic
-        navigate(`/checkout`, {
-          state: {
-            orderId: res.data.orderId,
-            cartItems: displayCart,
-            tableId: activeTable,
-            totalPrice: totalPrice.toFixed(2),
-          },
-        });
-      } else {
-        alert("Failed to send request. Please try again.");
+  try {
+    const res = await axios.post(
+      "https://snack-attack-backend.onrender.com/place-order",
+      {
+        customer: { name: "Guest", phone: "000000" },
+
+        items: displayCart
+        .filter((item) => item && (item.id || item.databaseId))
+        .map((item) => ({
+          id: item.id || item.databaseId,
+          name: item.name,
+          price: Number(item.price),
+          quantity: Number(item.quantity),
+        })),
+
+        total_price: Number(totalPrice.toFixed(2)),
+        table_id: activeTable,
+        payment_splits: [],
+        status: "Requested",
       }
-    } catch (err) {
-      alert("Error sending order. Please check if backend is live on Render.");
-      console.error(err);
-    } finally {
-      setPlacingOrder(false);
-    }
-  };
+    );
 
-  if (isRejected) return <div className="cart-page-glass"><h2>REJECTED ❌</h2></div>;
-  if (isOrdered) return <div className="cart-page-glass"><h2>{String(orderStatus).toUpperCase()} ✅</h2></div>;
+    console.log("ORDER RESPONSE:", res.data);
+
+    if (res.data.success) {
+      navigate("/checkout", {
+        state: {
+          orderId: res.data.orderId,
+          cartItems: displayCart,
+          tableId: activeTable,
+          totalPrice: totalPrice.toFixed(2),
+        },
+      });
+    } else {
+      alert("Failed to send request. Please try again.");
+    }
+  } catch (err) {
+    console.error("ORDER ERROR:", err);
+    alert("Error sending order. Check backend on Render.");
+  } finally {
+    setPlacingOrder(false);
+  }
+};
+
+  if (isRejected)
+    return (
+      <div className="cart-page-glass">
+        <h2>REJECTED ❌</h2>
+      </div>
+    );
+
+  if (isOrdered)
+    return (
+      <div className="cart-page-glass">
+        <h2>{String(orderStatus).toUpperCase()} ✅</h2>
+      </div>
+    );
 
   return (
     <div className="cart-page-glass">
       <div className="unified-glass-container">
         <div className="glass-panel order-panel">
           <h2 className="glass-title">ORDER SUMMARY</h2>
+
           <div className="glass-items-list">
             {displayCart.map((item, i) => {
               if (!item || typeof item !== "object") return null;
+
               const safeName = String(item.name || "Item");
+
               let extrasText = "";
               if (Array.isArray(item.selectedExtras)) {
-                extrasText = item.selectedExtras.map((e) => String(e.name || e)).join(", ");
+                extrasText = item.selectedExtras
+                  .map((e) => String(e.name || e))
+                  .join(", ");
               }
+
               return (
-                <div key={String(item.id || i)} className="item-container glass-item-card slide-down">
+                <div
+                  key={String(item.id || i)}
+                  className="item-container glass-item-card slide-down"
+                >
                   <div className="glass-item-row">
                     <div className="item-details">
                       <span className="item-name">{safeName}</span>
+
                       {extrasText && (
                         <span
                           className="item-extras"
-                          style={{ fontSize: "0.75rem", color: "#FFC20E", display: "block" }}
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "#FFC20E",
+                            display: "block",
+                          }}
                         >
                           + {extrasText}
                         </span>
                       )}
-                      <span className="item-price-each">${(Number(item.price) || 0).toFixed(2)} each</span>
+
+                      <span className="item-price-each">
+                        ${Number(item.price).toFixed(2)} each
+                      </span>
                     </div>
+
                     <div className="quantity-controls">
-                      <button className="q-btn minus" onClick={() => removeFromCart(item)} disabled={isJoinMode}>
+                      <button
+                        className="q-btn minus"
+                        onClick={() => removeFromCart(item)}
+                        disabled={isJoinMode}
+                      >
                         −
                       </button>
+
                       <span className="q-count">{item.quantity}</span>
-                      <button className="q-btn plus" onClick={() => addToCart(item)} disabled={isJoinMode}>
+
+                      <button
+                        className="q-btn plus"
+                        onClick={() => addToCart(item)}
+                        disabled={isJoinMode}
+                      >
                         +
                       </button>
                     </div>
+
                     <span className="item-total-price">
-                      ${((Number(item.price) || 0) * (Number(item.quantity) || 0)).toFixed(2)}
+                      $
+                      {(
+                        Number(item.price) * Number(item.quantity)
+                      ).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -170,14 +243,18 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
           </div>
 
           {!isJoinMode && (
-            <div className="glass-form-wrapper" style={{ marginTop: "20px" }}>
+            <div
+              className="glass-form-wrapper"
+              style={{ marginTop: "20px" }}
+            >
               <button
                 className="glass-complete-btn-final"
                 onClick={handleProceedToPayment}
                 disabled={placingOrder || displayCart.length === 0}
-                style={{ background: "#95b508", color: "#fff" }}
               >
-                {placingOrder ? "SENDING REQUEST... 👨‍🍳" : "PROCEED TO PAYMENT ▶"}
+                {placingOrder
+                  ? "SENDING REQUEST... 👨‍🍳"
+                  : "PROCEED TO PAYMENT ▶"}
               </button>
             </div>
           )}
@@ -185,7 +262,9 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
           <div className="glass-total-section">
             <div className="total-row final-total">
               <div className="g-total-label">TOTAL AMOUNT</div>
-              <div className="g-total-value">${totalPrice.toFixed(2)}</div>
+              <div className="g-total-value">
+                ${totalPrice.toFixed(2)}
+              </div>
             </div>
           </div>
         </div>

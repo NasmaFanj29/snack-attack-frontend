@@ -10,22 +10,22 @@ function Checkout({ setCart }) {
     const navigate = useNavigate();
 
      const [searchParams] = useSearchParams();
-     const isSplitRequest = searchParams.get('amount'); // ✅ Check eza jeye mn QR
     const splitAmount = searchParams.get('amount');
     const splitOrderId = searchParams.get('orderId');
+    const isSplitRequest = !!splitAmount;
+    const [step, setStep] = useState(isSplitRequest ? "payment" : "waiting");
 
     // Receive order info placed by Cart.js
     const {
         orderId: initialOrderId,
         cartItems: initialCartItems = [],
         tableId = "1",
-        totalPrice: passedTotal,
     } = location.state || {};
 
     const [orderId] = useState(initialOrderId);
    const [orderedItems, setOrderedItems] = useState(initialCartItems);
     const [orderStatus, setOrderStatus] = useState("Requested");
-    const [step, setStep] = useState("waiting"); // "waiting" | "payment" | "receipt"
+    
 
     const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
     const [payers, setPayers] = useState([{ id: 1, name: "Me", amount: 0, method: 'cash' }]);
@@ -107,7 +107,7 @@ function Checkout({ setCart }) {
 
     useEffect(() => {
     if (isSplitRequest && splitOrderId) {
-        axios.get(`https://snack-attack-backend.onrender.com/order/${splitOrderId}`)
+        axios.get(`https://snack-attack-backend.onrender.com/orders/${splitOrderId}`)
             .then(res => {
                 setOrderedItems(res.data.items);
             })
