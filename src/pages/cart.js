@@ -98,6 +98,7 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
   }, [isWaiting, orderId, urlOrderId, isJoinMode]);
 
  // ✅ PLACE ORDER (FIXED)
+// ✅ (cart.js) - Zabbte el-mapping kirmal ma yi-ba3at null IDs
 const handleProceedToPayment = async () => {
   if (displayCart.length === 0) {
     alert("Your cart is empty!");
@@ -111,7 +112,7 @@ const handleProceedToPayment = async () => {
       "https://snack-attack-backend.onrender.com/place-order",
       {
         customer: { name: "Guest", phone: "000000" },
-        // ✅ IMPORTANT: Ensure item.id is mapped correctly from the menu
+        // ✅ IMPORTANT: Map item.id correctly so Backend finds it
         items: displayCart.map((item) => ({
           id: item.id || item.menu_id || item.databaseId, 
           name: item.name,
