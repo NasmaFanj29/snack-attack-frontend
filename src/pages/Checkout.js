@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import logo from "../assets/logo.png";
 import '../style/checkout.css';
@@ -8,6 +8,11 @@ import { QRCodeCanvas } from "qrcode.react";
 function Checkout({ setCart }) {
     const location = useLocation();
     const navigate = useNavigate();
+
+     const [searchParams] = useSearchParams();
+     const isSplitRequest = searchParams.get('amount'); // ✅ Check eza jeye mn QR
+    const splitAmount = searchParams.get('amount');
+    const splitOrderId = searchParams.get('orderId');
 
     // Receive order info placed by Cart.js
     const {
@@ -18,7 +23,7 @@ function Checkout({ setCart }) {
     } = location.state || {};
 
     const [orderId] = useState(initialOrderId);
-    const [orderedItems] = useState(initialCartItems);
+   const [orderedItems, setOrderedItems] = useState(initialCartItems);
     const [orderStatus, setOrderStatus] = useState("Requested");
     const [step, setStep] = useState("waiting"); // "waiting" | "payment" | "receipt"
 
@@ -27,6 +32,8 @@ function Checkout({ setCart }) {
     const [showQR, setShowQR] = useState(false);
     const [loading, setLoading] = useState(false);
     const [isOrdered, setIsOrdered] = useState(false);
+   
+    
 
     const getItemBasePrice = (item) => {
         const extrasTotal = item.selectedExtras
@@ -35,10 +42,10 @@ function Checkout({ setCart }) {
         return Number(item.price) + extrasTotal;
     };
 
-    const subtotal = orderedItems.reduce(
-        (acc, item) => acc + getItemBasePrice(item) * item.quantity,
-        0
-    );
+    const subtotal = (orderedItems && orderedItems.length > 0) 
+        ? orderedItems.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0)
+        : 0;
+    
     const totalVAT = subtotal * 0.11;
     const finalTotal = subtotal + totalVAT;
 
@@ -76,10 +83,41 @@ function Checkout({ setCart }) {
 
         return () => clearInterval(interval);
     }, [step, orderId]);
+    useEffect(() => {
+        if (step !== "waitingForPayment" || !orderId) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const res = await axios.get(
+                    `https://snack-attack-backend.onrender.com/order-status/${orderId}`
+                );
+                const status = (res.data.status || "").toLowerCase();
+                if (status === "paid") {
+                    clearInterval(interval);
+                    if (setCart) setCart([]);
+                    setStep("receipt"); 
+                }
+            } catch (err) {
+                console.log("Waiting for payment confirmation...");
+            }
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [step, orderId, setCart]);
+
+    useEffect(() => {
+    if (isSplitRequest && splitOrderId) {
+        axios.get(`https://snack-attack-backend.onrender.com/order/${splitOrderId}`)
+            .then(res => {
+                setOrderedItems(res.data.items);
+            })
+            .catch(err => console.error(err));
+    }
+}, [isSplitRequest, splitOrderId]);
 
     const totalPaidSoFar = payers.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
     const remainingBalance = finalTotal - totalPaidSoFar;
-    const qrValue = `https://snackattacknasma.netlify.app/split/table/${tableId}?amount=${remainingBalance.toFixed(2)}`;
+    const qrValue = `https://snackattacknasma.netlify.app/split/table/${tableId}?amount=${remainingBalance.toFixed(2)}&orderId=${orderId}`;
 
     const addPayer = () =>
         setPayers([...payers, { id: Date.now(), name: `Friend ${payers.length}`, amount: 0, method: 'cash' }]);
@@ -106,15 +144,13 @@ function Checkout({ setCart }) {
             const res = await axios.put(
                 `https://snack-attack-backend.onrender.com/admin/orders/${orderId}/status`,
                 {
-                    status: "Paid",
+                    status: "PaymentPending",
                     customer: customerInfo,
                     payment_splits: payers,
                 }
             );
             if (res.data.success) {
-                setIsOrdered(true);
-                if (setCart) setCart([]);
-                setStep("receipt");
+                setStep("waitingForPayment");
             }
         } catch (err) {
             alert("Error confirming payment. Please try again.");
@@ -123,7 +159,42 @@ function Checkout({ setCart }) {
             setLoading(false);
         }
     };
+if (isSplitRequest) {
+    return (
+        <div className="checkout-page">
+            <div className="overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <div className="info-form-card glass-effect">
+                    <img src={logo} alt="Logo" width="120" />
 
+                    <h2>SPLIT PAYMENT 📲</h2>
+                    <p>Contributing to Table #{tableId}</p>
+
+                    {/* ✅ عرض الأكل */}
+                    <div style={{ margin: '15px 0', textAlign: 'left' }}>
+                        {orderedItems.map((item, index) => (
+                            <div key={index} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span>{item.quantity}x {item.name}</span>
+                                <span>${(Number(item.price) * item.quantity).toFixed(2)}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* ✅ المبلغ */}
+                    <div style={{ margin: '20px 0', fontSize: '2.5rem', fontWeight: '900', color: '#FFC20E' }}>
+                        ${splitAmount}
+                    </div>
+
+                    <button
+                        className="place-order-btn-final"
+                        onClick={() => alert("Paying Share...")}
+                    >
+                        PAY MY SHARE 💳
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
     // ── WAITING SCREEN ────────────────────────────────────────────────────────
     if (step === "waiting") {
         return (
@@ -139,6 +210,21 @@ function Checkout({ setCart }) {
                         <img src={logo} alt="Snack Attack Logo" width="160" style={{ marginBottom: '20px' }} />
                         <h2>WAITING FOR APPROVAL... 👨‍🍳</h2>
                         <p>Order #{orderId} sent — waiting for admin to accept</p>
+                        <div className="loader-line"></div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    // ── STEP: WAITING FOR PAYMENT CONFIRMATION ────────────────────────────
+    if (step === "waitingForPayment") {
+        return (
+            <div className="checkout-page">
+                <div className="overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', color: '#fff', textAlign: 'center' }}>
+                    <div className="info-form-card glass-effect" style={{ padding: '50px' }}>
+                        <img src={logo} alt="Snack Attack Logo" width="160" style={{ marginBottom: '20px' }} />
+                        <h2>WAITING FOR ADMIN... 💰</h2>
+                        <p>Payment details sent! Please wait for staff to confirm.</p>
                         <div className="loader-line"></div>
                     </div>
                 </div>
@@ -178,6 +264,7 @@ function Checkout({ setCart }) {
     if (step === "payment") {
         return (
             <div className="checkout-page">
+                <div className="overlay">
                 {showQR && (
                     <div className="qr-popup-overlay">
                         <div className="qr-popup-content slide-down">
@@ -199,7 +286,7 @@ function Checkout({ setCart }) {
                                 borderRadius: '8px',
                                 padding: '10px 16px',
                                 marginBottom: '16px',
-                                color: '#c8f04a',
+                                color: '#71900b',
                                 fontWeight: 600,
                                 fontSize: '0.9rem'
                             }}>
@@ -244,20 +331,13 @@ function Checkout({ setCart }) {
                                     onChange={handleChange}
                                 />
                                 <input
-                                    type="tel"
-                                    name="phone"
-                                    value={customerInfo.phone}
-                                    placeholder="Phone Number *"
-                                    className="glass-input-main"
-                                    onChange={handleChange}
+                                    type="tel" name="phone" value={customerInfo.phone} placeholder="Phone Number *" className="glass-input-main" onChange={handleChange}
                                 />
 
                                 <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
-                                    <button type="button" className="add-payer-btn-glass" onClick={addPayer}>
-                                        ➕ Split Bill
-                                    </button>
+                                    
                                     <button type="button" className="add-payer-btn-glass" onClick={() => setShowQR(true)}>
-                                        📲 Share QR
+                                        📲 Split Bill Share QR
                                     </button>
                                 </div>
                             </div>
@@ -302,7 +382,7 @@ function Checkout({ setCart }) {
                                 <p><strong>Customer:</strong> {customerInfo.name || "Guest"}</p>
                                 <p><strong>Number:</strong> {customerInfo.phone || "N/A"}</p>
                             </div>
-                            <div className="receipt-divider">--------------------------------------------</div>
+                            <div className="receipt-divider">-------------------------------------------</div>
                             <div className="receipt-items">
                                 {orderedItems.map((item, index) => (
                                     <div key={index} className="r-item-container">
@@ -320,7 +400,7 @@ function Checkout({ setCart }) {
                                     </div>
                                 ))}
                             </div>
-                            <div className="receipt-divider">--------------------------------------------</div>
+                            <div className="receipt-divider">-------------------------------------------</div>
                             <div className="receipt-summary">
                                 <div className="r-summary-line"><span>Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
                                 <div className="r-summary-line"><span>VAT (11%):</span><span>${totalVAT.toFixed(2)}</span></div>
@@ -329,6 +409,7 @@ function Checkout({ setCart }) {
                         </div>
                     </div>
                 </div>
+            </div>
             </div>
         );
     }

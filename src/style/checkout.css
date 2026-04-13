@@ -9,21 +9,27 @@
     background: url('../assets/burger_fries_bg.jpg') no-repeat center center fixed;
     background-size: cover;
     position: relative;
+    overflow-x: hidden;
     display: flex;
     justify-content: center;
     align-items: flex-start;
 }
 
-/* overlay */
+/* ✅ Updated Overlay: Full Page Blur Wrapper */
 .checkout-page .overlay {
-    position: fixed;
+    position: absolute; /* ✅ Not fixed, kirmal y-dal scrollable ma3 el-page */
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
-    background: rgba(103, 103, 103, 0.4);
-    backdrop-filter: blur(8px);
-    z-index: 0;
+    min-height: 100%;
+    background: rgba(145, 145, 145, 0.4); /* Gham-ma2na shway kirmal el-contrast */
+    backdrop-filter: blur(12px) saturate(140%); /* ✅ BLUR IS BACK */
+    z-index: 5;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 100px; /* ✅ Masāfé lal-navbar kirmal ma yilza2 fīha */
+    padding-bottom: 50px;
 }
 
 /* --- 2. MAIN LAYOUT (LEFT / RIGHT) --- */
@@ -61,13 +67,43 @@
     z-index: 1;
     background: rgba(255, 255, 255, 0.12) !important;
     backdrop-filter: blur(25px) saturate(180%);
-    padding: 35px;
+    padding: 50px 40px 60px 40px;
     border-radius: 40px;
     box-shadow: 0 20px 50px rgba(162, 162, 162, 0.4);
     width: 100%;
+    max-width: 500px; /* Sar small box bel nos */
+    margin: 0 auto;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-top: 10px solid #95b508;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+/* ✅ 3. Zabbte el-Logo kirmal ma y-koun ktīr kbir barra el-box */
+.info-form-card img {
+    max-width: 260px; /* Kān 140px → ṣār 180px */
+    width: 100%;
+    height: auto;
+    margin-top: -10px; 
+    margin-bottom: 35px;
+    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.2));
+}
+
+/* ✅ 4. El-Text spacing */
+.info-form-card h2 {
+    font-size: 28px;
+    color: #fff;
+    margin-bottom: 15px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+.info-form-card p {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 20px;
+    margin-bottom: 30px;
 }
 
 .checkout-title {
@@ -103,6 +139,67 @@
     font-size: 1rem;
     outline: none;
     margin: 10px 0;
+    transition: all 0.3s ease;
+}
+.glass-input-main:focus {
+    background: rgba(255, 255, 255, 0.3) !important;
+    border-color: #FFC20E; /* Signature Yellow */
+    box-shadow: 0 0 10px rgba(255, 194, 14, 0.3);
+}
+
+.glass-input-main::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+}
+
+
+
+/* --- 7. BUTTONS (Confirm Button chic) --- */
+.place-order-btn-final {
+    width: 100%;
+    background: #FFC20E; /* Yellow Palette */
+    color: #000;
+    border: none;
+    padding: 20px;
+    font-size: 1.4rem;
+    font-weight: 950;
+    border-radius: 60px;
+    cursor: pointer;
+    margin-top: 15px;
+    box-shadow: 0 8px 25px rgba(255, 194, 14, 0.4);
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.place-order-btn-final:hover {
+    background: #f2ba2c;
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px rgba(255, 194, 14, 0.5);
+}
+/* --- WAITING SCREEN (Small animation) --- */
+.loader-line {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 25px;
+    position: relative;
+}
+
+.loader-line::after {
+    content: "";
+    position: absolute;
+    left: -50%;
+    height: 100%;
+    width: 50%;
+    background: #95b508; /* Snack Attack Green */
+    animation: loading 1.5s infinite linear;
+}
+
+@keyframes loading {
+    100% { left: 100%; }
 }
 
 .glass-input-small {
@@ -265,46 +362,177 @@
 }
 .layout-wrapper {
     display: flex;
-    gap: 80px; /* زيدي المسافة */
+    gap: 80px; 
     justify-content: center;
     align-items: flex-start;
     width: 100%;
-    max-width: 1500px; /* 🔥 كان 1300 → صار أوسع */
+    max-width: 1500px; 
     margin: 0 auto;
 }
 /* --- 10. QR POPUP --- */
+/* ✅ QR POPUP ENHANCEMENT (Desktop & Mobile) */
 .qr-popup-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.7);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75); /* Darker backdrop */
+    backdrop-filter: blur(10px);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 9999;
+    z-index: 10000;
+    padding: 20px;
 }
 
 .qr-popup-content {
-    background: #fff;
-    padding: 30px;
-    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(25px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 40px 30px;
+    border-radius: 40px;
     text-align: center;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+    max-width: 350px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+    animation: popupScale 0.3s ease-out;
 }
 
-/* --- 11. MOBILE --- */
+/* ✅ QR Canvas itself */
+.qr-popup-content canvas {
+    border-radius: 20px;
+    background: #fff;
+    padding: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    width: 220px !important; /* Fixed size lal-mobile & desktop */
+    height: 220px !important;
+}
+
+/* ✅ Close Button Style */
+.qr-popup-content button {
+    width: 100%;
+    background: #FFC20E;
+    color: #000;
+    border: none;
+    padding: 15px;
+    border-radius: 50px;
+    font-weight: 900;
+    font-size: 1.1rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: 0.3s ease;
+}
+
+.qr-popup-content button:hover {
+    background: #f2ba2c;
+    transform: translateY(-2px);
+}
+
+@keyframes popupScale {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* ✅ Final Receipt 'New Order' Button Design */
+.back-btn-new {
+    width: 100%;
+    background: #FFC20E; /* Signature Yellow */
+    color: #000;
+    border: none;
+    padding: 18px;
+    font-size: 1.2rem;
+    font-weight: 900;
+    border-radius: 50px;
+    cursor: pointer;
+    margin-top: 20px;
+    text-transform: uppercase;
+    box-shadow: 0 8px 20px rgba(255, 194, 14, 0.3);
+    transition: all 0.3s ease;
+}
+
+.back-btn-new:hover {
+    background: #f2ba2c;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(255, 194, 14, 0.4);
+}
+.receipt-divider {
+    border-top: 2px dashed #000; /* ✅ Hayda bi-dal khatt wa7ed m-zabbat mahma sār el-size */
+    height: 0;
+    margin: 15px 0;
+    width: 100%;
+    color: transparent; /* Khaffī el-text eza ba3do mawjoud bel-HTML */
+    overflow: hidden;
+}
+
 @media (max-width: 900px) {
+    /* ✅ 1. Shīlna el-aswad kirmal t-bay-yin ṣouret el-burger */
+    .checkout-page {
+        background: url('../assets/burger_fries_bg.jpg') no-repeat center center fixed !important;
+        background-size: cover !important;
+    }
+
+    /* ✅ 2. Glass Overlay: Khafīf ktīr kirmal ma ybayyen abyad wala aswad */
+    .checkout-page .overlay {
+        background: rgba(102, 100, 100, 0.05) !important; /* ✅ Lon abyad shif-fāf ktīr */
+        backdrop-filter: blur(6px) saturate(140%) !important; /* ✅ Blur lal-ṣoura */
+    }
+
+    /* 3. Gham-ma2na el-Payment Card kirmal ybayno el-inputs */
+    .info-form-card {
+        /* ✅ Ghay-yarna el-lon la grey ghamī2 shway kirmal el-contrast */
+        background: rgba(166, 166, 166, 0.45) !important; 
+        backdrop-filter: blur(20px) saturate(160%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 35px 25px !important;
+        border-radius: 40px !important;
+        box-shadow: 0 15px 40px rgba(160, 160, 160, 0.4);
+    }
+    .info-form-card img {
+    max-width: 250px !important; 
+    margin-bottom: 20px !important;
+}
+
     .layout-wrapper {
-        flex-direction: column;
-        align-items: center;
+        flex-direction: column !important;
+        align-items: center !important; /* ✅ FORCE CENTER */
+        justify-content: flex-start !important;
+        gap: 35px !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+        padding: 20px 10px !important;
     }
-
+    /* 2. Shīlna el-flex properties yalle 3am b-zi-7o el-boxes */
+    .checkout-container, 
     .receipt-overlay {
-        max-width: 100%;
+        flex: none !important; /* ✅ Disable flex-grow */
+        width: 90% !important; 
+        max-width: 360px !important; /* ✅ Sar el-box small metel ma baddik */
+        margin: 0 auto !important; /* ✅ Mandatory for centering */
+        display: flex;
+        justify-content: center;
     }
 
-    .checkout-container {
-        max-width: 100%;
+    /* ✅ N-za8er el-loader bar shway */
+    .loader-line {
+        height: 3px !important;
+        margin-top: 15px !important;
+    }
+    .receipt-paper {
+        padding: 20px !important;
+        font-size: 14px !important; /* Za8erne shwayet el-font kirmal ma ya3mel wrap */
+    }
+
+    .receipt-divider {
+        margin: 10px 0 !important;
+    }
+    .qr-popup-content {
+        padding: 30px 20px;
+        max-width: 300px;
+    }
+    .qr-popup-content canvas {
+        width: 180px !important;
+        height: 180px !important;
     }
 }

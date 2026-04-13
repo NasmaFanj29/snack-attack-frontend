@@ -88,7 +88,7 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
     setPlacingOrder(true);
     try {
       const res = await axios.post(
-        "https://snack-attack-backend.onrender.com/place-order",
+     "https://snack-attack-backend.onrender.com/place-order",
         {
           customer: { name: "Guest", phone: "000000" }, // Initial placeholder for approval
           items: displayCart,
