@@ -108,24 +108,22 @@ const handleProceedToPayment = async () => {
 
   try {
     const res = await axios.post(
-  "https://snack-attack-backend.onrender.com/place-order",
-  {
-    customer: { name: "Guest", phone: "000000" },
-    items: displayCart.map((item) => ({
-      /* ✅ Ensure item.id is valid and not undefined */
-      id: item.id || item.databaseId || item.menu_id, 
-      name: item.name,
-      price: Number(item.price),
-      quantity: Number(item.quantity),
-    })),
-    total_price: Number(totalPrice.toFixed(2)),
-    table_id: activeTable,
-    payment_splits: [],
-    status: "Requested",
-  }
-);
-
-    console.log("ORDER RESPONSE:", res.data);
+      "https://snack-attack-backend.onrender.com/place-order",
+      {
+        customer: { name: "Guest", phone: "000000" },
+        // ✅ IMPORTANT: Ensure item.id is mapped correctly from the menu
+        items: displayCart.map((item) => ({
+          id: item.id || item.menu_id || item.databaseId, 
+          name: item.name,
+          price: Number(item.price),
+          quantity: Number(item.quantity),
+        })),
+        total_price: Number(totalPrice.toFixed(2)),
+        table_id: activeTable,
+        payment_splits: [],
+        status: "Requested",
+      }
+    );
 
     if (res.data.success) {
       navigate("/checkout", {
@@ -136,11 +134,9 @@ const handleProceedToPayment = async () => {
           totalPrice: totalPrice.toFixed(2),
         },
       });
-    } else {
-      alert("Failed to send request. Please try again.");
     }
   } catch (err) {
-    console.error("ORDER ERROR:", err);
+    console.error("ORDER ERROR:", err.response ? err.response.data : err.message);
     alert("Error sending order. Check backend on Render.");
   } finally {
     setPlacingOrder(false);
