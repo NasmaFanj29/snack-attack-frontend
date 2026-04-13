@@ -1,4 +1,4 @@
-/* --- 1. PAGE SETUP WITH DYNAMIC OVERLAY --- */
+/* --- 1. PAGE SETUP --- */
 .checkout-page {
     width: 100%;
     min-height: 100vh;
@@ -14,31 +14,57 @@
     align-items: flex-start;
 }
 
+/* overlay */
 .checkout-page .overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(103, 103, 103, 0.4); 
+    background: rgba(103, 103, 103, 0.4);
     backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     z-index: 0;
 }
 
-/* --- 2. THE MAIN FROSTY GLASS CARD --- */
+/* --- 2. MAIN LAYOUT (LEFT / RIGHT) --- */
+.layout-wrapper {
+    display: flex;
+    gap: 120px;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    z-index: 10;
+    position: relative;
+}
+
+/* LEFT (CHECKOUT) */
+.checkout-container {
+    flex: 1;
+    max-width: 460px;
+    margin-right: 40px;
+}
+
+/* RIGHT (RECEIPT) */
+.receipt-overlay {
+    flex: 0.8;
+    max-width: 500px;
+    display: flex;
+    align-items: flex-start;
+    margin-left: 40px;
+}
+
+/* --- 3. GLASS CARD --- */
 .info-form-card {
     position: relative;
     z-index: 1;
-    background: rgba(255, 255, 255, 0.12) !important; 
+    background: rgba(255, 255, 255, 0.12) !important;
     backdrop-filter: blur(25px) saturate(180%);
-    -webkit-backdrop-filter: blur(25px) saturate(180%);
-    
     padding: 35px;
     border-radius: 40px;
     box-shadow: 0 20px 50px rgba(162, 162, 162, 0.4);
     width: 100%;
-    max-width: 460px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-top: 10px solid #95b508;
     text-align: center;
@@ -50,10 +76,9 @@
     font-weight: 900;
     text-transform: uppercase;
     margin-bottom: 25px;
-    text-shadow: 0 4px 10px rgba(132, 131, 131, 0.3);
 }
 
-/* --- 3. INNER GLASS SECTIONS --- */
+/* --- 4. INNER BOX --- */
 .group-split-box {
     background: rgba(255, 255, 255, 0.08) !important;
     backdrop-filter: blur(10px);
@@ -63,131 +88,66 @@
     margin-bottom: 20px;
 }
 
-/* --- 4. GLASSY INPUTS - THE FIX --- */
-.glass-input-main, .glass-input-small, .glass-select {
-    width: 100% !important; 
-    box-sizing: border-box !important; /* ✅ MANDATORY: keeps padding inside */
-    
+/* --- 5. INPUTS --- */
+.glass-input-main,
+.glass-input-small,
+.glass-select {
+    width: 100%;
+    box-sizing: border-box;
     background: rgba(255, 255, 255, 0.1) !important;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: 15px;
     padding: 12px 15px;
-    
-    color: #ffffff !important; 
+    color: #ffffff;
     font-weight: 700;
     font-size: 1rem;
     outline: none;
-    display: block;
-    margin: 12px 0;
-    transition: 0.3s ease;
+    margin: 10px 0;
 }
 
-.glass-input-main:focus {
-    background: rgba(255, 255, 255, 0.2) !important;
-    border-color: #FFC20E !important;
-    box-shadow: 0 0 15px rgba(255, 194, 14, 0.3);
-}
-
-.glass-input-main::placeholder {
-    color: rgba(255, 255, 255, 0.7);
-}
-
-/* --- 5. QR POPUP MODAL (NEW) --- */
-.qr-popup-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-}
-
-.qr-popup-content {
-    background: white;
-    padding: 30px;
-    border-radius: 30px;
+.glass-input-small {
+    width: 90px;
     text-align: center;
-    box-shadow: 0 10px 30px rgba(149, 149, 149, 0.5);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
 }
 
-.close-popup-btn {
-    margin-top: 20px;
-    background: #95b508;
-    color: white;
-    border: none;
-    padding: 10px 30px;
-    border-radius: 50px;
-    font-weight: 900;
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-/* --- 6. SPLIT ACTIONS & PAYER ROW --- */
+/* --- 6. PAYER ROW --- */
 .payer-row-checkout {
     display: flex;
     gap: 10px;
     margin-bottom: 12px;
     align-items: center;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.glass-input-small {
-    width: 90px !important;
-    text-align: center;
-}
-
-.manual-add-btn-glass, .add-payer-btn-glass {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #fff;
-    padding: 10px 16px;
-    border-radius: 12px;
-    font-weight: 700;
-    font-size: 12px;
-    cursor: pointer;
-    transition: 0.3s;
-    margin: 5px;
 }
 
 /* --- 7. BUTTONS --- */
+.add-payer-btn-glass {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 10px;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
 .place-order-btn-final {
     width: 100%;
     background: #FFC20E;
     color: #000;
     border: none;
     padding: 18px;
-    font-size: 1.4rem;
-    font-weight: 950;
+    font-size: 1.3rem;
+    font-weight: 900;
     border-radius: 50px;
     cursor: pointer;
-    transition: 0.3s ease;
-    text-transform: uppercase;
-    box-shadow: 0 10px 25px rgba(255, 194, 14, 0.4);
     margin-top: 15px;
 }
 
-.place-order-btn-final:hover:not(:disabled) {
-    transform: translateY(-3px);
-    background: #e6a100;
-}
-
-/* --- 8. SUMMARY SECTION --- */
+/* --- 8. SUMMARY --- */
 .checkout-summary-mini-glass {
-    background: rgba(162, 161, 161, 0.3) !important;
+    background: rgba(162, 161, 161, 0.3);
     padding: 15px;
     border-radius: 20px;
     margin: 20px 0;
-    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .summary-row {
@@ -197,33 +157,154 @@
     font-weight: 700;
 }
 
-/* --- 9. MOBILE RESPONSIVE --- */
-@media (max-width: 600px) {
-    .info-form-card {
-        padding: 25px 20px;
-        width: 95%;
-    }
-    
-    .checkout-title {
-        font-size: 26px;
-    }
+/* --- 9. RECEIPT --- */
+.receipt-paper {
+    background: #fff;
+    color: #000;
+    padding: 20px;
+    border-radius: 6px;
+    box-shadow: 10px 10px 30px rgba(0,0,0,0.3);
+    font-family: 'Courier New', Courier, monospace;
 
-    .glass-input-main {
-        margin-bottom: 15px !important;
-    }
-    
-    .group-split-box {
-        padding: 15px;
-        gap: 15px !important;
-    }
+    width: 100%;
+    height: fit-content;
+    min-height: 100%;
+
+    display: flex;
+    flex-direction: column;
 }
 
-/* Animations */
-.slide-down {
-    animation: slideIn 0.3s ease-out;
+/* receipt content */
+.receipt-items {
+    margin: 10px 0;
 }
 
-@keyframes slideIn {
-    from { transform: translateY(-20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+.r-item-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 5px 0;
+}
+.receipt-logo-bw {
+    width: 200px !important; /* Made it bigger */
+    height: auto;
+    display: block;
+    margin: 0 auto 1px auto;
+    opacity: 1; 
+    filter: grayscale(100%);
+    transform: scale(1.05);
+}
+.receipt-branch-info {
+    text-align: center;
+    font-size: 15px;
+    font-weight: 800;
+    margin: 0;
+    line-height: 1.2;
+}
+.r-item-container {
+    margin-bottom: 12px;
+}
+.receipt-branch-info p {
+    margin: 2px 0;
+}
+
+.receipt-header-info p {
+    font-size: 17px;
+    margin: 3px 0; /* Ba3edna el-asba7 shway kirmal el-readability */
+    
+}
+
+.r-extras {
+    font-size: 11px;
+    font-style: italic;
+    margin-left: 20px;
+    color: #444;
+}
+.r-summary-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+/* LEFT */
+.checkout-container {
+    flex: 0 0 420px;
+}
+
+/* RIGHT */
+.receipt-overlay {
+    flex: 0 0 420px;
+    display: flex;
+    align-items: flex-start;
+}
+/* RECEIPT */
+.receipt-paper {
+    width: 100%;
+    height: auto;
+    padding: 25px !important; /* Shwayyet breathing room 3al borders */
+    min-height: auto !important; /* Kirmal ma y-tammit el-wara2a */
+}
+
+/* Clearer Dividers */
+.receipt-divider {
+    text-align: center;
+    letter-spacing: -1px;
+    font-weight: 900;
+    margin: 8px 0;
+    color: #000;
+}
+
+.receipt-total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 20px;
+    font-weight: 900;
+    border-top: 2px solid #000;
+    padding-top: 10px;
+    margin-top: 10px;
+}
+.layout-wrapper {
+    display: flex;
+    gap: 80px; /* زيدي المسافة */
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 1500px; /* 🔥 كان 1300 → صار أوسع */
+    margin: 0 auto;
+}
+/* --- 10. QR POPUP --- */
+.qr-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.qr-popup-content {
+    background: #fff;
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+}
+
+/* --- 11. MOBILE --- */
+@media (max-width: 900px) {
+    .layout-wrapper {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .receipt-overlay {
+        max-width: 100%;
+    }
+
+    .checkout-container {
+        max-width: 100%;
+    }
 }

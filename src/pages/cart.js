@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "../style/cart.css";
 
@@ -7,112 +7,117 @@ import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
   const navigate = useNavigate();
   const { orderId: urlOrderId } = useParams();
-  const [searchParams] = useSearchParams(); // ✅ Initialize searchParams
-  
-  
+  const [searchParams] = useSearchParams();
+
   const [isOrdered, setIsOrdered] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
   const [orderId, setOrderId] = useState(urlOrderId || null);
   const [orderStatus, setOrderStatus] = useState("");
   const [isRejected, setIsRejected] = useState(false);
-  const [showQR, setShowQR] = useState(false);
+  const [placingOrder, setPlacingOrder] = useState(false);
 
-  // ✅ Fix: Define activeTable and activeOrderId for the QR logic
-  const activeTable = searchParams.get('table') || localStorage.getItem('activeTable') || "1";
-  const activeOrderId = orderId || urlOrderId;
+  const [formData, setFormData] = useState({ fullName: "", phone: "" });
+
+  const activeTable = searchParams.get("table") || localStorage.getItem("activeTable") || "1";
 
   const [displayCart, setDisplayCart] = useState(Array.isArray(cart) ? cart : []);
-  const [formData, setFormData] = useState({ fullName: "", phone: "" });
 
   useEffect(() => {
     if (!isJoinMode) setDisplayCart(Array.isArray(cart) ? cart : []);
   }, [cart, isJoinMode]);
 
-  const productionURL = "https://snackattacknasma.netlify.app";
-  const qrValue = `${productionURL}/split/${activeOrderId || 'table/' + activeTable}`; 
   // --- Financial Logic ---
-  const subtotal = (displayCart || []).reduce((acc, item) => acc + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0);
+  const subtotal = (displayCart || []).reduce(
+    (acc, item) => acc + (Number(item.price) || 0) * (Number(item.quantity) || 0),
+    0
+  );
   const vat = subtotal * 0.11;
   const totalPrice = subtotal + vat;
-
-  const [payers, setPayers] = useState([
-    { id: 1, name: "Person 1", amount: totalPrice, method: "cash", cardNumber: "" }
-  ]);
 
   // --- Join Mode Logic ---
   useEffect(() => {
     if (isJoinMode && urlOrderId) {
-      axios.get(`https://snack-attack-backend.onrender.com/order-details/${urlOrderId}`)
-        .then(res => {
+      axios
+        .get(`https://snack-attack-backend.onrender.com/order-details/${urlOrderId}`)
+        .then((res) => {
           if (res.data) {
             setDisplayCart(Array.isArray(res.data.items) ? res.data.items : []);
-            setPayers(Array.isArray(res.data.payment_splits) ? res.data.payment_splits : []);
             setOrderStatus(res.data.status || "");
             setIsWaiting(true);
           }
         })
-        .catch(err => console.error("Join Mode Fetch Error:", err));
+        .catch((err) => console.error("Join Mode Fetch Error:", err));
     }
   }, [isJoinMode, urlOrderId]);
 
-  // --- Real-time Sync ---
+  // --- Real-time Sync (join mode only) ---
   useEffect(() => {
     let interval;
     const activeId = orderId || urlOrderId;
     if (activeId && (isWaiting || isJoinMode)) {
       interval = setInterval(async () => {
         try {
-          const res = await axios.get(`https://snack-attack-backend.onrender.com/order-status/${activeId}`);
+          const res = await axios.get(
+            `https://snack-attack-backend.onrender.com/order-status/${activeId}`
+          );
           setOrderStatus(res.data.status);
-          if (res.data.payment_splits) setPayers(res.data.payment_splits);
-
           const statusLower = String(res.data.status).toLowerCase();
           if (["preparing", "paid", "served", "ready"].includes(statusLower)) {
             setIsWaiting(false);
             setIsOrdered(true);
           }
-          if (statusLower === "served" || statusLower === "rejected") {
-            if (statusLower === "rejected") setIsRejected(true);
+          if (statusLower === "rejected") {
+            setIsRejected(true);
             clearInterval(interval);
           }
-        } catch (err) { console.error("Polling error..."); }
+        } catch (err) {
+          console.error("Polling error...");
+        }
       }, 3000);
     }
     return () => clearInterval(interval);
   }, [isWaiting, orderId, urlOrderId, isJoinMode]);
 
-  
-
-  const updatePayer = (id, field, value) => {
-    const updated = payers.map(p => p.id === id ? { ...p, [field]: field === 'amount' ? (parseFloat(value) || 0) : value } : p);
-    setPayers(updated);
-  };
-
-  const removePayer = (id) => {
-    if (payers.length > 1) setPayers(payers.filter(p => p.id !== id));
-  };
-
-  const totalPaidSoFar = payers.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
-  const remainingBalance = totalPrice - totalPaidSoFar;
-
-  const handleCompleteOrder = async () => {
-    if (!formData.fullName || !formData.phone) {
-      alert("Please fill your Name and Phone Number! 🍔");
+  // ✅ Place a "Requested" order and navigate to checkout/waiting
+  const handleProceedToPayment = async () => {
+    if (displayCart.length === 0) {
+      alert("Your cart is empty!");
       return;
     }
+
+    setPlacingOrder(true);
     try {
-      const res = await axios.post("https://snack-attack-backend.onrender.com/place-order", {
-        customer: { name: formData.fullName, phone: formData.phone },
-        total_price: totalPrice.toFixed(2),
-        payment_splits: payers,
-        items: displayCart,
-        table_id: activeTable // ✅ Added table_id to the request
-      });
+      const res = await axios.post(
+        "https://snack-attack-backend.onrender.com/place-order",
+        {
+          customer: { name: "Guest", phone: "000000" }, // Initial placeholder for approval
+          items: displayCart,
+          total_price: totalPrice.toFixed(2),
+          table_id: activeTable,
+          payment_splits: [], // Crucial: must be an array for Backend
+          status: "Requested",
+        }
+      );
+
       if (res.data.success) {
-        setOrderId(res.data.orderId);
-        setIsWaiting(true);
+        // ✅ Navigate directly to Checkout for the waiting screen logic
+        navigate(`/checkout`, {
+          state: {
+            orderId: res.data.orderId,
+            cartItems: displayCart,
+            tableId: activeTable,
+            totalPrice: totalPrice.toFixed(2),
+          },
+        });
+      } else {
+        alert("Failed to send request. Please try again.");
       }
-    } catch (err) { alert("Order Failed."); }
+    } catch (err) {
+      alert("Error sending order. Please check if backend is live on Render.");
+      console.error(err);
+    } finally {
+      setPlacingOrder(false);
+    }
   };
 
   if (isRejected) return <div className="cart-page-glass"><h2>REJECTED ❌</h2></div>;
@@ -125,41 +130,58 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
           <h2 className="glass-title">ORDER SUMMARY</h2>
           <div className="glass-items-list">
             {displayCart.map((item, i) => {
-              if (!item || typeof item !== 'object') return null;
+              if (!item || typeof item !== "object") return null;
               const safeName = String(item.name || "Item");
               let extrasText = "";
               if (Array.isArray(item.selectedExtras)) {
-                extrasText = item.selectedExtras.map(e => String(e.name || e)).join(", ");
+                extrasText = item.selectedExtras.map((e) => String(e.name || e)).join(", ");
               }
               return (
                 <div key={String(item.id || i)} className="item-container glass-item-card slide-down">
                   <div className="glass-item-row">
                     <div className="item-details">
                       <span className="item-name">{safeName}</span>
-                      {extrasText && <span className="item-extras" style={{ fontSize: '0.75rem', color: '#FFC20E', display: 'block' }}>+ {extrasText}</span>}
+                      {extrasText && (
+                        <span
+                          className="item-extras"
+                          style={{ fontSize: "0.75rem", color: "#FFC20E", display: "block" }}
+                        >
+                          + {extrasText}
+                        </span>
+                      )}
                       <span className="item-price-each">${(Number(item.price) || 0).toFixed(2)} each</span>
                     </div>
                     <div className="quantity-controls">
-                      <button className="q-btn minus" onClick={() => removeFromCart(item)} disabled={isJoinMode}>−</button>
+                      <button className="q-btn minus" onClick={() => removeFromCart(item)} disabled={isJoinMode}>
+                        −
+                      </button>
                       <span className="q-count">{item.quantity}</span>
-                      <button className="q-btn plus" onClick={() => addToCart(item)} disabled={isJoinMode}>+</button>
+                      <button className="q-btn plus" onClick={() => addToCart(item)} disabled={isJoinMode}>
+                        +
+                      </button>
                     </div>
-                    <span className="item-total-price">${((Number(item.price) || 0) * (Number(item.quantity) || 0)).toFixed(2)}</span>
+                    <span className="item-total-price">
+                      ${((Number(item.price) || 0) * (Number(item.quantity) || 0)).toFixed(2)}
+                    </span>
                   </div>
                 </div>
               );
             })}
           </div>
+
           {!isJoinMode && (
-            <div className="glass-form-wrapper" style={{ marginTop: '20px' }}>
-             <button 
-      className="glass-complete-btn-final" 
-      onClick={() => navigate('/checkout')}
-      style={{ background: '#95b508', color: '#fff' }} /* Green Snack Attack */
-    >
-      PROCEED TO PAYMENT <span>▶</span>
-    </button></div>
+            <div className="glass-form-wrapper" style={{ marginTop: "20px" }}>
+              <button
+                className="glass-complete-btn-final"
+                onClick={handleProceedToPayment}
+                disabled={placingOrder || displayCart.length === 0}
+                style={{ background: "#95b508", color: "#fff" }}
+              >
+                {placingOrder ? "SENDING REQUEST... 👨‍🍳" : "PROCEED TO PAYMENT ▶"}
+              </button>
+            </div>
           )}
+
           <div className="glass-total-section">
             <div className="total-row final-total">
               <div className="g-total-label">TOTAL AMOUNT</div>
@@ -167,10 +189,9 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
             </div>
           </div>
         </div>
-
-        </div>
-        </div>
-  )
+      </div>
+    </div>
+  );
 }
 
 export default Cart;
