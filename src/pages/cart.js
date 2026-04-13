@@ -97,8 +97,7 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
     return () => clearInterval(interval);
   }, [isWaiting, orderId, urlOrderId, isJoinMode]);
 
- // ✅ PLACE ORDER (FIXED)
-// ✅ (cart.js) - Zabbte el-mapping kirmal ma yi-ba3at null IDs
+
 const handleProceedToPayment = async () => {
   if (displayCart.length === 0) {
     alert("Your cart is empty!");

@@ -89,30 +89,27 @@ useEffect(() => {
 }, [step, orderId]);
     // ── POLL for staff to confirm payment (Paid) ────────────────────────────
 useEffect(() => {
-    if (step !== "waitingForPayment" || !orderId) return;
+    if (step !== "waiting" || !orderId) return;
 
     const interval = setInterval(async () => {
         try {
-            // ✅ Ghayre hayda el link (ken /order-status/${orderId})
-            const res = await axios.get(
-                `https://snack-attack-backend.onrender.com/orders/${orderId}`
-            );
-
-            // Bel backend, el response hiye { order: {status: 'Paid', ...}, items: [...] }
-            const status = (res.data.order.status || "").toLowerCase();
+            // ✅ Hayda el link dabet (Metel el backend index.js line 150)
+            const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${orderId}`);
             
-            if (status === "paid") {
+            // Bel backend el status mawjoud jawwa res.data.order
+            const status = res.data.order.status.toLowerCase();
+            setOrderStatus(status);
+
+            if (status === "accepted" || status === "preparing") {
                 clearInterval(interval);
-                if (setCart) setCart([]);
-                setStep("receipt"); // ✅ Hon deghre bet-talla3elak el vasal (Receipt)
+                setStep("payment"); // Hek deghre b-yfout 3al Payment Form
             }
         } catch (err) {
-            console.log("Waiting for payment confirmation...");
+            console.log("Waiting...");
         }
     }, 3000);
-
     return () => clearInterval(interval);
-}, [step, orderId, setCart]);
+}, [step, orderId]);
 
     useEffect(() => {
     if (isSplitRequest && splitOrderId) {
