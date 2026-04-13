@@ -108,25 +108,22 @@ const handleProceedToPayment = async () => {
 
   try {
     const res = await axios.post(
-      "https://snack-attack-backend.onrender.com/place-order",
-      {
-        customer: { name: "Guest", phone: "000000" },
-
-        items: displayCart
-        .filter((item) => item && (item.id || item.databaseId))
-        .map((item) => ({
-          id: item.id || item.databaseId,
-          name: item.name,
-          price: Number(item.price),
-          quantity: Number(item.quantity),
-        })),
-
-        total_price: Number(totalPrice.toFixed(2)),
-        table_id: activeTable,
-        payment_splits: [],
-        status: "Requested",
-      }
-    );
+  "https://snack-attack-backend.onrender.com/place-order",
+  {
+    customer: { name: "Guest", phone: "000000" },
+    items: displayCart.map((item) => ({
+      /* ✅ Ensure item.id is valid and not undefined */
+      id: item.id || item.databaseId || item.menu_id, 
+      name: item.name,
+      price: Number(item.price),
+      quantity: Number(item.quantity),
+    })),
+    total_price: Number(totalPrice.toFixed(2)),
+    table_id: activeTable,
+    payment_splits: [],
+    status: "Requested",
+  }
+);
 
     console.log("ORDER RESPONSE:", res.data);
 
