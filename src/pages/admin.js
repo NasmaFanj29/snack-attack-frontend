@@ -4,7 +4,7 @@ import "../style/admin.css";
 
 function Admin() {
   const [orders, setOrders] = useState([]);
-  
+
 
   // 1. Fetch orders every 5 seconds for real-time feel
   const fetchOrders = async () => {
@@ -143,15 +143,16 @@ function Admin() {
 
             {/* --- CARD ACTIONS --- */}
             <div className="admin-card-actions">
-              {order.status === "Requested" && (
-                <div className="action-row">
-                  <button className="btn-action start" onClick={() => handleStatusUpdate(order.id, "Accepted")}>
-                    ACCEPT ORDER ✅
-                  </button>
-                  <button className="btn-action reject" onClick={() => handleStatusUpdate(order.id, "Rejected")}>
-                    REJECT
-                  </button>
-                </div>
+            {/* ✅ Allow Admin to Accept if status is Requested OR PaymentPending */}
+            {(order.status === "Requested" || order.status === "PaymentPending") && (
+              <div className="action-row">
+                <button className="btn-action start" onClick={() => handleStatusUpdate(order.id, "Accepted")}>
+                  ACCEPT ORDER ✅
+                </button>
+                <button className="btn-action reject" onClick={() => handleStatusUpdate(order.id, "Rejected")}>
+                  REJECT
+                </button>
+              </div>
               )}
 
               {order.status === "Preparing" && (

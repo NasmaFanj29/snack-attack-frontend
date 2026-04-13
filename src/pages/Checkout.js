@@ -56,54 +56,63 @@ function Checkout({ setCart }) {
         }
     }, [finalTotal]);
 
-    // ── POLL for admin decision while on "waiting" step ──────────────────────
-    useEffect(() => {
-        if (step !== "waiting" || !orderId) return;
+    
+useEffect(() => {
+    if (step !== "waiting" || !orderId) return;
 
-        const interval = setInterval(async () => {
-            try {
-                const res = await axios.get(
-                    `https://snack-attack-backend.onrender.com/order-status/${orderId}`
-                );
-                const status = (res.data.status || "").toLowerCase();
-                setOrderStatus(status);
+    const interval = setInterval(async () => {
+        try {
+            // ✅ GHAYRE EL LINK HON LA YSIR /orders/${orderId}
+            const res = await axios.get(
+                `https://snack-attack-backend.onrender.com/orders/${orderId}`
+            );
+            
+            // Bel backend, el response hiye { order: {...}, items: [...] }
+            // So lezem ne5od res.data.order.status
+            const status = (res.data.order.status || "").toLowerCase();
+            setOrderStatus(status);
 
-                if (status === "accepted" || status === "preparing") {
-                    clearInterval(interval);
-                    setStep("payment"); // ✅ Admin accepted → show payment form
-                }
-                if (status === "rejected") {
-                    clearInterval(interval);
-                    setStep("rejected");
-                }
-            } catch (err) {
-                console.log("Still waiting for admin...");
+            if (status === "accepted" || status === "preparing") {
+                clearInterval(interval);
+                setStep("payment"); // ✅ Hon bi-fout 3al payment form
             }
-        }, 3000);
-
-        return () => clearInterval(interval);
-    }, [step, orderId]);
-    useEffect(() => {
-        if (step !== "waitingForPayment" || !orderId) return;
-
-        const interval = setInterval(async () => {
-            try {
-                const res = await axios.get(
-                    `https://snack-attack-backend.onrender.com/order-status/${orderId}`
-                );
-                const status = (res.data.status || "").toLowerCase();
-                if (status === "paid") {
-                    clearInterval(interval);
-                    if (setCart) setCart([]);
-                    setStep("receipt"); 
-                }
-            } catch (err) {
-                console.log("Waiting for payment confirmation...");
+            if (status === "rejected") {
+                clearInterval(interval);
+                setStep("rejected");
             }
-        }, 3000);
+        } catch (err) {
+            console.log("Still waiting for admin...");
+        }
+    }, 3000);
 
-        return () => clearInterval(interval);
-    }, [step, orderId, setCart]);
+    return () => clearInterval(interval);
+}, [step, orderId]);
+    // ── POLL for staff to confirm payment (Paid) ────────────────────────────
+useEffect(() => {
+    if (step !== "waitingForPayment" || !orderId) return;
+
+    const interval = setInterval(async () => {
+        try {
+            // ✅ Ghayre hayda el link (ken /order-status/${orderId})
+            const res = await axios.get(
+                `https://snack-attack-backend.onrender.com/orders/${orderId}`
+            );
+
+            // Bel backend, el response hiye { order: {status: 'Paid', ...}, items: [...] }
+            const status = (res.data.order.status || "").toLowerCase();
+            
+            if (status === "paid") {
+                clearInterval(interval);
+                if (setCart) setCart([]);
+                setStep("receipt"); // ✅ Hon deghre bet-talla3elak el vasal (Receipt)
+            }
+        } catch (err) {
+            console.log("Waiting for payment confirmation...");
+        }
+    }, 3000);
+
+    return () => clearInterval(interval);
+}, [step, orderId, setCart]);
 
     useEffect(() => {
     if (isSplitRequest && splitOrderId) {
@@ -117,8 +126,15 @@ function Checkout({ setCart }) {
 
     const totalPaidSoFar = payers.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
     const remainingBalance = finalTotal - totalPaidSoFar;
-    const qrValue = `https://snackattacknasma.netlify.app/split/table/${tableId}?amount=${remainingBalance.toFixed(2)}&orderId=${orderId}`;
+   
+    
+    
+    
+   // ✅ Sta3mle hayda el link el asasi
+// ✅ Sta3mle hayda el link el dabet (Production URL)
+const vercelLink = "https://snack-attack-frontend.vercel.app";
 
+const qrValue = vercelLink + "/split/table/" + tableId + "?amount=" + remainingBalance.toFixed(2) + "&orderId=" + orderId;
     const addPayer = () =>
         setPayers([...payers, { id: Date.now(), name: `Friend ${payers.length}`, amount: 0, method: 'cash' }]);
 
@@ -145,13 +161,11 @@ function Checkout({ setCart }) {
     return;
 }
         try {
-            const res = await axios.put( `https://snack-attack-backend.onrender.com/orders/${orderId}/status`,
-                {
-                    status: "PaymentPending",
-                    customer: customerInfo,
-                    payment_splits: payers,
-                }
-            );
+            const res = await axios.put(`https://snack-attack-backend.onrender.com/admin/orders/${orderId}/status`, {
+            status: "PaymentPending",
+            customer: customerInfo,
+            payment_splits: payers,
+        });
             if (res.data.success) {
                 setStep("waitingForPayment");
             }
@@ -348,15 +362,17 @@ if (isSplitRequest) {
                             <form onSubmit={handleConfirmPayment}>
                                 <div className="checkout-summary-mini-glass">
                                     <div className="summary-row">
-                                        <span>Total:</span>
+                                        <span>Total Bill:</span>
                                         <span>${finalTotal.toFixed(2)}</span>
                                     </div>
-                                    {payers.length > 1 && (
+                                    <div className="summary-row" style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.2)' }}></div>
+                                    
                                         <div className="summary-row" style={{ color: remainingBalance > 0 ? '#ff4d4d' : '#95b508' }}>
                                             <span>Remaining:</span>
+                                            
                                             <span>${remainingBalance.toFixed(2)}</span>
                                         </div>
-                                    )}
+                                    
                                 </div>
                                 <button
                                     type="submit"
