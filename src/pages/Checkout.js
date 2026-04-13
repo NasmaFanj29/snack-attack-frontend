@@ -140,9 +140,12 @@ function Checkout({ setCart }) {
             return;
         }
         setLoading(true);
+        if (!orderId) {
+    alert("Order ID missing!");
+    return;
+}
         try {
-            const res = await axios.put(
-                `https://snack-attack-backend.onrender.com/admin/orders/${orderId}/status`,
+            const res = await axios.put( `https://snack-attack-backend.onrender.com/orders/${orderId}/status`,
                 {
                     status: "PaymentPending",
                     customer: customerInfo,
