@@ -114,7 +114,7 @@ const handleProceedToPayment = async () => {
         customer: { name: "Guest", phone: "000000" },
         // ✅ IMPORTANT: Map item.id correctly so Backend finds it
         items: displayCart.map((item) => ({
-        
+        id: item.menu_id, 
         name: item.name,
         price: Number(item.price),
         quantity: Number(item.quantity),
