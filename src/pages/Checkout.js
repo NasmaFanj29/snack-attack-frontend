@@ -17,6 +17,8 @@ function Checkout({ setCart }) {
     const [myShareAmount, setMyShareAmount] = useState(splitAmount || "");
     const [splitMethod, setSplitMethod] = useState("cash");
 
+    const urlOrderId = searchParams.get('orderId');
+
     // 1. Awwal shi mnjib el data
     const {
         orderId: initialOrderId,
@@ -39,10 +41,9 @@ function Checkout({ setCart }) {
     const [loading, setLoading] = useState(false);
    
     
-
-    // ✅ FIX 1: NaN fix for Extras and Base Price
+    // ✅ Calculation Helpers
     const getItemBasePrice = (item) => {
-        if (!item) return 0; // Safety check
+        if (!item) return 0;
         const extrasTotal = (item.selectedExtras && Array.isArray(item.selectedExtras))
             ? item.selectedExtras.reduce((sum, e) => sum + Number(e.price || 0), 0)
             : 0;
@@ -63,34 +64,47 @@ function Checkout({ setCart }) {
         }
     }, [finalTotal]);
 
-    
+    useEffect(() => {
+        if (activeOrderId) {
+            axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`)
+                .then(res => {
+                    setOrderedItems(res.data.items || []);
+                    setTableId(res.data.order?.table_id || "1");
+                    const status = res.data.order?.status?.toLowerCase();
+                    if (["accepted", "preparing", "ready", "served", "paymentpending"].includes(status)) {
+                        setStep("payment");
+                    } else if (status === "paid") {
+                        setStep("receipt");
+                    } else if (status === "rejected") {
+                        setStep("rejected");
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+    }, [activeOrderId]);
+
 useEffect(() => {
         if (!activeOrderId) return;
-
         const interval = setInterval(async () => {
             try {
                 const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`);
                 const status = res.data.order.status.toLowerCase();
-                setOrderStatus(res.data.order.status);
-
-                if (step === "waiting" && (status === "accepted" || status === "preparing")) {
+                if (status === "paid") setStep("receipt");
+                if (status === "rejected") setStep("rejected");
+                if (step === "waiting" && (status === "accepted" || status === "preparing" || status === "paymentpending")) {
                     setStep("payment");
                 }
-                if (step === "waiting" && status === "rejected") {
-                    setStep("rejected");
-                }
-                // Watch for Paid to show receipt
-                if (step === "waitingForPayment" && status === "paid") {
-                    setStep("receipt");
-                }
-            } catch (err) {
-                console.log("Polling for updates...");
-            }
+            } catch (err) { console.log("Polling..."); }
         }, 3000);
-
         return () => clearInterval(interval);
-    }, [step, activeOrderId]);
+    }, [activeOrderId, step]);
 
+    // ✅ Payer Logic
+    useEffect(() => {
+        if (payers.length === 1 && finalTotal > 0) {
+            setPayers((p) => [{ ...p[0], amount: finalTotal.toFixed(2) }]);
+        }
+    }, [finalTotal]);
 
     // ── POLL for staff to confirm payment (Paid) ───────────────────────────
     useEffect(() => {
