@@ -164,7 +164,12 @@ function Checkout({ setCart }) {
     const remainingBalance = finalTotal - totalPaidSoFar;
     const qrValue = `${window.location.origin}/checkout?orderId=${activeOrderId}&mode=add`;
 
-    // ✅ Updated payer handlers — sync to backend + mark editing state
+    useEffect(() => {
+    const mode = searchParams.get('mode');
+    if (mode === 'add' && isScanner) {
+        addPayer(); }}, []);
+
+
     const addPayer = () => {
         const updated = [...payers, { id: Date.now(), name: "", amount: 0, method: 'cash' }];
         setPayers(updated);
@@ -237,7 +242,7 @@ function Checkout({ setCart }) {
                         <div className="checkout-container">
                             <div className="info-form-card glass-effect">
                                 <h2 className="checkout-title">✅ COMPLETE PAYMENT</h2>
-                                <p style={{ color: '#ccc', marginBottom: '15px' }}>Order #{activeOrderId} | Table #{tableId}</p>
+                                <p style={{ color: '#acacac', marginBottom: '15px' }}>Order #{activeOrderId} | Table #{tableId}</p>
 
                                 <div className="checkout-section group-split-box">
                                     {payers.map((payer) => (
