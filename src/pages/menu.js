@@ -31,6 +31,7 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
       .catch((err) => console.error(err));
   }, [setMenuItems]);
 
+  // Update counter state based on cartItems
   useEffect(() => {
     const newCounter = {};
     if (cartItems && Array.isArray(cartItems)) {
@@ -52,7 +53,6 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
     )
     .filter((item) => item.name.toLowerCase().includes(search.toLowerCase()));
 
-  // 🔥 FIXED
   const handleUpdateCounter = (item, change) => {
     if (change > 0) {
       addToCart({
@@ -92,7 +92,6 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
     }
   };
 
-  // 🔥 FIXED
   const handleAddToCartFromModal = () => {
     addToCart({
       id: selectedItem.id,
@@ -202,9 +201,7 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
                   {cartItems
                     .reduce(
                       (acc, item) =>
-                        acc +
-                        getItemBasePrice(item) * item.quantity,
-                      0
+                        acc + getItemBasePrice(item) * item.quantity, 0
                     )
                     .toFixed(2)}
                 </span>
@@ -239,22 +236,23 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
                   <div className="title-row">
                     <h3>{item.name}</h3>
 
+                    {/* ✅ FIXED: Dynamic Counter Controls */}
                     <div
                       className="counter-controls"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <button
-                        className="qty-btn minus"
+                        className={`qty-btn minus ${counter[item.name] > 0 ? "show" : "hidden"}`}
                         onClick={() => handleUpdateCounter(item, -1)}
                       >
                         −
                       </button>
 
                       <button
-                        className="dynamic-add-btn"
+                        className={`dynamic-add-btn ${counter[item.name] > 0 ? "has-items" : ""}`}
                         onClick={() => handleUpdateCounter(item, 1)}
                       >
-                        +
+                        {counter[item.name] > 0 ? counter[item.name] : "+"}
                       </button>
                     </div>
                   </div>
@@ -287,6 +285,18 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
               />
               <h2>{selectedItem.name}</h2>
               <p>{selectedItem.description}</p>
+            </div>
+
+            <div className="modal-scroll-area">
+              {itemExtras.length > 0 && (
+                <div className="extras-section">
+                  <h3>Customize Your Order</h3>
+                  <div className="extra-group">
+                    <div className="extra-group-title">Add Extras</div>
+                    {itemExtras.map((extra) => renderExtraRow(extra))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="modal-footer">

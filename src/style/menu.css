@@ -325,10 +325,21 @@ html, body {
   border-bottom: 1px solid #f0f0f0;
 }
 
-.item-name {
-  font-weight: 700;
-  font-size: 13px;
-  color: #333;
+.mini-cart-item .item-name {
+  color: #95b508 !important; /* Dark Grey / Aswad */
+  font-weight: 800 !important;
+  font-size: 18px;
+}
+.mini-cart-item .item-qty {
+  color: #95b508 !important; /* Aswad ghami2 lal quantity */
+  font-weight: 900 !important;
+  font-size: 15px;
+}
+
+.mini-cart-item .item-price {
+  color: #95b508 !important; /* Dark Grey lal se3er */
+  font-weight: 800 !important;
+  font-size: 15px;
 }
 
 .item-qty {
@@ -362,7 +373,7 @@ html, body {
   border-top: 1px solid #eee;
   font-weight: 900;
   font-size: 15px;
-  color: #333;
+  color: #95b508;
 }
 
 .mini-cart-total-row span:last-child {

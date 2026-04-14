@@ -11,12 +11,11 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
 
   const [isOrdered, setIsOrdered] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
-  const [orderId, setOrderId] = useState(urlOrderId || null);
+ 
   const [orderStatus, setOrderStatus] = useState("");
   const [isRejected, setIsRejected] = useState(false);
   const [placingOrder, setPlacingOrder] = useState(false);
 
-  const [formData, setFormData] = useState({ fullName: "", phone: "" });
 
   const activeTable =
     searchParams.get("table") ||
@@ -69,9 +68,7 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
     if (activeId && (isWaiting || isJoinMode)) {
       interval = setInterval(async () => {
         try {
-          const res = await axios.get(
-            `https://snack-attack-backend.onrender.com/order-status/${activeId}`
-          );
+         const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeId}`);
 
           setOrderStatus(res.data.status);
 

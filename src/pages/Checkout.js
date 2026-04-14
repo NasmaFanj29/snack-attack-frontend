@@ -24,17 +24,13 @@ function Checkout({ setCart }) {
 
     const [orderId] = useState(initialOrderId);
    const [orderedItems, setOrderedItems] = useState(initialCartItems);
-    const [orderStatus, setOrderStatus] = useState("Requested");
-    
-
+   
     const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
     const [payers, setPayers] = useState([{ id: 1, name: "Me", amount: 0, method: 'cash' }]);
     const [showQR, setShowQR] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [isOrdered, setIsOrdered] = useState(false);
    
-    
-
+   
     const getItemBasePrice = (item) => {
         const extrasTotal = item.selectedExtras
             ? item.selectedExtras.reduce((sum, e) => sum + Number(e.price), 0)
@@ -63,13 +59,11 @@ useEffect(() => {
     const interval = setInterval(async () => {
         try {
             // ✅ GHAYRE EL LINK HON LA YSIR /orders/${orderId}
-            const res = await axios.get(
-                `https://snack-attack-backend.onrender.com/orders/${orderId}`
-            );
+            const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${orderId}`);
             
             // Bel backend, el response hiye { order: {...}, items: [...] }
             // So lezem ne5od res.data.order.status
-            const status = (res.data.order.status || "").toLowerCase();
+            const status = res.data.order.status.toLowerCase();
             setOrderStatus(status);
 
             if (status === "accepted" || status === "preparing") {
@@ -87,30 +81,7 @@ useEffect(() => {
 
     return () => clearInterval(interval);
 }, [step, orderId]);
-    // ── POLL for staff to confirm payment (Paid) ────────────────────────────
-useEffect(() => {
-    if (step !== "waiting" || !orderId) return;
-
-    const interval = setInterval(async () => {
-        try {
-            // ✅ Hayda el link dabet (Metel el backend index.js line 150)
-            const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${orderId}`);
-            
-            // Bel backend el status mawjoud jawwa res.data.order
-            const status = res.data.order.status.toLowerCase();
-            setOrderStatus(status);
-
-            if (status === "accepted" || status === "preparing") {
-                clearInterval(interval);
-                setStep("payment"); // Hek deghre b-yfout 3al Payment Form
-            }
-        } catch (err) {
-            console.log("Waiting...");
-        }
-    }, 3000);
-    return () => clearInterval(interval);
-}, [step, orderId]);
-
+    // ── POLL for staff to confirm payment (Paid) ───────────────────────────
     useEffect(() => {
     if (isSplitRequest && splitOrderId) {
         axios.get(`https://snack-attack-backend.onrender.com/orders/${splitOrderId}`)
@@ -127,13 +98,11 @@ useEffect(() => {
     
     
     
-   // ✅ Sta3mle hayda el link el asasi
-// ✅ Sta3mle hayda el link el dabet (Production URL)
+   
 const vercelLink = "https://snack-attack-frontend.vercel.app";
-
 const qrValue = vercelLink + "/split/table/" + tableId + "?amount=" + remainingBalance.toFixed(2) + "&orderId=" + orderId;
-    const addPayer = () =>
-        setPayers([...payers, { id: Date.now(), name: `Friend ${payers.length}`, amount: 0, method: 'cash' }]);
+  
+
 
     const updatePayer = (id, field, value) =>
         setPayers(payers.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
@@ -364,7 +333,7 @@ if (isSplitRequest) {
                                     </div>
                                     <div className="summary-row" style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.2)' }}></div>
                                     
-                                        <div className="summary-row" style={{ color: remainingBalance > 0 ? '#ff4d4d' : '#95b508' }}>
+                                        <div className="summary-row" style={{ color: remainingBalance > 0 ? '#d90d0d' : '#95b508' }}>
                                             <span>Remaining:</span>
                                             
                                             <span>${remainingBalance.toFixed(2)}</span>

@@ -374,8 +374,8 @@
 .qr-popup-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.75); /* Darker backdrop */
-    backdrop-filter: blur(10px);
+    background: rgba(77, 71, 71, 0.75); /* Darker backdrop */
+    backdrop-filter: blur(5px);
     display: flex;
     justify-content: center;
     align-items: center;
