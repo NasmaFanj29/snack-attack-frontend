@@ -24,13 +24,17 @@ function Checkout({ setCart }) {
 
     const [orderId] = useState(initialOrderId);
    const [orderedItems, setOrderedItems] = useState(initialCartItems);
-   
+    const [orderStatus, setOrderStatus] = useState("Requested");
+    
+
     const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
     const [payers, setPayers] = useState([{ id: 1, name: "Me", amount: 0, method: 'cash' }]);
     const [showQR, setShowQR] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [isOrdered, setIsOrdered] = useState(false);
    
-   
+    
+
     const getItemBasePrice = (item) => {
         const extrasTotal = item.selectedExtras
             ? item.selectedExtras.reduce((sum, e) => sum + Number(e.price), 0)
@@ -103,6 +107,8 @@ const vercelLink = "https://snack-attack-frontend.vercel.app";
 const qrValue = vercelLink + "/split/table/" + tableId + "?amount=" + remainingBalance.toFixed(2) + "&orderId=" + orderId;
   
 
+const addPayer = () =>
+        setPayers([...payers, { id: Date.now(), name: `Friend ${payers.length}`, amount: 0, method: 'cash' }]);
 
     const updatePayer = (id, field, value) =>
         setPayers(payers.map((p) => (p.id === id ? { ...p, [field]: value } : p)));
