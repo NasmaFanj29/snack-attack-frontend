@@ -119,9 +119,9 @@ const handleProceedToPayment = async () => {
         customer: { name: "Guest", phone: "000000" },
         // ✅ IMPORTANT: Map item.id correctly so Backend finds it
         items: displayCart.map((item) => ({
-        id: item.menu_id, 
+        id: item.databaseId || item.item_id || item.id, // ✅ HON EL SALBE! Hayda yali 5alla el DB tdall fadeye
         name: item.name,
-        price: Number(item.price),
+        price: Number(item.price || item.price_at_time),
         quantity: Number(item.quantity),
       })),
         total_price: totalPrice.toFixed(2),
