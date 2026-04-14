@@ -30,31 +30,40 @@ function Checkout({ setCart }) {
     const [loading, setLoading] = useState(false);
 
 
-       useEffect(() => {
+   useEffect(() => {
     const mode = searchParams.get('mode');
+
     if (mode === 'add' && isScanner && activeOrderId) {
         const addNewScannerPayer = async () => {
             try {
-                // 1. Njib el splits el mawjoudin aslan (fadi matalan)
                 const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`);
-                const existingSplits = res.data.order?.payment_splits 
-                    ? JSON.parse(res.data.order.payment_splits) 
+
+                const existingSplits = res.data.order?.payment_splits
+                    ? JSON.parse(res.data.order.payment_splits)
                     : [];
 
-                // 2. Nzid sami bala ma nshil fadi
-                const updated = [...existingSplits, { id: Date.now(), name: "", amount: 0, method: 'cash' }];
-                
-                // 3. Update lal list kella
+                const updated = [
+                    ...existingSplits,
+                    { id: Date.now(), name: "", amount: 0, method: 'cash' }
+                ];
+
                 setPayers(updated);
-                await axios.put(`https://snack-attack-backend.onrender.com/admin/orders/${activeOrderId}/status`, {
-                    payment_splits: updated,
-                    replace_splits: true
-                });
-            } catch (e) { console.error(e); }
+
+                await axios.put(
+                    `https://snack-attack-backend.onrender.com/admin/orders/${activeOrderId}/status`,
+                    {
+                        payment_splits: updated,
+                        replace_splits: true
+                    }
+                );
+            } catch (e) {
+                console.error(e);
+            }
         };
+
         addNewScannerPayer();
     }
-}, [activeOrderId]);
+}, [activeOrderId, searchParams]);
 
     // ✅ Ref to avoid overwriting payers while user is actively editing
     const isEditingRef = useRef(false);
@@ -132,6 +141,9 @@ function Checkout({ setCart }) {
                 const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`);
                 const status = res.data.order.status.toLowerCase();
 
+                if (["accepted", "preparing", "ready", "served", "paymentpending"].includes(status)) {
+                setStep("payment");
+            }
                 if (status === "paid") setStep("receipt");
                 if (status === "rejected") setStep("rejected");
                 if (step === "waitingForPayment" && (status === "paid" || status === "Paid")) {
