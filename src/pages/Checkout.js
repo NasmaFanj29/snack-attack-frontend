@@ -30,12 +30,15 @@ function Checkout({ setCart }) {
     const [loading, setLoading] = useState(false);
 
 
-   useEffect(() => {
-    const mode = searchParams.get('mode');
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const mode = params.get('mode');
 
     if (mode === 'add' && isScanner && activeOrderId) {
         const addNewScannerPayer = async () => {
             try {
+                console.log("🔥 SCANNER TRIGGERED");
+
                 const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`);
 
                 const existingSplits = res.data.order?.payment_splits
@@ -63,7 +66,7 @@ function Checkout({ setCart }) {
 
         addNewScannerPayer();
     }
-}, [activeOrderId, searchParams]);
+}, [location.search, activeOrderId]); // 🔥🔥🔥
 
     // ✅ Ref to avoid overwriting payers while user is actively editing
     const isEditingRef = useRef(false);
@@ -135,36 +138,33 @@ function Checkout({ setCart }) {
 
     // ✅ Real-time Polling — order status + shared payers
     useEffect(() => {
-        if (!activeOrderId) return;
-        const interval = setInterval(async () => {
-            try {
-                const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`);
-                const status = res.data.order.status.toLowerCase();
+    if (!activeOrderId) return;
 
-                if (["accepted", "preparing", "ready", "served", "paymentpending"].includes(status)) {
+    const interval = setInterval(async () => {
+        try {
+            const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`);
+            const status = res.data.order.status.toLowerCase();
+
+            // 🔥 الحل هون
+            if (["accepted", "preparing", "ready", "served", "paymentpending"].includes(status)) {
                 setStep("payment");
             }
-                if (status === "paid") setStep("receipt");
-                if (status === "rejected") setStep("rejected");
-                if (step === "waitingForPayment" && (status === "paid" || status === "Paid")) {
-                }
 
-                // ✅ Sync payers from backend (only if user is not actively editing)
-                if (!isEditingRef.current && step === "payment") {
-                    const splits = res.data.order?.payment_splits;
-                    if (splits) {
-                        try {
-                            const parsed = typeof splits === 'string' ? JSON.parse(splits) : splits;
-                            if (Array.isArray(parsed) && parsed.length > 0) {
-                                setPayers(parsed);
-                            }
-                        } catch (e) { /* keep current */ }
-                    }
-                }
-            } catch (err) { console.log("Polling..."); }
-        }, 3000);
-        return () => clearInterval(interval);
-    }, [activeOrderId, step]);
+            if (status === "paid") {
+                setStep("receipt");
+            }
+
+            if (status === "rejected") {
+                setStep("rejected");
+            }
+
+        } catch (err) {
+            console.log("Polling...");
+        }
+    }, 1500); // خففناها لسرعة
+
+    return () => clearInterval(interval);
+}, [activeOrderId]);
 
     useEffect(() => {
         if (payers.length === 1 && finalTotal > 0) {
