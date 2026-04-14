@@ -32,43 +32,13 @@ function Checkout({ setCart }) {
     const [loading, setLoading] = useState(false);
 
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const mode = params.get('mode');
-
-    if (mode === 'add' && isScanner && activeOrderId) {
-        const addNewScannerPayer = async () => {
-            try {
-                console.log("🔥 SCANNER TRIGGERED");
-
-                const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`);
-
-                const existingSplits = res.data.order?.payment_splits
-                    ? JSON.parse(res.data.order.payment_splits)
-                    : [];
-
-                const updated = [
-                    ...existingSplits,
-                    { id: Date.now(), name: "", amount: 0, method: 'cash' }
-                ];
-
-                setPayers(updated);
-
-                await axios.put(
-                    `https://snack-attack-backend.onrender.com/admin/orders/${activeOrderId}/status`,
-                    {
-                        payment_splits: updated,
-                        replace_splits: true
-                    }
-                );
-            } catch (e) {
-                console.error(e);
-            }
-        };
-
-        addNewScannerPayer();
+  // ✅ EL 7ALL EL SA7: Bas emit scanJoin, wel backend bi zid el Guest bala ma yemsa7 el adim
+useEffect(() => {
+    if (isScanner && activeOrderId) {
+        console.log("🔥 Socket Scan Joined:", activeOrderId);
+        socket.emit("scanJoin", { orderId: activeOrderId });
     }
-}, [activeOrderId]);
+}, [isScanner, activeOrderId]);
 
     // ✅ Ref to avoid overwriting payers while user is actively editing
     const isEditingRef = useRef(false);
@@ -144,22 +114,25 @@ function Checkout({ setCart }) {
     useEffect(() => {
     if (!activeOrderId) return;
 
-    const interval = setInterval(async () => {
-        try {
-            const res = await axios.get(
-                `https://snack-attack-backend.onrender.com/orders/${activeOrderId}`
-            );
-
-            const status = res.data.order.status.toLowerCase();
-
-            if (["accepted","preparing","ready","served","paymentpending"].includes(status)) {
-                setStep("payment");
+    // Bel Checkout.js jowa el useEffect taba3 el polling (setInterval):
+const interval = setInterval(async () => {
+    try {
+        const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`);
+        
+        // ✅ Eza fi splits bel DB, khallon ybayno 3nd el kel dghere
+        if (res.data.order?.payment_splits) {
+            const remoteSplits = typeof res.data.order.payment_splits === 'string' 
+                ? JSON.parse(res.data.order.payment_splits) 
+                : res.data.order.payment_splits;
+            
+            // Fa7s: eza ma 3m na3mel edit halla2, update el UI
+            if (!isEditingRef.current) {
+                setPayers(remoteSplits);
             }
-
-            if (status === "paid") setStep("receipt");
-
-        } catch (err) {}
-    }, 1500);
+        }
+        // ... ba2it el status logic
+    } catch (e) {}
+}, 1500);
 
     return () => clearInterval(interval);
 }, [activeOrderId]);
