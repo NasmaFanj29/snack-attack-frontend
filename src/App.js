@@ -80,7 +80,7 @@ function App() {
 
       return [...currentCart, { 
         id: Date.now() + Math.random(), 
-        databaseId: typeof nameOrItem === 'object' ? nameOrItem.databaseId : databaseId, 
+        databaseId: typeof nameOrItem === 'object' ? (nameOrItem.databaseId || nameOrItem.id) : databaseId, 
         name: name, 
         price: itemPrice, 
         image: typeof nameOrItem === 'object' ? nameOrItem.image : image, 
