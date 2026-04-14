@@ -8,38 +8,34 @@ import { QRCodeCanvas } from "qrcode.react";
 function Checkout({ setCart }) {
     const location = useLocation();
     const navigate = useNavigate();
-
     const [searchParams] = useSearchParams();
+
+    // 1. Awwal shi mnjib el IDs men el URL
     const splitAmount = searchParams.get('amount');
     const splitOrderId = searchParams.get('orderId');
     const isSplitRequest = !!splitAmount;
-    const [step, setStep] = useState(isSplitRequest ? "payment" : "waiting");
-    const [myShareAmount, setMyShareAmount] = useState(splitAmount || "");
-    const [splitMethod, setSplitMethod] = useState("cash");
 
-    const urlOrderId = searchParams.get('orderId');
-
-    // 1. Awwal shi mnjib el data
+    // 2. Mnjib el initial data men el state (lal original user)
     const {
         orderId: initialOrderId,
         cartItems: initialCartItems = [],
-        tableId = "1",
+        tableId: initialTableId = "1",
     } = location.state || {};
 
-    // 2. Tene shi mna3ref el orderId
+    // 3. Mna3ref el States (Defining tableId & setTableId here) ✅
     const [orderId] = useState(initialOrderId);
+    const [activeOrderId] = useState(orderId || splitOrderId);
+    const [tableId, setTableId] = useState(initialTableId); // Hayde kermel l scanners
     
-    // 3. Telet shi mna3ref el activeOrderId (BA3ED el orderId) ✅
-    const activeOrderId = orderId || splitOrderId;
-
-    // 4. Mnakfi l ba2we...
+    const [step, setStep] = useState(isSplitRequest ? "payment" : "waiting");
+    const [myShareAmount, setMyShareAmount] = useState(splitAmount || "");
+    const [splitMethod, setSplitMethod] = useState("cash");
     const [orderedItems, setOrderedItems] = useState(Array.isArray(initialCartItems) ? initialCartItems : []);
     const [orderStatus, setOrderStatus] = useState("Requested");
     const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
     const [payers, setPayers] = useState([{ id: 1, name: "Me", amount: 0, method: 'cash' }]);
     const [showQR, setShowQR] = useState(false);
     const [loading, setLoading] = useState(false);
-   
     
     // ✅ Calculation Helpers
     const getItemBasePrice = (item) => {
