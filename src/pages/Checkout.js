@@ -30,12 +30,31 @@ function Checkout({ setCart }) {
     const [loading, setLoading] = useState(false);
 
 
-        useEffect(() => {
-            const mode = searchParams.get('mode');
-            if (mode === 'add' && isScanner) {
-                addPayer(); 
-            }
-        }, []); 
+       useEffect(() => {
+    const mode = searchParams.get('mode');
+    if (mode === 'add' && isScanner && activeOrderId) {
+        const addNewScannerPayer = async () => {
+            try {
+                // 1. Njib el splits el mawjoudin aslan (fadi matalan)
+                const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`);
+                const existingSplits = res.data.order?.payment_splits 
+                    ? JSON.parse(res.data.order.payment_splits) 
+                    : [];
+
+                // 2. Nzid sami bala ma nshil fadi
+                const updated = [...existingSplits, { id: Date.now(), name: "", amount: 0, method: 'cash' }];
+                
+                // 3. Update lal list kella
+                setPayers(updated);
+                await axios.put(`https://snack-attack-backend.onrender.com/admin/orders/${activeOrderId}/status`, {
+                    payment_splits: updated,
+                    replace_splits: true
+                });
+            } catch (e) { console.error(e); }
+        };
+        addNewScannerPayer();
+    }
+}, [activeOrderId]);
 
     // ✅ Ref to avoid overwriting payers while user is actively editing
     const isEditingRef = useRef(false);
@@ -243,13 +262,12 @@ function Checkout({ setCart }) {
                                  
                                     {!isScanner && (
                                         <button type="button" className="add-payer-btn-glass" onClick={() => setShowQR(true)} style={{ width: '100%', marginTop: '10px', background: '#FFC20E', color: '#000', fontWeight: 'bold' }} >
-                                            Scan to split payment and automatically add person to split 📲
+                                            Scan to split payment 📲
                                         </button>
                                     )}
 
                                     <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
-                                        {/* ✅ QR button shown to everyone — scanner & original user */}
-                                        <button type="button" className="add-payer-btn-glass" onClick={() => setShowQR(true)}>📲 Split Share QR</button>
+                                       
                                         <button type="button" className="add-payer-btn-glass" onClick={() => navigate(`/cart/${activeOrderId}`)} style={{ background: 'transparent', border: '1px solid #FFC20E', color: '#FFC20E' }}>✏️ Edit Order</button>
                                     </div>
                                 </div>
