@@ -25,9 +25,17 @@ function Checkout({ setCart }) {
     const [tableId, setTableId] = useState(stateTableId);
     const [step, setStep] = useState("waiting");
     const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '' });
-    const [payers, setPayers] = useState([{ id: 1, name: "Me", amount: 0, method: 'cash' }]);
+    const [payers, setPayers] = useState([{ id: 1, name: "", amount: 0, method: 'cash' }]);
     const [showQR, setShowQR] = useState(false);
     const [loading, setLoading] = useState(false);
+
+
+        useEffect(() => {
+            const mode = searchParams.get('mode');
+            if (mode === 'add' && isScanner) {
+                addPayer(); 
+            }
+        }, []); 
 
     // ✅ Ref to avoid overwriting payers while user is actively editing
     const isEditingRef = useRef(false);
@@ -89,8 +97,8 @@ function Checkout({ setCart }) {
                         setStep("payment");
                     } else if (status === "paid") {
                         setStep("receipt");
-                    } else if (status === "rejected") {
-                        setStep("rejected");
+                    } else if (status === "paid" || status === "Paid") { 
+                        setStep("receipt");
                     }
                 })
                 .catch(err => console.error(err));
@@ -107,8 +115,7 @@ function Checkout({ setCart }) {
 
                 if (status === "paid") setStep("receipt");
                 if (status === "rejected") setStep("rejected");
-                if (step === "waiting" && (status === "accepted" || status === "preparing" || status === "paymentpending")) {
-                    setStep("payment");
+                if (step === "waitingForPayment" && (status === "paid" || status === "Paid")) {
                 }
 
                 // ✅ Sync payers from backend (only if user is not actively editing)
@@ -136,7 +143,7 @@ function Checkout({ setCart }) {
 
     const totalPaidSoFar = payers.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
     const remainingBalance = finalTotal - totalPaidSoFar;
-    const qrValue = `${window.location.origin}/checkout?orderId=${activeOrderId}`;
+    const qrValue = `${window.location.origin}/checkout?orderId=${activeOrderId}&mode=add`;
 
     // ✅ Updated payer handlers — sync to backend + mark editing state
     const addPayer = () => {
@@ -166,8 +173,8 @@ function Checkout({ setCart }) {
 
     const handleConfirmPayment = async (e) => {
         e.preventDefault();
-        if (!customerInfo.name || !customerInfo.phone) return alert("Please fill Name & Phone!");
-        setLoading(true);
+        const invalidPayer = payers.find(p => !p.name || (p.method === 'card' && !p.phone));
+            if (invalidPayer) return alert("Please fill Name (and Phone for Card)!");
         try {
             await axios.put(`https://snack-attack-backend.onrender.com/admin/orders/${activeOrderId}/status`, {
                 status: "PaymentPending",
@@ -216,18 +223,14 @@ function Checkout({ setCart }) {
                                 <div className="checkout-section group-split-box">
                                     {payers.map((payer) => (
                                         <div key={payer.id} className="payer-row-checkout">
-                                            <input
-                                                type="text" placeholder="Name" className="glass-input-small" style={{ width: '80px' }}
-                                                value={payer.name} onChange={(e) => updatePayer(payer.id, 'name', e.target.value)}
-                                            />
-                                            <input
-                                                type="number" value={payer.amount} className="glass-input-small"
-                                                onChange={(e) => updatePayer(payer.id, 'amount', e.target.value)}
-                                            />
+                                           <input type="text"  placeholder="Name *"  className="glass-input-small" style={{width: '80px'}} value={payer.name || ""} onChange={(e) => updatePayer(payer.id, 'name', e.target.value)}/>
+                                           
+                                        {payer.method === 'card' && (
+                                            <input type="tel"  placeholder="Phone *"  className="glass-input-small" style={{width: '80px'}}  value={payer.phone || ""} onChange={(e) => updatePayer(payer.id, 'phone', e.target.value)}/>
+                                        )}
+                                        <input type="number" value={payer.amount} className="glass-input-small"  onChange={(e) => updatePayer(payer.id, 'amount', e.target.value)} />
                                             <select
-                                                className="glass-select" value={payer.method}
-                                                onChange={(e) => updatePayer(payer.id, 'method', e.target.value)}
-                                            >
+                                            className="glass-select" value={payer.method} onChange={(e) => updatePayer(payer.id, 'method', e.target.value)}>
                                                 <option value="cash">💵 Cash</option>
                                                 <option value="card">💳 Card</option>
                                             </select>
@@ -237,12 +240,12 @@ function Checkout({ setCart }) {
                                         </div>
                                     ))}
 
-                                    <button type="button" className="add-payer-btn-glass" onClick={addPayer} style={{ marginBottom: '10px' }}>
-                                        + Add Person
-                                    </button>
-
-                                    <input type="text" placeholder="Full Name *" className="glass-input-main" value={customerInfo.name} onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })} />
-                                    <input type="tel" placeholder="Phone Number *" className="glass-input-main" value={customerInfo.phone} onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })} />
+                                 
+                                    {!isScanner && (
+                                        <button type="button" className="add-payer-btn-glass" onClick={() => setShowQR(true)} style={{ width: '100%', marginTop: '10px', background: '#FFC20E', color: '#000', fontWeight: 'bold' }} >
+                                            Scan to split payment and automatically add person to split 📲
+                                        </button>
+                                    )}
 
                                     <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
                                         {/* ✅ QR button shown to everyone — scanner & original user */}
