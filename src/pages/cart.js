@@ -105,52 +105,54 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
 
 
 const handleProceedToPayment = async () => {
-  if (displayCart.length === 0) {
-    alert("Your cart is empty!");
-    return;
-  }
-
-  setPlacingOrder(true);
-
-  try {
-    const res = await axios.post(
-      "https://snack-attack-backend.onrender.com/place-order",
-      {
-        customer: { name: "Guest", phone: "000000" },
-        // ✅ IMPORTANT: Map item.id correctly so Backend finds it
-        items: displayCart.map((item) => ({
-          id: item.databaseId || item.item_id || item.id,
-          databaseId: item.databaseId || item.item_id || item.id, // ✅ Zedna hayde la nedman teusal lal backend
-          name: item.name,
-          price: Number(item.price || item.price_at_time),
-          quantity: Number(item.quantity),
-        })),
-        total_price: totalPrice.toFixed(2),
-        table_id: activeTable,
-        payment_splits: [],
-        status: "Requested",
-      }
-    );
-
-    if (res.data.success) {
-      navigate("/checkout", {
-        state: {
-          orderId: res.data.orderId,
-          cartItems: displayCart,
-          tableId: activeTable,
-          totalPrice: totalPrice.toFixed(2),
-        },
-      });
+    if (!displayCart || displayCart.length === 0) {
+      alert("Your cart is empty!");
+      return;
     }
-  } catch (err) {
-    console.log("BACKEND ERROR:", err.response?.data);
-    console.log("STATUS:", err.response?.status);
-    console.error("ORDER ERROR:", err.response ? err.response.data : err.message);
-    alert("Error sending order. Check backend on Render.");
-  } finally {
-    setPlacingOrder(false);
-  }
-};
+
+    setPlacingOrder(true);
+
+    try {
+      // ✅ Safety Check: Nshil ay item fade aw mntza3 mn el cart abel ma neb3ato
+      const validItems = displayCart.filter(item => item && typeof item === 'object' && item.name);
+
+      const res = await axios.post(
+        "https://snack-attack-backend.onrender.com/place-order",
+        {
+          customer: { name: "Guest", phone: "000000" },
+          items: validItems.map((item) => ({
+            id: item.databaseId || item.item_id || item.id || 0,
+            databaseId: item.databaseId || item.item_id || item.id || 0,
+            name: item.name || "Item",
+            price: Number(item.price || item.price_at_time || 0),
+            quantity: Number(item.quantity || 1),
+          })),
+          total_price: totalPrice.toFixed(2),
+          table_id: activeTable || "1",
+          payment_splits: [],
+          status: "Requested",
+        }
+      );
+
+      if (res.data && res.data.success) {
+        navigate("/checkout", {
+          state: {
+            orderId: res.data.orderId,
+            cartItems: validItems, // Ba3atna el items el ndaf bas
+            tableId: activeTable || "1",
+            totalPrice: totalPrice.toFixed(2),
+          },
+        });
+      } else {
+        alert("Backend issue, order not placed.");
+      }
+    } catch (err) {
+      console.log("BACKEND ERROR:", err);
+      alert("Error sending order. Please try again.");
+    } finally {
+      setPlacingOrder(false);
+    }
+  };
 
   if (isRejected)
     return (
