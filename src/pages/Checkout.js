@@ -15,6 +15,7 @@ function Checkout({ setCart }) {
     const isSplitRequest = !!splitAmount;
     const [step, setStep] = useState(isSplitRequest ? "payment" : "waiting");
     const [myShareAmount, setMyShareAmount] = useState(splitAmount || "");
+    const [splitMethod, setSplitMethod] = useState("cash");
 
     // Receive order info placed by Cart.js
     const {
@@ -162,63 +163,91 @@ const addPayer = () =>
         }
     };
 if (isSplitRequest) {
-    return (
-        <div className="checkout-page">
-            <div className="overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <div className="info-form-card glass-effect">
-                    <img src={logo} alt="Logo" width="120" />
+        return (
+            <div className="checkout-page">
+                <div className="overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <div className="info-form-card glass-effect">
+                        <img src={logo} alt="Logo" width="120" />
+                        <h2>SPLIT PAYMENT 📲</h2>
+                        <p>Contributing to Table #{tableId}</p>
 
-                    <h2>SPLIT PAYMENT 📲</h2>
-                    <p>Contributing to Table #{tableId}</p>
-
-                    {/* ✅ عرض الأكل - Zedt scroll eza ken fi items kteer */}
-                    <div style={{ margin: '15px 0', textAlign: 'left', maxHeight: '150px', overflowY: 'auto' }}>
-                        {orderedItems.map((item, index) => (
-                            <div key={index} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span>{item.quantity}x {item.name}</span>
-                                <span>${(Number(item.price) * item.quantity).toFixed(2)}</span>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* ✅ إدخال المبلغ - Sar input badal div sebit */}
-                    <div style={{ margin: '20px 0' }}>
-                        <p style={{ fontSize: '0.9rem', marginBottom: '8px' }}>How much do you want to pay?</p>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
-                            <span style={{ fontSize: '2rem', color: '#FFC20E', fontWeight: 'bold' }}>$</span>
-                            <input 
-                                type="number" 
-                                value={myShareAmount}
-                                onChange={(e) => setMyShareAmount(e.target.value)}
-                                style={{
-                                    fontSize: '2rem',
-                                    fontWeight: '900',
-                                    color: '#FFC20E',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    borderBottom: '2px solid #FFC20E',
-                                    width: '120px',
-                                    textAlign: 'center',
-                                    outline: 'none'
-                                }}
-                            />
+                        <div style={{ margin: '15px 0', textAlign: 'left', maxHeight: '150px', overflowY: 'auto' }}>
+                            {orderedItems.map((item, index) => (
+                                <div key={index} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>{item.quantity}x {item.name}</span>
+                                    <span>${(Number(item.price) * item.quantity).toFixed(2)}</span>
+                                </div>
+                            ))}
                         </div>
-                        <p style={{ fontSize: '0.8rem', color: '#aaa', marginTop: '5px' }}>
-                            Remaining Balance: ${splitAmount}
-                        </p>
-                    </div>
 
-                    <button
-                        className="place-order-btn-final"
-                        onClick={() => alert(`Logic to pay $${myShareAmount} goes here!`)}
-                    >
-                        PAY MY SHARE 💳
-                    </button>
+                        {/* ✅ Form Jdid ll Scanners */}
+                        <div style={{ margin: '20px 0', textAlign: 'left' }}>
+                            <input 
+                                type="text" 
+                                placeholder="Your Name *" 
+                                className="glass-input-main" 
+                                value={customerInfo.name} 
+                                onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})} 
+                                style={{ marginBottom: '10px' }}
+                            />
+                            
+                            <select 
+                                className="glass-select" 
+                                value={splitMethod} 
+                                onChange={(e) => setSplitMethod(e.target.value)}
+                                style={{ width: '100%', marginBottom: '15px' }}
+                            >
+                                <option value="cash">💵 Pay with Cash</option>
+                                <option value="card">💳 Pay with Card</option>
+                            </select>
+
+                            <p style={{ fontSize: '0.9rem', marginBottom: '8px', textAlign: 'center' }}>How much are you paying?</p>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                                <span style={{ fontSize: '2rem', color: '#FFC20E', fontWeight: 'bold' }}>$</span>
+                                <input 
+                                    type="number" 
+                                    value={myShareAmount}
+                                    onChange={(e) => setMyShareAmount(e.target.value)}
+                                    style={{ fontSize: '2rem', fontWeight: '900', color: '#FFC20E', background: 'transparent', border: 'none', borderBottom: '2px solid #FFC20E', width: '120px', textAlign: 'center', outline: 'none' }}
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            className="place-order-btn-final"
+                            disabled={loading}
+                            onClick={async () => {
+                                if (!customerInfo.name) return alert("Please enter your name!");
+                                setLoading(true);
+                                try {
+                                    // 1. Njib el splits l adime
+                                    const existing = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`);
+                                    const oldSplits = existing.data.order.payment_splits ? JSON.parse(existing.data.order.payment_splits) : [];
+                                    
+                                    // 2. Nzid sha5es jdid
+                                    const newSplit = { id: Date.now(), name: customerInfo.name, amount: myShareAmount, method: splitMethod };
+                                    
+                                    // 3. Neb3aton 3al DB
+                                    await axios.put(`https://snack-attack-backend.onrender.com/admin/orders/${activeOrderId}/status`, {
+                                        status: existing.data.order.status, 
+                                        payment_splits: [...oldSplits, newSplit]
+                                    });
+                                    alert("Payment recorded! Thank you.");
+                                    navigate('/');
+                                } catch(err) {
+                                    alert("Error recording payment.");
+                                } finally {
+                                    setLoading(false);
+                                }
+                            }}
+                        >
+                            {loading ? "PROCESSING..." : "CONFIRM MY SHARE 💳"}
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
-    );
-}
+        );
+    }
     // ── WAITING SCREEN ────────────────────────────────────────────────────────
     if (step === "waiting") {
         return (
@@ -365,6 +394,21 @@ if (isSplitRequest) {
                                     </button>
                                 </div>
                             </div>
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                                    <button type="button" className="add-payer-btn-glass" onClick={() => setShowQR(true)}>
+                                        📲 Split Bill Share QR
+                                    </button>
+
+                                    {/* ✅ Zerr jdid lal sha5es el 2asese kirmal y3addel */}
+                                    <button 
+                                        type="button" 
+                                        className="add-payer-btn-glass" 
+                                        onClick={() => navigate(`/cart/${orderId}`)}
+                                        style={{ background: 'transparent', border: '1px solid #FFC20E', color: '#FFC20E' }}
+                                    >
+                                        ✏️ Edit Order
+                                    </button>
+                                </div>
 
                             <form onSubmit={handleConfirmPayment}>
                                 <div className="checkout-summary-mini-glass">
