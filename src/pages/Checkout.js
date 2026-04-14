@@ -4,6 +4,7 @@ import axios from 'axios';
 import logo from "../assets/logo.png";
 import '../style/checkout.css';
 import { QRCodeCanvas } from "qrcode.react";
+import socket from "../socket";
 
 function Checkout({ setCart }) {
     const location = useLocation();
@@ -19,7 +20,8 @@ function Checkout({ setCart }) {
     } = location.state || {};
 
     const activeOrderId = stateOrderId || urlOrderId;
-    const isScanner = !!urlOrderId;
+    const isScanner =
+    urlOrderId && new URLSearchParams(location.search).get("mode") === "add";
 
     const [orderedItems, setOrderedItems] = useState(stateCartItems);
     const [tableId, setTableId] = useState(stateTableId);
@@ -66,7 +68,7 @@ function Checkout({ setCart }) {
 
         addNewScannerPayer();
     }
-}, [location.search, activeOrderId]); // 🔥🔥🔥
+}, [activeOrderId]);
 
     // ✅ Ref to avoid overwriting payers while user is actively editing
     const isEditingRef = useRef(false);
@@ -115,12 +117,14 @@ function Checkout({ setCart }) {
                     // Load existing payers from backend
                     const splits = res.data.order?.payment_splits;
                     if (splits) {
+                        let parsed = [];
                         try {
-                            const parsed = typeof splits === 'string' ? JSON.parse(splits) : splits;
-                            if (Array.isArray(parsed) && parsed.length > 0) {
-                                setPayers(parsed);
-                            }
-                        } catch (e) { /* keep default */ }
+                            parsed = typeof splits === "string"
+                                ? JSON.parse(splits)
+                                : splits;
+                        } catch {
+                            parsed = [];
+                        }
                     }
 
                     const status = res.data.order?.status?.toLowerCase();
@@ -142,29 +146,45 @@ function Checkout({ setCart }) {
 
     const interval = setInterval(async () => {
         try {
-            const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`);
+            const res = await axios.get(
+                `https://snack-attack-backend.onrender.com/orders/${activeOrderId}`
+            );
+
             const status = res.data.order.status.toLowerCase();
 
-            // 🔥 الحل هون
-            if (["accepted", "preparing", "ready", "served", "paymentpending"].includes(status)) {
+            if (["accepted","preparing","ready","served","paymentpending"].includes(status)) {
                 setStep("payment");
             }
 
-            if (status === "paid") {
-                setStep("receipt");
-            }
+            if (status === "paid") setStep("receipt");
 
-            if (status === "rejected") {
-                setStep("rejected");
-            }
-
-        } catch (err) {
-            console.log("Polling...");
-        }
-    }, 1500); // خففناها لسرعة
+        } catch (err) {}
+    }, 1500);
 
     return () => clearInterval(interval);
 }, [activeOrderId]);
+
+useEffect(() => {
+    if (!activeOrderId) return;
+    socket.emit("joinOrder", activeOrderId);
+
+    socket.on("payersUpdated", (updated) => {
+        setPayers(updated);
+    });
+
+    socket.on("cartUpdated", () => {
+    axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`)
+        .then(res => {
+            setOrderedItems(res.data.items || []);
+        });
+});
+
+    return () => {
+        socket.off("payersUpdated");
+        socket.off("cartUpdated");
+    };
+}, [activeOrderId]);
+
 
     useEffect(() => {
         if (payers.length === 1 && finalTotal > 0) {
@@ -217,7 +237,7 @@ function Checkout({ setCart }) {
             });
             setStep("waitingForPayment");
         } catch (err) { alert("Error!"); }
-        finally { setLoading(false); }
+        finally { setLoading(true); }
     };
 
     if (step === "waiting" || step === "waitingForPayment") {
