@@ -14,6 +14,7 @@ function Checkout({ setCart }) {
     const splitOrderId = searchParams.get('orderId');
     const isSplitRequest = !!splitAmount;
     const [step, setStep] = useState(isSplitRequest ? "payment" : "waiting");
+    const [myShareAmount, setMyShareAmount] = useState(splitAmount || "");
 
     // Receive order info placed by Cart.js
     const {
@@ -63,12 +64,12 @@ useEffect(() => {
     const interval = setInterval(async () => {
         try {
             // ✅ GHAYRE EL LINK HON LA YSIR /orders/${orderId}
-            const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${orderId}`);
+            const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${orderId}`)
             
             // Bel backend, el response hiye { order: {...}, items: [...] }
             // So lezem ne5od res.data.order.status
             const status = res.data.order.status.toLowerCase();
-            setOrderStatus(status);
+            setOrderStatus(res.data.order.status);
 
             if (status === "accepted" || status === "preparing") {
                 clearInterval(interval);
@@ -102,9 +103,9 @@ useEffect(() => {
     
     
     
-   
-const vercelLink = "https://snack-attack-frontend.vercel.app";
-const qrValue = vercelLink + "/split/table/" + tableId + "?amount=" + remainingBalance.toFixed(2) + "&orderId=" + orderId;
+   const activeOrderId = orderId || splitOrderId;
+const vercelLink = "https://snack-attack-frontend-eta.vercel.app";
+const qrValue = `${vercelLink}/cart/${activeOrderId}`;
   
 
 const addPayer = () =>
@@ -133,11 +134,23 @@ const addPayer = () =>
     return;
 }
         try {
-            const res = await axios.put(`https://snack-attack-backend.onrender.com/admin/orders/${orderId}/status`, {
-            status: "PaymentPending",
-            customer: customerInfo,
-            payment_splits: payers,
-        });
+            const existing = await axios.get(
+            `https://snack-attack-backend.onrender.com/orders/${orderId}`
+            );
+
+            const oldSplits = existing.data.order.payment_splits
+            ? JSON.parse(existing.data.order.payment_splits)
+            : [];
+
+            const updatedSplits = [...oldSplits, ...payers];
+            const res = await axios.put(
+            `https://snack-attack-backend.onrender.com/admin/orders/${orderId}/status`,
+            {
+                status: "PaymentPending",
+                customer: customerInfo,
+                payment_splits: updatedSplits,
+            }
+            );
             if (res.data.success) {
                 setStep("waitingForPayment");
             }
@@ -158,8 +171,8 @@ if (isSplitRequest) {
                     <h2>SPLIT PAYMENT 📲</h2>
                     <p>Contributing to Table #{tableId}</p>
 
-                    {/* ✅ عرض الأكل */}
-                    <div style={{ margin: '15px 0', textAlign: 'left' }}>
+                    {/* ✅ عرض الأكل - Zedt scroll eza ken fi items kteer */}
+                    <div style={{ margin: '15px 0', textAlign: 'left', maxHeight: '150px', overflowY: 'auto' }}>
                         {orderedItems.map((item, index) => (
                             <div key={index} style={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <span>{item.quantity}x {item.name}</span>
@@ -168,14 +181,36 @@ if (isSplitRequest) {
                         ))}
                     </div>
 
-                    {/* ✅ المبلغ */}
-                    <div style={{ margin: '20px 0', fontSize: '2.5rem', fontWeight: '900', color: '#FFC20E' }}>
-                        ${splitAmount}
+                    {/* ✅ إدخال المبلغ - Sar input badal div sebit */}
+                    <div style={{ margin: '20px 0' }}>
+                        <p style={{ fontSize: '0.9rem', marginBottom: '8px' }}>How much do you want to pay?</p>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                            <span style={{ fontSize: '2rem', color: '#FFC20E', fontWeight: 'bold' }}>$</span>
+                            <input 
+                                type="number" 
+                                value={myShareAmount}
+                                onChange={(e) => setMyShareAmount(e.target.value)}
+                                style={{
+                                    fontSize: '2rem',
+                                    fontWeight: '900',
+                                    color: '#FFC20E',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    borderBottom: '2px solid #FFC20E',
+                                    width: '120px',
+                                    textAlign: 'center',
+                                    outline: 'none'
+                                }}
+                            />
+                        </div>
+                        <p style={{ fontSize: '0.8rem', color: '#aaa', marginTop: '5px' }}>
+                            Remaining Balance: ${splitAmount}
+                        </p>
                     </div>
 
                     <button
                         className="place-order-btn-final"
-                        onClick={() => alert("Paying Share...")}
+                        onClick={() => alert(`Logic to pay $${myShareAmount} goes here!`)}
                     >
                         PAY MY SHARE 💳
                     </button>

@@ -32,9 +32,9 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
 }, [cart, isJoinMode]);
 
   // --- Financial Logic ---
-  const subtotal = (displayCart || []).reduce(
+ const subtotal = (displayCart || []).reduce(
     (acc, item) =>
-      acc + (Number(item.price) || 0) * (Number(item.quantity) || 0),
+      acc + (Number(item.price || item.price_at_time) || 0) * (Number(item.quantity) || 0),
     0
   );
 
@@ -42,18 +42,20 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
   const totalPrice = subtotal + vat;
 
   // --- Join Mode Logic ---
+  // --- Join Mode Logic ---
   useEffect(() => {
     if (isJoinMode && urlOrderId) {
       axios
         .get(
-          `https://snack-attack-backend.onrender.com/order/${urlOrderId}`
+          `https://snack-attack-backend.onrender.com/orders/${urlOrderId}` // ✅ Zidna 's' hon
         )
         .then((res) => {
           if (res.data) {
             setDisplayCart(
               Array.isArray(res.data.items) ? res.data.items : []
             );
-            setOrderStatus(res.data.order?.status || "");
+            // ✅ Saret res.data.order.status
+            setOrderStatus(res.data.order?.status || ""); 
             setIsWaiting(true);
           }
         })
@@ -61,6 +63,7 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
     }
   }, [isJoinMode, urlOrderId]);
 
+  // --- Real-time Sync ---
   // --- Real-time Sync ---
   useEffect(() => {
     let interval;
@@ -71,13 +74,18 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
         try {
           const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeId}`);
 
-          setOrderStatus(res.data.status);
+          // ✅ 1. Fix el status logic
+          const currentStatus = res.data.order?.status || "";
+          setOrderStatus(currentStatus);
 
-          const statusLower = String(res.data.status).toLowerCase();
+          // ✅ 2. Update el cart kirmal ybayin el akl l jdid 3nd kel l tawle!
+          if (Array.isArray(res.data.items)) {
+            setDisplayCart(res.data.items);
+          }
 
-          if (
-            ["preparing", "paid", "served", "ready"].includes(statusLower)
-          ) {
+          const statusLower = String(currentStatus).toLowerCase();
+
+          if (["preparing", "paid", "served", "ready"].includes(statusLower)) {
             setIsWaiting(false);
             setIsOrdered(true);
           }
@@ -157,6 +165,23 @@ const handleProceedToPayment = async () => {
       </div>
     );
 
+    const handleJoinModeUpdate = async (item, action) => {
+    const activeId = orderId || urlOrderId;
+    if (!activeId) return;
+
+    try {
+      // Bneba3at 'add' aw 'remove' lal backend
+      await axios.post(`https://snack-attack-backend.onrender.com/orders/${activeId}/update-item`, {
+        action: action, 
+        item: item
+      });
+      // Mala7aza: ma fi da3i ta3mle refresh de8re, la2ano el setInterval 
+      // yali 3amltiye (kel 3 saweni) rah ya3mol fetch lal data l jdide w ybayin el ta3dil la kel l tawle!
+    } catch (err) {
+      console.error("Error updating shared cart", err);
+    }
+  };
+
   return (
     <div className="cart-page-glass">
       <div className="unified-glass-container">
@@ -199,15 +224,14 @@ const handleProceedToPayment = async () => {
                       )}
 
                       <span className="item-price-each">
-                        ${Number(item.price).toFixed(2)} each
-                      </span>
+                      ${Number(item.price || item.price_at_time).toFixed(2)} each
+                    </span>
                     </div>
 
                     <div className="quantity-controls">
                       <button
                         className="q-btn minus"
-                        onClick={() => removeFromCart(item)}
-                        disabled={isJoinMode}
+                        onClick={() => isJoinMode ? handleJoinModeUpdate(item, 'remove') : removeFromCart(item)}
                       >
                         −
                       </button>
@@ -215,42 +239,38 @@ const handleProceedToPayment = async () => {
                       <span className="q-count">{item.quantity}</span>
 
                       <button
-                        className="q-btn plus"
-                        onClick={() => addToCart(item)}
-                        disabled={isJoinMode}
-                      >
-                        +
-                      </button>
+                        className="q-btn plus" onClick={() => isJoinMode ? handleJoinModeUpdate(item, 'add') : addToCart(item)}>+</button>
                     </div>
 
                     <span className="item-total-price">
-                      $
-                      {(
-                        Number(item.price) * Number(item.quantity)
-                      ).toFixed(2)}
-                    </span>
+                    ${(Number(item.price || item.price_at_time) * Number(item.quantity)).toFixed(2)}
+                  </span>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {!isJoinMode && (
-            <div
-              className="glass-form-wrapper"
-              style={{ marginTop: "20px" }}
-            >
+          <div className="glass-form-wrapper" style={{ marginTop: "20px" }}>
+            {!isJoinMode ? (
+              /* Zerr el sha5es el 2asese yali fata7 el tawle */
               <button
                 className="glass-complete-btn-final"
                 onClick={handleProceedToPayment}
                 disabled={placingOrder || displayCart.length === 0}
               >
-                {placingOrder
-                  ? "SENDING REQUEST... 👨‍🍳"
-                  : "PROCEED TO PAYMENT ▶"}
+                {placingOrder ? "SENDING REQUEST... 👨‍🍳" : "PROCEED TO PAYMENT ▶"}
               </button>
-            </div>
-          )}
+            ) : (
+              /* Zerr el ref2a yali 3emlo scan lal QR */
+              <button
+                className="glass-complete-btn-final"
+                onClick={() => navigate(`/checkout?orderId=${urlOrderId}&amount=${totalPrice.toFixed(2)}`)}
+              >
+                PAY MY SHARE 💳
+              </button>
+            )}
+          </div>
 
           <div className="glass-total-section">
             <div className="total-row final-total">

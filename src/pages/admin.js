@@ -62,6 +62,16 @@ function Admin() {
       }
     }
   };
+  const getPaidTotal = (splitsData) => {
+    try {
+      if (!splitsData || splitsData.trim() === "") return 0; // safety check
+      const parsed = typeof splitsData === 'string' ? JSON.parse(splitsData) : splitsData;
+      const splitsArray = Array.isArray(parsed) ? parsed : [];
+      return splitsArray.reduce((sum, s) => sum + Number(s.amount || 0), 0);
+    } catch (error) {
+      return 0;
+    }
+  };
 
   return (
     <div className="admin-dashboard-page">
@@ -167,7 +177,8 @@ function Admin() {
                 </button>
               )}
 
-              {order.status !== "Paid" && order.status !== "Rejected" && (
+              {order.status !== "Paid" && order.status !== "Rejected" && 
+               getPaidTotal(order.payment_splits) >= Number(order.total_price) && (
                 <button onClick={() => handleStatusUpdate(order.id, "Paid")}>
                   CONFIRM PAYMENT
                 </button>

@@ -30,17 +30,11 @@ function AppContent({ cart, setCart, addToCart, removeFromCart, setMenuItems }) 
           <Route path='/' element={<Home />} />
           <Route path='/menu' element={<MenuPage addToCart={addToCart} removeFromCart={removeFromCart} setMenuItems={setMenuItems} cartItems={cart}/>} />
           <Route path='/customize' element={<CustomBurger addToCart={addToCart} />} />
-          <Route path='/cart' element={<Cart 
-            cart={cart} 
-            setCart={setCart} 
-            addToCart={addToCart} 
-            removeFromCart={removeFromCart} 
-          />} />
+          <Route path='/cart' element={<Cart cart={cart} setCart={setCart} addToCart={addToCart} removeFromCart={removeFromCart} />} />
           <Route path="/checkout" element={<Checkout cart={cart} setCart={setCart} tableId={tableFromQR} />} />
           <Route path="/admin" element={<Admin />} />
-          <Route path="/split/table/:tableId" element={<Cart isJoinMode={true} addToCart={addToCart} removeFromCart={removeFromCart} />} />
-          <Route path="/split/:orderId" element={<Cart isJoinMode={true} addToCart={addToCart} removeFromCart={removeFromCart} />} />
-        </Routes>
+          <Route path="/cart/:orderId" element={<Cart isJoinMode={true} addToCart={addToCart} removeFromCart={removeFromCart} setCart={setCart}/>} />
+          </Routes>
       </main>
       <Footer className={isHomePage ? "home-footer" : "general-footer"} />
     </div>
