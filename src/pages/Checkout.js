@@ -37,15 +37,16 @@ function Checkout({ setCart }) {
    
     
 
+    // ✅ FIX 1: NaN fix for Extras and Base Price
     const getItemBasePrice = (item) => {
         const extrasTotal = item.selectedExtras
             ? item.selectedExtras.reduce((sum, e) => sum + Number(e.price), 0)
             : 0;
-        return Number(item.price) + extrasTotal;
+        return Number(item.price || item.price_at_time) + extrasTotal;
     };
 
     const subtotal = (orderedItems && orderedItems.length > 0) 
-        ? orderedItems.reduce((acc, item) => acc + (Number(item.price) * item.quantity), 0)
+        ? orderedItems.reduce((acc, item) => acc + (Number(item.price || item.price_at_time) * item.quantity), 0)
         : 0;
     
     const totalVAT = subtotal * 0.11;
@@ -60,33 +61,33 @@ function Checkout({ setCart }) {
 
     
 useEffect(() => {
-    if (step !== "waiting" || !orderId) return;
+        if (!activeOrderId) return;
 
-    const interval = setInterval(async () => {
-        try {
-            // ✅ GHAYRE EL LINK HON LA YSIR /orders/${orderId}
-            const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${orderId}`)
-            
-            // Bel backend, el response hiye { order: {...}, items: [...] }
-            // So lezem ne5od res.data.order.status
-            const status = res.data.order.status.toLowerCase();
-            setOrderStatus(res.data.order.status);
+        const interval = setInterval(async () => {
+            try {
+                const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`);
+                const status = res.data.order.status.toLowerCase();
+                setOrderStatus(res.data.order.status);
 
-            if (status === "accepted" || status === "preparing") {
-                clearInterval(interval);
-                setStep("payment"); // ✅ Hon bi-fout 3al payment form
+                if (step === "waiting" && (status === "accepted" || status === "preparing")) {
+                    setStep("payment");
+                }
+                if (step === "waiting" && status === "rejected") {
+                    setStep("rejected");
+                }
+                // Watch for Paid to show receipt
+                if (step === "waitingForPayment" && status === "paid") {
+                    setStep("receipt");
+                }
+            } catch (err) {
+                console.log("Polling for updates...");
             }
-            if (status === "rejected") {
-                clearInterval(interval);
-                setStep("rejected");
-            }
-        } catch (err) {
-            console.log("Still waiting for admin...");
-        }
-    }, 3000);
+        }, 3000);
 
-    return () => clearInterval(interval);
-}, [step, orderId]);
+        return () => clearInterval(interval);
+    }, [step, activeOrderId]);
+
+
     // ── POLL for staff to confirm payment (Paid) ───────────────────────────
     useEffect(() => {
     if (isSplitRequest && splitOrderId) {
@@ -162,7 +163,7 @@ const addPayer = () =>
             setLoading(false);
         }
     };
-if (isSplitRequest) {
+if (isSplitRequest && step === "payment") {
         return (
             <div className="checkout-page">
                 <div className="overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
