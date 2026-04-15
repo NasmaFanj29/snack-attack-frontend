@@ -3,6 +3,13 @@ import "../style/menu.css";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
+// ✅ REMOVE EXTRAS MAPPING BY CATEGORY
+const REMOVE_EXTRAS_BY_CATEGORY = {
+  "Burgers": [1, 2, 3, 4, 5, 8, 9, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 29, 31, 32, 35, 36, 37],
+  "Salad": [1, 7, 10, 11, 12, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 37],
+  "Sandwiches": [1, 2, 3, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 35, 36, 37]
+};
+
 function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState("");
@@ -16,6 +23,18 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
   const [itemExtras, setItemExtras] = useState([]);
   const [selectedExtras, setSelectedExtras] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  // ✅ NEW STATE: Notes popup
+  const [notesModalOpen, setNotesModalOpen] = useState(false);
+  const [notesText, setNotesText] = useState("");
+  const [notesItem, setNotesItem] = useState(null);
+
+  // ✅ NEW STATE: Remove extras popup
+  const [removeExtrasModalOpen, setRemoveExtrasModalOpen] = useState(false);
+  const [removeExtrasItem, setRemoveExtrasItem] = useState(null);
+  const [allAvailableExtras, setAllAvailableExtras] = useState([]);
+  const [removableExtras, setRemovableExtras] = useState([]);
+  const [selectedRemoveExtras, setSelectedRemoveExtras] = useState([]);
 
   useEffect(() => {
     axios.get("https://snack-attack-backend.onrender.com/menu")
@@ -84,11 +103,89 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
     }
   };
 
+  // ✅ NEW: Open notes modal
+  const handleOpenNotesModal = (item) => {
+    setNotesItem(item);
+    setNotesText("");
+    setNotesModalOpen(true);
+  };
+
+  const handleSaveNote = () => {
+    if (notesText.trim()) {
+      // Add the item with a note
+      addToCart({
+        id: notesItem.id,
+        name: notesItem.name,
+        price: notesItem.price,
+        image: notesItem.image,
+        quantity: 1,
+        selectedExtras: [],
+        specialNote: notesText // ✅ Store the note
+      });
+      setNotesModalOpen(false);
+      setIsCartOpen(true);
+    }
+  };
+
+  // ✅ NEW: Open remove extras modal
+  const handleOpenRemoveExtrasModal = async (item) => {
+    setRemoveExtrasItem(item);
+    setSelectedRemoveExtras([]);
+
+    // Fetch all available extras for this item's category
+    const removableIds = REMOVE_EXTRAS_BY_CATEGORY[item.category] || [];
+
+    try {
+      const res = await axios.get(
+        `https://snack-attack-backend.onrender.com/item-extras/${item.id}`
+      );
+      const allExtras = res.data || [];
+      
+      // Filter to only show extras that can be removed from this category
+      const filterableExtras = allExtras.filter(extra => 
+        removableIds.includes(extra.id)
+      );
+
+      setAllAvailableExtras(allExtras);
+      setRemovableExtras(filterableExtras);
+      setRemoveExtrasModalOpen(true);
+    } catch (err) {
+      console.error("Error fetching extras:", err);
+      setRemoveExtrasModalOpen(false);
+    }
+  };
+
+  const handleSaveRemoveExtras = () => {
+    if (selectedRemoveExtras.length > 0) {
+      addToCart({
+        id: removeExtrasItem.id,
+        name: removeExtrasItem.name,
+        price: removeExtrasItem.price,
+        image: removeExtrasItem.image,
+        quantity: 1,
+        selectedExtras: [],
+        removedExtras: selectedRemoveExtras // ✅ Store removed extras
+      });
+      setRemoveExtrasModalOpen(false);
+      setIsCartOpen(true);
+    } else {
+      alert("Select at least one extra to remove");
+    }
+  };
+
   const toggleExtra = (extra) => {
     if (selectedExtras.find((e) => e.id === extra.id)) {
       setSelectedExtras(selectedExtras.filter((e) => e.id !== extra.id));
     } else {
       setSelectedExtras([...selectedExtras, extra]);
+    }
+  };
+
+  const toggleRemoveExtra = (extra) => {
+    if (selectedRemoveExtras.find((e) => e.id === extra.id)) {
+      setSelectedRemoveExtras(selectedRemoveExtras.filter((e) => e.id !== extra.id));
+    } else {
+      setSelectedRemoveExtras([...selectedRemoveExtras, extra]);
     }
   };
 
@@ -126,6 +223,21 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
       <span className="extra-price">+${Number(extra.price).toFixed(2)}</span>
     </label>
   );
+
+  // ✅ NEW: Render remove extras checkboxes
+ const renderRemoveExtraRow = (extra) => (
+  <label key={extra.id} className="extra-label">
+    <div className="extra-info">
+      <input
+        type="checkbox"
+        checked={selectedRemoveExtras.some(e => e.id === extra.id)}
+        onChange={() => toggleRemoveExtra(extra)}
+      />
+      <span>{extra.name}</span>
+    </div>
+  </label>
+);
+
 
   return (
     <div className="menu-page">
@@ -185,6 +297,11 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
                       <div className="item-details">
                         <span className="item-name">{item.name}</span>
                         <span className="item-qty"> x{item.quantity}</span>
+                        {item.specialNote && (
+                          <span className="item-note" style={{ fontSize: '0.7rem', color: '#FFC20E', display: 'block', marginTop: '2px' }}>
+                            📝 {item.specialNote}
+                          </span>
+                        )}
                       </div>
                       <span className="item-price">
                         ${(getItemBasePrice(item) * item.quantity).toFixed(2)}
@@ -223,12 +340,13 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
               <div
                 className="menu-card"
                 key={i}
-                onClick={() => handleOpenModal(item)}
               >
                 <div className="menu-img">
                   <img
                     src={`https://snack-attack-backend.onrender.com/images/${item.image}`}
                     alt={item.name}
+                    onClick={() => handleOpenModal(item)}
+                    style={{ cursor: 'pointer' }}
                   />
                 </div>
 
@@ -236,7 +354,6 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
                   <div className="title-row">
                     <h3>{item.name}</h3>
 
-                    {/* ✅ FIXED: Dynamic Counter Controls */}
                     <div
                       className="counter-controls"
                       onClick={(e) => e.stopPropagation()}
@@ -258,6 +375,8 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
                   </div>
 
                   <p className="price">${item.price.toFixed(2)}</p>
+
+                 
                 </div>
               </div>
             ))}
@@ -265,6 +384,99 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
         </div>
       </div>
 
+      {/* ✅ NOTES MODAL */}
+      {notesModalOpen && notesItem && (
+        <div className="modal-overlay" onClick={() => setNotesModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+           <button
+              className="close-modal"
+              onClick={() => {
+                setNotesModalOpen(false);
+                setSelectedItem(notesItem);
+                setIsModalOpen(true);
+              }}
+            >
+              ×
+            </button>
+
+            <div className="modal-header">
+              <h2> Special Instructions</h2>
+              <p style={{ color: '#666', fontSize: '14px' }}>
+                Add any special requests for {notesItem.name}
+              </p>
+            </div>
+
+            <div className="modal-scroll-area">
+              <textarea
+                className="notes-textarea"
+                placeholder="e.g., Cut in half, No onions, Extra sauce, Allergies..."
+                value={notesText}
+                onChange={(e) => setNotesText(e.target.value)}
+                rows="6"
+              />
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="add-btn-final"
+                onClick={handleSaveNote}
+                disabled={!notesText.trim()}
+              >
+                Add to Cart with Note 📝
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ REMOVE EXTRAS MODAL */}
+      
+      {removeExtrasModalOpen && removeExtrasItem && (
+        <div className="modal-overlay" onClick={() => setRemoveExtrasModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button
+                className="close-modal"
+                onClick={() => {
+                  setRemoveExtrasModalOpen(false); setSelectedItem(removeExtrasItem); setIsModalOpen(true); }} > × </button>
+
+            <div className="modal-header">
+              <h2> Remove Ingredients</h2>
+              <p className="remove-modal-subtitle">
+                Select ingredients to remove from {removeExtrasItem.name}
+              </p>
+            </div>
+
+            <div className="modal-scroll-area">
+              {removableExtras.length > 0 ? (
+                <div className="extras-section">
+                  <div className="extra-group">
+                    {removableExtras.map((extra) => renderRemoveExtraRow(extra))}
+                  </div>
+                </div>
+              ) : (
+                <p style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
+                  No removable ingredients available
+                </p>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="add-btn-final"
+                onClick={handleSaveRemoveExtras}
+                disabled={selectedRemoveExtras.length === 0}
+                style={{
+                  backgroundColor: selectedRemoveExtras.length > 0 ? '#d90d0d' : '#ccc'
+                }}
+              >
+                Remove Selected Items ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ORIGINAL CUSTOMIZE MODAL */}
       {isModalOpen && selectedItem && (
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div
@@ -285,6 +497,36 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
               />
               <h2>{selectedItem.name}</h2>
               <p>{selectedItem.description}</p>
+            </div>
+            <div className="modal-actions">
+                  <button
+                className="menu-action-btn notes-btn"
+                style={
+                  ["Beverages", "Appetizers", "Dips"].includes(selectedItem.category)
+                    ? { flex: "0 0 auto", width: "auto",  padding: "14px 18px", fontSize: "14px" }
+                    : {}
+                } 
+                onClick={() => {
+                  setIsModalOpen(false);
+                  handleOpenNotesModal(selectedItem);
+                }} 
+              >
+                📝 Add Note
+              </button>
+
+                  {/* 🔥 HAWDA HENNE */}
+              {!["Beverages", "Appetizers", "Dips"].includes(selectedItem.category) && (
+                <button
+                  className="menu-action-btn remove-btn"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    handleOpenRemoveExtrasModal(selectedItem);
+                  }}
+                >
+                  ✕ Remove Ingredients
+                </button>
+              )}
+
             </div>
 
             <div className="modal-scroll-area">
