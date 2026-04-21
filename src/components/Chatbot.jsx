@@ -5,7 +5,6 @@ import {
   subscribeToChats, addCustomOrder
 } from "./chatbotStore";
 
-
 // ── Image generation for custom orders ───────────────────────────
 const generateMealImage = async (order) => {
   const desc = encodeURIComponent(
@@ -13,6 +12,34 @@ const generateMealImage = async (order) => {
   );
   return `https://image.pollinations.ai/prompt/${desc}?width=280&height=280&nologo=true&seed=${Date.now()}`;
 };
+
+// ── Auto-response rules (no API call needed) ─────────────────────
+const AUTO_RULES = [
+  {
+    match: /\b(sa3at|hours|mta|meta|awkat|wa2t|open|close|closes|w2t|working hours|bta7do|bta5do|btfe7o|btsakro)\b/i,
+    reply: "We are open every day from 11:00 AM to 11:00 PM. Feel free to visit us or order anytime within those hours!",
+  },
+  {
+    match: /^(hi|hello|hey|marhaba|ahla|salam|3ammeh|3amo|kifak|kif|sup)\b/i,
+    reply: "Welcome to Snack Attack! Great to have you here. What can I get started for you today?",
+  },
+  {
+    match: /\b(shukran|thank|thanks|merci|3anjad|cool|perfect|great)\b/i,
+    reply: "Happy to help! Let me know if there is anything else you need.",
+  },
+  {
+    match: /\b(bye|goodbye|yalla bye|tc|take care|ciao)\b/i,
+    reply: "Take care! We hope to see you again soon at Snack Attack.",
+  },
+  {
+    match: /\b(wifi|wi-fi|password|internet)\b/i,
+    reply: "Our Wi-Fi network is SnackAttack_Guest. Please ask a staff member for the current password.",
+  },
+  {
+    match: /\b(toilet|bathroom|restroom|wc|7ammam)\b/i,
+    reply: "The restrooms are located at the back of the restaurant, just past the counter on your right.",
+  },
+];
 
 function Chatbot({ menuItems = [], addToCart }) {
   const tableId = String(localStorage.getItem("activeTable") || "1");
@@ -46,7 +73,7 @@ function Chatbot({ menuItems = [], addToCart }) {
     } else {
       const welcome = {
         sender: "bot",
-        text: "Hey! 👋🍔 Welcome to Snack Attack! Shu baddak today? I am here — bde order, custom burger, or just want recommendations?",
+        text: "Welcome to Snack Attack! I am here to help you order, build a custom burger, or answer any questions. What can I do for you today?",
       };
       setMessages([welcome]);
       addMessage(tableId, welcome);
@@ -84,39 +111,71 @@ function Chatbot({ menuItems = [], addToCart }) {
     setTableStatus(tableId, "admin");
     setChatStatus("admin");
     chatStatusRef.current = "admin";
-    const sysMsg = { sender: "system", text: `🔔 Staff requested — ${reason}` };
+    const sysMsg = { sender: "system", text: `Staff has been notified and will be with you shortly — ${reason}` };
     addMessage(tableId, sysMsg);
     setMessages((prev) => [...prev, sysMsg]);
   };
 
   // ── Add item to cart by name ───────────────────────────────────
   const addItemToCartByName = (itemName) => {
-  // Try to find in menuItems prop first
-  if (menuItems && menuItems.length > 0) {
-    const found = menuItems.find(
-      (m) => m.name?.toLowerCase().includes(itemName.toLowerCase()) ||
-             itemName.toLowerCase().includes(m.name?.toLowerCase())
-    );
-    if (found && addToCart) {
-      addToCart({
-        id: found.id,
-        databaseId: found.id,
-        name: found.name,
-        price: Number(found.price),
-        image: found.image,
-        quantity: 1,
-        selectedExtras: [],
-      });
-      console.log("✅ Added to cart:", found.name);
-      return true;
+    if (menuItems && menuItems.length > 0) {
+      const found = menuItems.find(
+        (m) =>
+          m.name?.toLowerCase().includes(itemName.toLowerCase()) ||
+          itemName.toLowerCase().includes(m.name?.toLowerCase())
+      );
+      if (found && addToCart) {
+        addToCart({
+          id: found.id,
+          databaseId: found.id,
+          name: found.name,
+          price: Number(found.price),
+          image: found.image,
+          quantity: 1,
+          selectedExtras: [],
+        });
+        return true;
+      }
     }
-  }
-  
-  // If not found in menuItems, dispatch event for App.jsx to handle
-  window.dispatchEvent(new CustomEvent("snackCartAddByName", { detail: { name: itemName } }));
-  console.warn("⚠️ Item not found in menu, dispatched fallback event:", itemName);
-  return true;
-};
+    window.dispatchEvent(new CustomEvent("snackCartAddByName", { detail: { name: itemName } }));
+    return true;
+  };
+
+  // ── Add custom order to cart ───────────────────────────────────
+  const addCustomOrderToCart = (orderData) => {
+    const customItem = {
+      id: `custom_${Date.now()}`,
+      databaseId: null,
+      name: `Custom Burger (${orderData.bread} bun, ${orderData.protein})`,
+      price: orderData.price || 12.99,
+      image: null,
+      quantity: 1,
+      selectedExtras: [
+        orderData.cheese && `Cheese: ${orderData.cheese}`,
+        orderData.veggies && `Veggies: ${orderData.veggies}`,
+        orderData.sauce && `Sauce: ${orderData.sauce}`,
+        orderData.notes && `Note: ${orderData.notes}`,
+      ].filter(Boolean),
+      isCustom: true,
+      customOrderData: orderData,
+    };
+
+    if (addToCart) {
+      addToCart(customItem);
+    }
+
+    window.dispatchEvent(new CustomEvent("snackCustomOrderAdded", {
+      detail: { order: orderData, cartItem: customItem, tableId },
+    }));
+  };
+
+  // ── Check auto-rules before calling API ───────────────────────
+  const checkAutoRules = (text) => {
+    for (const rule of AUTO_RULES) {
+      if (rule.match.test(text.trim())) return rule.reply;
+    }
+    return null;
+  };
 
   // ── Send message ───────────────────────────────────────────────
   const handleSend = async () => {
@@ -128,68 +187,83 @@ function Chatbot({ menuItems = [], addToCart }) {
     setMessages((prev) => [...prev, userMsg]);
     addMessage(tableId, userMsg);
 
+    // If admin is active, just save the message and wait
     if (chatStatusRef.current === "admin") return;
+
+    // ── Auto-response check (no API needed) ──────────────────────
+    const autoReply = checkAutoRules(text);
+    if (autoReply) {
+      conversationHistory.current.push({ role: "user", content: text });
+      conversationHistory.current.push({ role: "assistant", content: autoReply });
+      const botMsg = { sender: "bot", text: autoReply };
+      setMessages((prev) => [...prev, botMsg]);
+      addMessage(tableId, botMsg);
+      return;
+    }
 
     conversationHistory.current.push({ role: "user", content: text });
     setIsLoading(true);
 
     try {
-      // ✅ FIX: Send conversationHistory.current directly (Backend handles the rest)
       const res = await fetch("https://snack-attack-backend.onrender.com/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: conversationHistory.current,
-          menuItems: menuItems
+          menuItems,
         }),
       });
 
       const data = await res.json();
-       if (!res.ok) {
-         console.error("Backend Error:", data);
-         throw new Error(data.error || "Server error");
-      }
-      let raw = data.reply;
+      if (!res.ok) throw new Error(data.error || "Server error");
 
+      let raw = data.reply;
       if (!raw) throw new Error("Empty response from backend");
 
       conversationHistory.current.push({ role: "assistant", content: raw });
 
       // ── Handle CUSTOM_ORDER ──────────────────────────────────
-     // ── Handle CUSTOM_ORDER ──────────────────────────────────
       if (raw.includes("CUSTOM_ORDER:")) {
         const match = raw.match(/CUSTOM_ORDER:(\{[\s\S]*?\})/);
         if (match) {
           try {
             const orderData = JSON.parse(match[1]);
+
+            // Save to store
             addCustomOrder(tableId, orderData);
-      
+
+            // Add to cart immediately
+            addCustomOrderToCart(orderData);
+
             const cleanText = raw.replace(/CUSTOM_ORDER:[\s\S]*/, "").trim();
-            
-            // 🛑 FIX: Only save if there's actual text left!
             if (cleanText) {
               const botMsg = { sender: "bot", text: cleanText };
               setMessages((prev) => [...prev, botMsg]);
               addMessage(tableId, botMsg);
             }
-      
+
             // Generate preview image
-            const loadingMsg = { sender: "bot", text: "🎨 Generating your burger preview..." };
+            const loadingMsg = { sender: "bot", text: "Generating your burger preview, please wait..." };
             setMessages((prev) => [...prev, loadingMsg]);
+
             const imageUrl = await generateMealImage(orderData);
-            const imageMsg = { sender: "bot", text: "Here's your custom creation! 🍔✨", image: imageUrl };
-            setMessages((prev) => { const u = [...prev]; u[u.length - 1] = imageMsg; return u; });
+            const imageMsg = {
+              sender: "bot",
+              text: "Here is your custom creation! It has been added to your cart.",
+              image: imageUrl,
+            };
+            setMessages((prev) => {
+              const updated = [...prev];
+              updated[updated.length - 1] = imageMsg;
+              return updated;
+            });
             addMessage(tableId, imageMsg);
-      
-            // ✅ NOW ALSO ADD TO MAIN CART - this is critical!
-            // Dispatch event so App.jsx knows to sync the custom order to cart
-            window.dispatchEvent(new CustomEvent("snackCustomOrderAdded", { 
-              detail: { order: orderData, tableId } 
-            }));
-      
+
             setIsLoading(false);
             return;
-          } catch (e) { console.error("Custom order parse error", e); }
+          } catch (e) {
+            console.error("Custom order parse error", e);
+          }
         }
         raw = raw.replace(/CUSTOM_ORDER:[\s\S]*/, "").trim();
       }
@@ -197,9 +271,7 @@ function Chatbot({ menuItems = [], addToCart }) {
       // ── Handle CART_ADD ──────────────────────────────────────
       if (raw.includes("CART_ADD:")) {
         const itemName = raw.match(/CART_ADD:([^\n]+)/)?.[1]?.trim();
-        if (itemName) {
-          addItemToCartByName(itemName);
-        }
+        if (itemName) addItemToCartByName(itemName);
         raw = raw.replace(/CART_ADD:[^\n]+/, "").trim();
       }
 
@@ -211,28 +283,31 @@ function Chatbot({ menuItems = [], addToCart }) {
         raw = raw.replace(/NEED_ADMIN:\w+/, "").trim();
         const map = {
           confused: "Customer needs clarification",
-          offensive: "Inappropriate language",
-          complaint: "Food/service complaint",
+          offensive: "Inappropriate language detected",
+          complaint: "Food or service complaint",
+          request: "Customer requested staff assistance",
         };
-       if (raw) {
-        const botMsg = { sender: "bot", text: raw };
-        setMessages((prev) => [...prev, botMsg]);
-        addMessage(tableId, botMsg);
-      }
+        if (raw) {
+          const botMsg = { sender: "bot", text: raw };
+          setMessages((prev) => [...prev, botMsg]);
+          addMessage(tableId, botMsg);
+        }
         escalateToAdmin(map[reason] || reason);
         setIsLoading(false);
         return;
       }
 
-      const botMsg = { sender: "bot", text: raw };
-      setMessages((prev) => [...prev, botMsg]);
-      addMessage(tableId, botMsg);
+      if (raw) {
+        const botMsg = { sender: "bot", text: raw };
+        setMessages((prev) => [...prev, botMsg]);
+        addMessage(tableId, botMsg);
+      }
 
     } catch (err) {
-      console.error("Gemini error:", err.message);
+      console.error("Chat error:", err.message);
       const errMsg = {
         sender: "bot",
-        text: "Sorry, sar fi mashekel z8eer! Try again 🍔",
+        text: "Something went wrong on our end. Please try again or ask a staff member for assistance.",
       };
       setMessages((prev) => [...prev, errMsg]);
       addMessage(tableId, errMsg);
@@ -256,7 +331,7 @@ function Chatbot({ menuItems = [], addToCart }) {
         <div className="chat-window glass-effect-chat">
           <div className={`chat-header ${isAdminActive ? "chat-header--admin" : ""}`}>
             <div className="chat-header-inner">
-              <h3>{isAdminActive ? "👨‍💼 Staff Connected" : "🤖 Snack Assistant"}</h3>
+              <h3>{isAdminActive ? "Staff Connected" : "Snack Assistant"}</h3>
               <span className="table-badge">Table {tableId}</span>
             </div>
           </div>
@@ -277,7 +352,7 @@ function Chatbot({ menuItems = [], addToCart }) {
                   }`}
                 >
                   {msg.sender === "admin" && (
-                    <span className="admin-label">👨‍💼 Staff</span>
+                    <span className="admin-label">Staff</span>
                   )}
                   <div
                     className={`chat-message ${
@@ -319,7 +394,7 @@ function Chatbot({ menuItems = [], addToCart }) {
               className="chat-input"
               type="text"
               placeholder={
-                isAdminActive ? "Staff will reply shortly…" : "Ask me anything…"
+                isAdminActive ? "A staff member will reply shortly..." : "Ask me anything..."
               }
               value={input}
               onChange={(e) => setInput(e.target.value)}
