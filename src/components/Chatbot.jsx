@@ -6,8 +6,8 @@ import {
 } from "./chatbotStore";
 
 // ── Config ────────────────────────────────────────────────────────
-const GEMINI_API_KEY = "AIzaSyB7S_U0TSZNFRU4wbv3gTXs43Bu5VqJ7Ko";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_API_KEY = "AIzaSyCL8Yaulhn6U8XP_YjoJOMY-a6UT_W2fJo";
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 const SYSTEM_PROMPT = `You are a friendly, energetic AI assistant for "Snack Attack," a burger & sandwich restaurant.
 Keep replies SHORT (max 3-4 sentences). Use food emojis naturally 🍔🍟.
@@ -200,6 +200,10 @@ function Chatbot({ menuItems = [], addToCart }) {
       });
 
       const data = await res.json();
+       if (!res.ok) {
+         console.error("Backend Error:", data);
+         throw new Error(data.error || "Server error");
+      }
       let raw = data.reply;
 
       if (!raw) throw new Error("Empty response from backend");
