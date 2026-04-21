@@ -46,7 +46,7 @@ function Chatbot({ menuItems = [], addToCart }) {
     } else {
       const welcome = {
         sender: "bot",
-        text: "Hey! 👋🍔 Welcome to Snack Attack! Shu baddak today? Ana here — bde order, custom burger, or just want recommendations?",
+        text: "Hey! 👋🍔 Welcome to Snack Attack! Shu baddak today? I am here — bde order, custom burger, or just want recommendations?",
       };
       setMessages([welcome]);
       addMessage(tableId, welcome);
@@ -139,8 +139,8 @@ function Chatbot({ menuItems = [], addToCart }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          
-          messages: conversationHistory.current
+          messages: conversationHistory.current,
+          menuItems: menuItems
         }),
       });
 
