@@ -1,46 +1,89 @@
-const STORAGE_KEY = 'snackAttackChats';
-const ORDERS_KEY = 'snackAttackCustomOrders';
-const CART_KEY = 'snackAttackCart';
+// ═══════════════════════════════════════════════════
+//  chatbotStore.js  —  Snack Attack Chat State
+//  Handles: messages, bot/admin mode, custom orders
+// ═══════════════════════════════════════════════════
 
-let channel = null;
-let ordersChannel = null;
+const CHATS_KEY   = 'snack_chats';
+const ORDERS_KEY  = 'snack_custom_orders';
+const CART_KEY    = 'snack_cart';
+
+// BroadcastChannel — syncs between customer tab & admin tab
+let chatChannel  = null;
+let orderChannel = null;
 try {
-  channel = new BroadcastChannel('snack-attack-chats');
-  ordersChannel = new BroadcastChannel('snack-attack-orders');
-} catch (e) {}
+  chatChannel  = new BroadcastChannel('snack_chat_bc');
+  orderChannel = new BroadcastChannel('snack_order_bc');
+} catch (_) {}
 
-export const getConversations = () => {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
+// ─── Conversations ───────────────────────────────────────────────
+
+export const getAllConversations = () => {
+  try { return JSON.parse(localStorage.getItem(CHATS_KEY) || '{}'); }
   catch { return {}; }
 };
 
 export const getTableConversation = (tableId) => {
-  const convs = getConversations();
-  return convs[String(tableId)] || { tableId: String(tableId), messages: [], status: 'bot', adminJoined: false };
+  const all = getAllConversations();
+  return all[String(tableId)] ?? {
+    tableId: String(tableId),
+    messages: [],
+    status: 'bot',   // 'bot' | 'admin'
+  };
 };
 
-export const saveConversations = (convs) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(convs));
-  channel?.postMessage({ type: 'CHAT_UPDATE', conversations: convs });
+// Export this so AdminChatPanel can use it
+export const saveConversations = (all) => {
+  localStorage.setItem(CHATS_KEY, JSON.stringify(all));
+  chatChannel?.postMessage({ type: 'UPDATE', conversations: all });
 };
+
+// Keep the internal 'saveAll' name working for the rest of this file
+const saveAll = saveConversations;
+
+// Create an alias so AdminChatPanel can import 'getConversations'
+export const getConversations = getAllConversations;
 
 export const addMessage = (tableId, message) => {
-  const convs = getConversations();
+  const all = getAllConversations();
   const tid = String(tableId);
-  if (!convs[tid]) convs[tid] = { tableId: tid, messages: [], status: 'bot', adminJoined: false };
-  convs[tid].messages.push({ ...message, timestamp: Date.now() });
-  saveConversations(convs);
+  if (!all[tid]) all[tid] = { tableId: tid, messages: [], status: 'bot' };
+  all[tid].messages.push({ ...message, timestamp: Date.now() });
+  saveAll(all);
 };
 
-export const setTableStatus = (tableId, status, extra = {}) => {
-  const convs = getConversations();
+export const setTableStatus = (tableId, status) => {
+  const all = getAllConversations();
   const tid = String(tableId);
-  if (!convs[tid]) convs[tid] = { tableId: tid, messages: [], status: 'bot', adminJoined: false };
-  convs[tid] = { ...convs[tid], status, ...extra };
-  saveConversations(convs);
+  if (!all[tid]) all[tid] = { tableId: tid, messages: [], status: 'bot' };
+  all[tid].status = status;
+  saveAll(all);
 };
 
-// ─── Custom Orders ──────────────────────────────────────────────────────────
+export const clearTableChat = (tableId) => {
+  const all = getAllConversations();
+  const tid = String(tableId);
+  all[tid] = { tableId: tid, messages: [], status: 'bot' };
+  saveAll(all);
+};
+
+// Subscribe — used by both Chatbot.jsx and Admin panel
+export const subscribeToChats = (callback) => {
+  const onStorage = (e) => {
+    if (e.key === CHATS_KEY) {
+      try { callback(JSON.parse(e.newValue || '{}')); } catch (_) {}
+    }
+  };
+  window.addEventListener('storage', onStorage);
+  if (chatChannel) chatChannel.onmessage = (e) => {
+    if (e.data?.conversations) callback(e.data.conversations);
+  };
+  return () => {
+    window.removeEventListener('storage', onStorage);
+    if (chatChannel) chatChannel.onmessage = null;
+  };
+};
+
+// ─── Custom Orders ────────────────────────────────────────────────
 
 export const getCustomOrders = () => {
   try { return JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]'); }
@@ -49,28 +92,40 @@ export const getCustomOrders = () => {
 
 export const addCustomOrder = (tableId, order) => {
   const orders = getCustomOrders();
-  const newOrder = { id: Date.now(), tableId: String(tableId), order, status: 'pending', timestamp: Date.now() };
-  orders.push(newOrder);
+  const entry = {
+    id: Date.now(),
+    tableId: String(tableId),
+    order,
+    status: 'pending',
+    timestamp: Date.now(),
+  };
+  orders.push(entry);
   localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
-  ordersChannel?.postMessage({ type: 'NEW_ORDER', order: newOrder });
-  return newOrder;
+  orderChannel?.postMessage({ type: 'NEW_ORDER', order: entry });
+  return entry;
 };
 
 export const updateCustomOrderStatus = (orderId, status) => {
   const orders = getCustomOrders();
-  const idx = orders.findIndex(o => o.id === orderId);
-  if (idx === -1) return null;
-  orders[idx].status = status;
+  const i = orders.findIndex((o) => o.id === orderId);
+  if (i === -1) return null;
+  orders[i].status = status;
   localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
-  ordersChannel?.postMessage({ type: 'ORDER_UPDATE', orderId, status, tableId: orders[idx].tableId });
-  return orders[idx];
+  orderChannel?.postMessage({ type: 'ORDER_UPDATE', orderId, status });
+  return orders[i];
 };
 
-// ─── Add confirmed custom order to main cart ────────────────────────────
-export const addCustomOrderToCart = (order, tableId) => {
+export const subscribeToOrders = (callback) => {
+  if (orderChannel) orderChannel.onmessage = (e) => callback(e.data);
+  return () => { if (orderChannel) orderChannel.onmessage = null; };
+};
+
+// ─── Cart helpers ─────────────────────────────────────────────────
+
+export const addCustomOrderToCart = (order) => {
   try {
     const cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
-    const customItem = {
+    const item = {
       id: Date.now() + Math.random(),
       databaseId: null,
       name: `Custom: ${order.protein} on ${order.bread}`,
@@ -80,36 +135,14 @@ export const addCustomOrderToCart = (order, tableId) => {
       isCustom: true,
       selectedExtras: [
         order.cheese && order.cheese !== 'none' ? { name: `🧀 ${order.cheese}`, price: 0 } : null,
-        order.veggies ? { name: `🥗 ${order.veggies}`, price: 0 } : null,
-        order.sauce && order.sauce !== 'none' ? { name: `🫙 ${order.sauce}`, price: 0 } : null,
-        order.notes ? { name: `📝 ${order.notes}`, price: 0 } : null,
+        order.veggies                           ? { name: `🥗 ${order.veggies}`, price: 0 } : null,
+        order.sauce  && order.sauce  !== 'none' ? { name: `🫙 ${order.sauce}`,   price: 0 } : null,
+        order.notes                             ? { name: `📝 ${order.notes}`,   price: 0 } : null,
       ].filter(Boolean),
     };
-    cart.push(customItem);
+    cart.push(item);
     localStorage.setItem(CART_KEY, JSON.stringify(cart));
-    // Notify App.jsx to reload cart
     window.dispatchEvent(new CustomEvent('snackCartExternalUpdate'));
-    return customItem;
+    return item;
   } catch { return null; }
-};
-
-// ─── Subscriptions ──────────────────────────────────────────────────────────
-
-export const subscribeToChats = (callback) => {
-  const storageHandler = (e) => {
-    if (e.key === STORAGE_KEY) {
-      try { callback(JSON.parse(e.newValue || '{}')); } catch {}
-    }
-  };
-  window.addEventListener('storage', storageHandler);
-  if (channel) channel.onmessage = (e) => e.data?.conversations && callback(e.data.conversations);
-  return () => {
-    window.removeEventListener('storage', storageHandler);
-    if (channel) channel.onmessage = null;
-  };
-};
-
-export const subscribeToOrders = (callback) => {
-  if (ordersChannel) ordersChannel.onmessage = (e) => callback(e.data);
-  return () => { if (ordersChannel) ordersChannel.onmessage = null; };
 };

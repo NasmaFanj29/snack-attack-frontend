@@ -134,23 +134,8 @@ function Chatbot({ menuItems = [], addToCart }) {
     setIsLoading(true);
 
     try {
-      // Build strict alternating history for Gemini
-      let strictHistory = [];
-      for (const msg of conversationHistory.current) {
-        const role = msg.role === "assistant" ? "model" : "user";
-        const parts = [{ text: msg.content }];
-        if (strictHistory.length === 0) {
-          if (role === "user") strictHistory.push({ role, parts });
-        } else {
-          if (strictHistory[strictHistory.length - 1].role !== role) {
-            strictHistory.push({ role, parts });
-          } else {
-            strictHistory[strictHistory.length - 1].parts[0].text += `\n${msg.content}`;
-          }
-        }
-      }
-
-      const res= await fetch("https://snack-attack-backend.onrender.com/api/chat", {
+      // ✅ FIX: Send conversationHistory.current directly (Backend handles the rest)
+      const res = await fetch("https://snack-attack-backend.onrender.com/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -170,6 +155,7 @@ function Chatbot({ menuItems = [], addToCart }) {
       conversationHistory.current.push({ role: "assistant", content: raw });
 
       // ── Handle CUSTOM_ORDER ──────────────────────────────────
+     // ── Handle CUSTOM_ORDER ──────────────────────────────────
       if (raw.includes("CUSTOM_ORDER:")) {
         const match = raw.match(/CUSTOM_ORDER:(\{[\s\S]*?\})/);
         if (match) {
@@ -178,9 +164,13 @@ function Chatbot({ menuItems = [], addToCart }) {
             addCustomOrder(tableId, orderData);
       
             const cleanText = raw.replace(/CUSTOM_ORDER:[\s\S]*/, "").trim();
-            const botMsg = { sender: "bot", text: cleanText };
-            setMessages((prev) => [...prev, botMsg]);
-            addMessage(tableId, botMsg);
+            
+            // 🛑 FIX: Only save if there's actual text left!
+            if (cleanText) {
+              const botMsg = { sender: "bot", text: cleanText };
+              setMessages((prev) => [...prev, botMsg]);
+              addMessage(tableId, botMsg);
+            }
       
             // Generate preview image
             const loadingMsg = { sender: "bot", text: "🎨 Generating your burger preview..." };
@@ -223,11 +213,11 @@ function Chatbot({ menuItems = [], addToCart }) {
           offensive: "Inappropriate language",
           complaint: "Food/service complaint",
         };
-        if (raw) {
-          const botMsg = { sender: "bot", text: raw };
-          setMessages((prev) => [...prev, botMsg]);
-          addMessage(tableId, botMsg);
-        }
+       if (raw) {
+        const botMsg = { sender: "bot", text: raw };
+        setMessages((prev) => [...prev, botMsg]);
+        addMessage(tableId, botMsg);
+      }
         escalateToAdmin(map[reason] || reason);
         setIsLoading(false);
         return;
