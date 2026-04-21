@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "../style/cart.css";
-
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+
+const BACKEND = "https://snack-attack-backend.onrender.com";
 
 function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
   const navigate = useNavigate();
@@ -15,47 +16,36 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
   const [orderStatus, setOrderStatus] = useState("");
   const [isRejected, setIsRejected] = useState(false);
   const [placingOrder, setPlacingOrder] = useState(false);
-
-  const [formData, setFormData] = useState({ fullName: "", phone: "" });
+  const [displayCart, setDisplayCart] = useState([]);
 
   const activeTable =
     searchParams.get("table") ||
     localStorage.getItem("activeTable") ||
     "1";
 
-  const [displayCart, setDisplayCart] = useState([]);
-
   useEffect(() => {
-  if (!isJoinMode && Array.isArray(cart)) {
-    setDisplayCart(cart);
-  }
-}, [cart, isJoinMode]);
+    if (!isJoinMode && Array.isArray(cart)) {
+      setDisplayCart(cart);
+    }
+  }, [cart, isJoinMode]);
 
-  // --- Financial Logic ---
- const subtotal = (displayCart || []).reduce(
+  // ── Financials ──
+  const subtotal = (displayCart || []).reduce(
     (acc, item) =>
       acc + (Number(item.price || item.price_at_time) || 0) * (Number(item.quantity) || 0),
     0
   );
-
   const vat = subtotal * 0.11;
   const totalPrice = subtotal + vat;
 
-  // --- Join Mode Logic ---
-  // --- Join Mode Logic ---
+  // ── Join Mode Fetch ──
   useEffect(() => {
     if (isJoinMode && urlOrderId) {
-      axios
-        .get(
-          `https://snack-attack-backend.onrender.com/orders/${urlOrderId}` // ✅ Zidna 's' hon
-        )
+      axios.get(`${BACKEND}/orders/${urlOrderId}`)
         .then((res) => {
           if (res.data) {
-            setDisplayCart(
-              Array.isArray(res.data.items) ? res.data.items : []
-            );
-            // ✅ Saret res.data.order.status
-            setOrderStatus(res.data.order?.status || ""); 
+            setDisplayCart(Array.isArray(res.data.items) ? res.data.items : []);
+            setOrderStatus(res.data.order?.status || "");
             setIsWaiting(true);
           }
         })
@@ -63,82 +53,83 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
     }
   }, [isJoinMode, urlOrderId]);
 
-  // --- Real-time Sync ---
-  // --- Real-time Sync ---
+  // ── Polling ──
   useEffect(() => {
     let interval;
     const activeId = orderId || urlOrderId;
-
     if (activeId && (isWaiting || isJoinMode)) {
       interval = setInterval(async () => {
         try {
-          const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeId}`);
-
-          // ✅ 1. Fix el status logic
+          const res = await axios.get(`${BACKEND}/orders/${activeId}`);
           const currentStatus = res.data.order?.status || "";
           setOrderStatus(currentStatus);
-
-          // ✅ 2. Update el cart kirmal ybayin el akl l jdid 3nd kel l tawle!
-          if (Array.isArray(res.data.items)) {
-            setDisplayCart(res.data.items);
-          }
-
-          const statusLower = String(currentStatus).toLowerCase();
-
-          if (["preparing", "paid", "served", "ready"].includes(statusLower)) {
+          if (Array.isArray(res.data.items)) setDisplayCart(res.data.items);
+          const s = String(currentStatus).toLowerCase();
+          if (["preparing", "paid", "served", "ready"].includes(s)) {
             setIsWaiting(false);
             setIsOrdered(true);
           }
-
-          if (statusLower === "rejected") {
+          if (s === "rejected") {
             setIsRejected(true);
             clearInterval(interval);
           }
-        } catch (err) {
-          console.error("Polling error...");
-        }
+        } catch {}
       }, 3000);
     }
-
     return () => clearInterval(interval);
   }, [isWaiting, orderId, urlOrderId, isJoinMode]);
 
-
-const handleProceedToPayment = async () => {
+  // ── Place Order ──
+  const handleProceedToPayment = async () => {
     if (!displayCart || displayCart.length === 0) {
       alert("Your cart is empty!");
       return;
     }
-
     setPlacingOrder(true);
-
     try {
-      // ✅ Safety Check: Nshil ay item fade aw mntza3 mn el cart abel ma neb3ato
-      const validItems = displayCart.filter(item => item && typeof item === 'object' && item.name);
-
-      const res = await axios.post(
-        "https://snack-attack-backend.onrender.com/place-order",
-        {
-          customer: { name: "Guest", phone: "000000" },
-          items: validItems.map((item) => ({
-            id: item.databaseId || item.item_id || item.id || 0,
-            databaseId: item.databaseId || item.item_id || item.id || 0,
-            name: item.name || "Item",
-            price: Number(item.price || item.price_at_time || 0),
-            quantity: Number(item.quantity || 1),
-          })),
-          total_price: totalPrice.toFixed(2),
-          table_id: activeTable || "1",
-          payment_splits: [],
-          status: "Requested",
-        }
+      const validItems = displayCart.filter(
+        (item) => item && typeof item === "object" && item.name
       );
+
+      // ✅ FIX: Map items with all possible ID fields so backend finds itemId
+      const mappedItems = validItems.map((item) => {
+        // The menu item's DB id — check all possible field names
+        const dbId =
+          item.databaseId ||   // set explicitly in some flows
+          item.item_id  ||     // from DB fetch
+          item.menu_id  ||     // alternative name
+          item.id       ||     // set in Menu.jsx addToCart
+          null;
+
+        return {
+          id:          dbId,
+          databaseId:  dbId,   // ← backend reads this first
+          item_id:     dbId,   // ← fallback
+          name:        item.name        || "Item",
+          price:       Number(item.price || item.price_at_time || 0),
+          quantity:    Number(item.quantity || 1),
+          specialNote: item.specialNote || item.special_note || null,
+          removedExtras: item.removedExtras || item.removed_extras || null,
+        };
+      });
+
+      // Log so you can verify IDs in browser console
+      console.log("Placing order with items:", mappedItems);
+
+      const res = await axios.post(`${BACKEND}/place-order`, {
+        customer: { name: "Guest", phone: "000000" },
+        items: mappedItems,
+        total_price: totalPrice.toFixed(2),
+        table_id: activeTable || "1",
+        payment_splits: [],
+        status: "Requested",
+      });
 
       if (res.data && res.data.success) {
         navigate("/checkout", {
           state: {
             orderId: res.data.orderId,
-            cartItems: validItems, // Ba3atna el items el ndaf bas
+            cartItems: validItems,
             tableId: activeTable || "1",
             totalPrice: totalPrice.toFixed(2),
           },
@@ -147,141 +138,153 @@ const handleProceedToPayment = async () => {
         alert("Backend issue, order not placed.");
       }
     } catch (err) {
-      console.log("BACKEND ERROR:", err);
+      console.error("BACKEND ERROR:", err);
       alert("Error sending order. Please try again.");
     } finally {
       setPlacingOrder(false);
     }
   };
 
-  if (isRejected)
-    return (
-      <div className="cart-page-glass">
-        <h2>REJECTED ❌</h2>
-      </div>
-    );
-
-  if (isOrdered)
-    return (
-      <div className="cart-page-glass">
-        <h2>{String(orderStatus).toUpperCase()} ✅</h2>
-      </div>
-    );
-
-    const handleJoinModeUpdate = async (item, action) => {
+  // ── Join Mode Update ──
+  const handleJoinModeUpdate = async (item, action) => {
     const activeId = orderId || urlOrderId;
     if (!activeId) return;
-
     try {
-      // Bneba3at 'add' aw 'remove' lal backend
-      await axios.post(`https://snack-attack-backend.onrender.com/orders/${activeId}/update-item`, {
-        action: action, 
-        item: item
+      await axios.post(`${BACKEND}/orders/${activeId}/update-item`, {
+        action,
+        item,
       });
-      // Mala7aza: ma fi da3i ta3mle refresh de8re, la2ano el setInterval 
-      // yali 3amltiye (kel 3 saweni) rah ya3mol fetch lal data l jdide w ybayin el ta3dil la kel l tawle!
     } catch (err) {
       console.error("Error updating shared cart", err);
     }
   };
 
+  // ── Status Screens ──
+  if (isRejected)
+    return (
+      <div className="cart-page">
+        <div className="cart-container">
+          <div className="cart-status-card">
+            <h2>❌ ORDER REJECTED</h2>
+            <button className="cart-back-btn" onClick={() => window.location.href = "/"}>
+              GO BACK
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+
+  if (isOrdered)
+    return (
+      <div className="cart-page">
+        <div className="cart-container">
+          <div className="cart-status-card">
+            <h2>{String(orderStatus).toUpperCase()} ✅</h2>
+            <p>Order #{orderId || urlOrderId}</p>
+            <button className="cart-back-btn" onClick={() => navigate(`/checkout?orderId=${orderId || urlOrderId}`)}>
+              VIEW ORDER
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+
+  // ── Main Render ──
   return (
-    <div className="cart-page-glass">
-      <div className="unified-glass-container">
-        <div className="glass-panel order-panel">
-          <h2 className="glass-title">ORDER SUMMARY</h2>
+    <div className="cart-page">
+      <div className="cart-container">
+        <div className="cart-card">
+          <h2 className="cart-title">🛒 YOUR ORDER</h2>
+          <p className="cart-table-tag">Table #{activeTable}</p>
 
-          <div className="glass-items-list">
-            {displayCart.map((item, i) => {
-              if (!item || typeof item !== "object") return null;
+          {displayCart.length === 0 ? (
+            <div className="cart-empty">
+              <p>Your cart is empty</p>
+            </div>
+          ) : (
+            <div className="cart-items">
+              {displayCart.map((item, i) => {
+                if (!item || typeof item !== "object") return null;
+                const basePrice = Number(item.price || item.price_at_time || 0);
+                const lineTotal = basePrice * Number(item.quantity || 1);
+                let extrasText = "";
+                if (Array.isArray(item.selectedExtras)) {
+                  extrasText = item.selectedExtras
+                    .map((e) => String(e.name || e))
+                    .join(", ");
+                }
 
-              const safeName = String(item.name || "Item");
-
-              let extrasText = "";
-              if (Array.isArray(item.selectedExtras)) {
-                extrasText = item.selectedExtras
-                  .map((e) => String(e.name || e))
-                  .join(", ");
-              }
-
-              return (
-                <div
-                  key={String(item.id || i)}
-                  className="item-container glass-item-card slide-down"
-                >
-                  <div className="glass-item-row">
-                    <div className="item-details">
-                      <span className="item-name">{safeName}</span>
-
+                return (
+                  <div key={String(item.id || i)} className="cart-item">
+                    <div className="cart-item-left">
+                      <span className="cart-item-name">{item.name || "Item"}</span>
                       {extrasText && (
-                        <span
-                          className="item-extras"
-                          style={{
-                            fontSize: "0.75rem",
-                            color: "#FFC20E",
-                            display: "block",
-                          }}
-                        >
-                          + {extrasText}
-                        </span>
+                        <span className="cart-item-extras">+ {extrasText}</span>
                       )}
-
-                      <span className="item-price-each">
-                      ${Number(item.price || item.price_at_time).toFixed(2)} each
-                    </span>
+                      <span className="cart-item-each">${basePrice.toFixed(2)} each</span>
                     </div>
 
-                    <div className="quantity-controls">
-                      <button
-                        className="q-btn minus"
-                        onClick={() => isJoinMode ? handleJoinModeUpdate(item, 'remove') : removeFromCart(item)}
-                      >
-                        −
-                      </button>
-
-                      <span className="q-count">{item.quantity}</span>
-
-                      <button
-                        className="q-btn plus" onClick={() => isJoinMode ? handleJoinModeUpdate(item, 'add') : addToCart(item)}>+</button>
+                    <div className="cart-item-right">
+                      <div className="cart-qty">
+                        <button
+                          className="cart-qty-btn"
+                          onClick={() =>
+                            isJoinMode
+                              ? handleJoinModeUpdate(item, "remove")
+                              : removeFromCart(item)
+                          }
+                        >−</button>
+                        <span className="cart-qty-num">{item.quantity}</span>
+                        <button
+                          className="cart-qty-btn"
+                          onClick={() =>
+                            isJoinMode
+                              ? handleJoinModeUpdate(item, "add")
+                              : addToCart(item)
+                          }
+                        >+</button>
+                      </div>
+                      <span className="cart-item-total">${lineTotal.toFixed(2)}</span>
                     </div>
-
-                    <span className="item-total-price">
-                    ${(Number(item.price || item.price_at_time) * Number(item.quantity)).toFixed(2)}
-                  </span>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          )}
+
+          <div className="cart-summary">
+            <div className="cart-summary-row">
+              <span>Subtotal</span>
+              <span>${subtotal.toFixed(2)}</span>
+            </div>
+            <div className="cart-summary-row vat-row">
+              <span>VAT (11%)</span>
+              <span>${vat.toFixed(2)}</span>
+            </div>
+            <div className="cart-summary-divider"></div>
+            <div className="cart-summary-row cart-final-row">
+              <span>TOTAL</span>
+              <span>${totalPrice.toFixed(2)}</span>
+            </div>
           </div>
 
-          <div className="glass-form-wrapper" style={{ marginTop: "20px" }}>
+          <div className="cart-action">
             {!isJoinMode ? (
-              /* Zerr el sha5es el 2asese yali fata7 el tawle */
               <button
-                className="glass-complete-btn-final"
+                className="cart-pay-btn"
                 onClick={handleProceedToPayment}
                 disabled={placingOrder || displayCart.length === 0}
               >
-                {placingOrder ? "SENDING REQUEST... 👨‍🍳" : "PROCEED TO PAYMENT ▶"}
+                {placingOrder ? "SENDING... 👨‍🍳" : "PROCEED TO PAYMENT ▶"}
               </button>
             ) : (
-              /* Zerr el ref2a yali 3emlo scan lal QR */
               <button
-                className="glass-complete-btn-final"
-                onClick={() => navigate(`/checkout?orderId=${urlOrderId}&amount=${totalPrice.toFixed(2)}`)}
+                className="cart-pay-btn"
+                onClick={() => navigate(`/checkout?orderId=${urlOrderId}&mode=add`)}
               >
                 PAY MY SHARE 💳
               </button>
             )}
-          </div>
-
-          <div className="glass-total-section">
-            <div className="total-row final-total">
-              <div className="g-total-label">TOTAL AMOUNT</div>
-              <div className="g-total-value">
-                ${totalPrice.toFixed(2)}
-              </div>
-            </div>
           </div>
         </div>
       </div>

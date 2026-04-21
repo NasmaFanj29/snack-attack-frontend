@@ -1,65 +1,80 @@
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom"; 
-import ReorderIcon from "@mui/icons-material/Reorder";
-import CloseIcon from "@mui/icons-material/Close";
-import "../style/navbar.css";
-import logo from "../assets/logo.png";
-import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 
-function Navbar({ cart = {} }) {
-  const [openMenu, setOpenMenu] = useState(false);
-  const location = useLocation(); 
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { useTheme } from '../hooks/useTheme';
+import '../style/navbar.css';
 
-  const toggleMenu = () => setOpenMenu(!openMenu);
-  
- 
-  const cartCount = cart ? Object.values(cart).reduce((a, b) => a + b, 0) : 0;
-  
-  const isHomePage = location.pathname === "/";
+export default function Navbar({ cartCount = 0 }) {
+  const [open, setOpen] = useState(false);
+  const { isDark, toggle } = useTheme();
+  const location = useLocation();
+  const isHome = location.pathname === '/';
+
+  const ThemeBtn = () => (
+    <button className="theme-toggle-btn" onClick={toggle} title={isDark ? 'Light Mode' : 'Dark Mode'}>
+      <span className="theme-toggle-track">
+        <span className="theme-toggle-thumb">{isDark ? '🌙' : '☀️'}</span>
+      </span>
+    </button>
+  );
 
   return (
-    <nav className={`navbar ${isHomePage ? "home-nav" : "general-nav"}`}>
-      
-      
-      {!isHomePage && (
-        <Link to="/">
-          <img src={logo} className="logo" alt="logo" />
-        </Link>
-      )}
+    <>
+      <nav className={`navbar ${isHome ? 'nav-home' : ''}`}>
+        <div className="navbar-inner">
+          
 
-      
-      <div className="nav-links desktop">
-        <Link to="/">Home</Link>
-        <Link to="/menu">Menu</Link>
-        <Link to="/customize">Customize Your Own Burger</Link>
-        
-        
-        
-        <span className="nav-phone">03 231 506</span>
+          {/* Desktop Links */}
+          <div className="nav-links">
+             <Link to="/" className="nav-link">Home</Link>
+            <Link to="/menu" className={`nav-link ${location.pathname === '/menu' ? 'active' : ''}`}>Menu</Link>
+            <Link to="/cart" className={`nav-link ${location.pathname === '/cart' ? 'active' : ''}`}>Cart</Link>
+          </div>
 
-        <Link to="/cart" className="cart-icon">
-          <AddShoppingCartIcon />
-          {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
-        </Link>
+          {/* Desktop Actions */}
+          <div className="nav-actions">
+            <a href="tel:+96103231506" className="nav-phone">📞 03 231 506</a>
+            <Link to="/cart" className="nav-cart">
+              🛒
+              {cartCount > 0 && <span className="nav-badge">{cartCount}</span>}
+            </Link>
+            {/* ✅ Theme toggle */}
+            <div className="nav-theme-toggle"><ThemeBtn /></div>
+          </div>
+
+          {/* Mobile buttons */}
+          <div className="nav-mobile-btns">
+            
+            <ThemeBtn />
+            <button className="nav-burger" onClick={() => setOpen(true)}>☰</button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Dim */}
+      <div className={`nav-dim ${open ? 'on' : ''}`} onClick={() => setOpen(false)} />
+
+      {/* Drawer */}
+      <div className={`nav-drawer ${open ? 'on' : ''}`}>
+        <button className="nav-x" onClick={() => setOpen(false)}>✕</button>
+        <div className="nav-drawer-body">
+           <div className="nav-d-theme">
+            <span>{isDark ? 'Dark Mode' : 'Light Mode'}</span>
+            <ThemeBtn />
+          </div>
+          {/* ✅ زيدي لينك الـ Home هون بقلب الموبايل منيو */}
+          <Link to="/" className="nav-d-link" onClick={() => setOpen(false)}>Home</Link>
+          <div className="nav-d-sep" />
+
+          <Link to="/menu" className="nav-d-link" onClick={() => setOpen(false)}>Menu</Link>
+          <div className="nav-d-sep" />
+          <a href="tel:+96103231506" className="nav-d-phone">📞 03 231 506</a>
+          <Link to="/cart" className="nav-d-cart" onClick={() => setOpen(false)}>
+            🛒 Cart
+            {cartCount > 0 && <span className="nav-d-badge">{cartCount}</span>}
+          </Link>
+        </div>
       </div>
-
-      
-      <button className="mobile-menu-icon" onClick={toggleMenu}>
-        <ReorderIcon />
-      </button>
-
-      
-      <div className={`mobile-menu ${openMenu ? "open" : ""}`}>
-        <button className="close-menu-icon" onClick={toggleMenu}>
-          <CloseIcon />
-        </button>
-        <Link to="/" onClick={toggleMenu}>Home</Link>
-        <Link to="/menu" onClick={toggleMenu}>Menu</Link>
-        <Link to="/customize" onClick={toggleMenu}> Customize Your Burger </Link>
-        <Link to="/cart" onClick={toggleMenu}>Cart</Link>
-      </div>
-    </nav>
+    </>
   );
 }
-
-export default Navbar;

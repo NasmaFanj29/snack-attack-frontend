@@ -1,865 +1,284 @@
-/* --- Global & Page Setup --- */
-html, body {
-  margin: 0;
-  padding: 0;
-  min-height: 100%;
-}
+/* ================================================================
+   MENU.CSS — Snack Attack · Themed
+   Requires theme.css
+   ================================================================ */
+*, *::before, *::after { box-sizing:border-box; }
 
-/* --- 1. THE PAGE SETUP --- */
+html, body { margin:0; padding:0; min-height:100%; font-family:'DM Sans',sans-serif; }
+
 .menu-page {
-  width: 100%;
-  min-height: 100vh;
-  padding: 160px 20px 0 20px; /* 0 ta7et kirmal el-gap */
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  background: url('../assets/menupage.jpg') no-repeat center center fixed;
-  background-size: cover;
-  background-color: #1a1a1a;
-  overflow-x: hidden;
+  width:100%; min-height:100vh;
+  padding:140px 20px 0 20px;
+  display:flex; flex-direction:column; position:relative;
+  background:url('../assets/menupage.jpg') no-repeat center center fixed;
+  background-size:cover;
+  background-color:var(--bg);
+  overflow-x:hidden;
 }
-
 .menu-page::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%; 
-  height: 100%;
-  background: rgba(0, 0, 0, 0.2);
-  z-index: 0;
+  content:''; position:fixed; inset:0;
+  background:var(--page-overlay);
+  backdrop-filter:blur(3px); z-index:0; pointer-events:none;
 }
 
-/* --- Search & Title --- */
-.menu-title, .menu-search, .menu-content {
-  position: relative;
-  z-index: 10;
-}
+/* Light: lighter overlay */
+:root .menu-page::before { background:rgba(180,160,130,0.35); backdrop-filter:blur(1px); }
+[data-theme="dark"] .menu-page::before { background:rgba(5,3,1,0.55); backdrop-filter:blur(2px); }
 
+.overlay { display:none; }
+
+.menu-title, .menu-search, .menu-content { position:relative; z-index:10; }
+
+/* Title */
 .menu-title {
-  text-align: center;
-  font-size: 42px;
-  font-weight: 900;
-  color: #FFC20E;
-  text-transform: uppercase;
-  margin-bottom: 20px;
+  text-align:center; font-family:'Bebas Neue','DM Sans',sans-serif;
+  font-size:3rem; font-weight:400; letter-spacing:10px;
+  color:var(--gold); text-transform:uppercase; margin-bottom:8px;
 }
 
+/* Search */
 .menu-search {
-  display: block;
-  width: 90%;
-  max-width: 400px;
-  padding: 12px 20px;
-  margin: 0 auto 30px auto;
-  border-radius: 25px;
-  border: 2px solid #FFC20E;
-  outline: none;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  display:block; width:90%; max-width:420px;
+  padding:12px 22px; margin:0 auto 32px auto;
+  border-radius:50px; outline:none;
+  background:var(--surface); border:2px solid var(--border-gold);
+  color:var(--text); font-family:'DM Sans',sans-serif; font-size:14px;
+  box-shadow:var(--shadow);
 }
+.menu-search::placeholder { color:var(--text-faint); }
+.menu-search:focus { border-color:var(--gold); box-shadow:0 0 0 4px rgba(255,194,14,0.1); }
 
-/* --- Layout Grid --- */
-.menu-content {
-  display: flex;
-  gap: 30px;
-  align-items: flex-start;
-  flex: 1;
-  width: 100%;
-  justify-content: center; 
-  padding: 0 40px; 
-  box-sizing: border-box;
-  padding-bottom: 0 !important;
-  margin-bottom: 0 !important;
-}
+/* Layout */
+.menu-content { display:flex; gap:28px; align-items:flex-start; flex:1; width:100%; padding:0 32px; }
 
-.menu-list {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  flex: 1;
-  margin-bottom: 0 !important;
-  padding-bottom: 0 !important;
-  margin-bottom: 0 !important;
-}
+/* Sidebar */
+.menu-sidebar { flex:0 0 200px; display:flex; flex-direction:column; gap:12px; position:sticky; top:140px; }
 
-/* --- The Card --- */
-.menu-card {
-  background: white;
-  border-radius: 15px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  transition: transform 0.3s ease;
-  z-index: 11;
-}
-
-.menu-card:hover {
-  transform: translateY(-5px);
-}
-
-.menu-img {
-  width: 100%;
-  height: 180px;
-  overflow: hidden;
-}
-
-.menu-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* --- THE DYNAMIC BUTTON (In Title Row) --- */
-.menu-info {
-  padding: 15px;
-  text-align: left; /* Alignment left kirmal el-row look */
-}
-
-.title-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.title-row h3 {
-  /* 1. EL-GRADIENT COLORS (#95b508 to #FFC20E) */
-  background: linear-gradient(90deg, #95b508 0%, #FFC20E 100%);
-  
-  /* 2. APPLY GRADIENT TO TEXT */
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  
-  /* 3. STYLING */
-  font-size: 1.2rem;
-  font-weight: 900;
-  text-transform: capitalize; /* Aw uppercase eza baddik yehon kbar */
-  margin: 0;
-  display: inline-block;
-}
-
-.dynamic-add-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background-color: #FFC20E; /* Yellow default (+) */
-  color: white;
-  border: none;
-  font-size: 22px;
-  font-weight: 900;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
-  flex-shrink: 0;
-}
-
-/* Lamma y-sir fiyo ra2am (1, 2, 3...) */
-.dynamic-add-btn.has-items {
-  background-color: #95b508; /* Green Snack Attack */
-  transform: scale(1.1);
-  font-size: 16px;
-}
-
-.dynamic-add-btn:active {
-  transform: scale(0.9);
-}
-
-.menu-description {
-  font-size: 13px;
-  color: #777;
-  margin-bottom: 10px;
-  line-height: 1.4;
-}
-
-.price {
-  font-weight: 900;
-  color: #95b508;
-  font-size: 18px;
-}
-
-.menu-sidebar {
-  flex: 0 0 220px; /* Thabbeti el-3ard kirmal ma y-fouto b-ba3d */
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
+.menu-categories-vertical, .burger-type-buttons-vertical { display:flex; flex-direction:column; gap:4px; }
 
 .menu-categories-vertical button,
 .burger-type-buttons-vertical button {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 10px;
-  border-radius: 30px;
-  border: 2px solid #B5CF45;
-  background: white;
-  color: #95b508;
-  font-weight: 700;
-  cursor: pointer;
-  transition: 0.3s;
+  width:100%; padding:11px 16px; margin-bottom:0;
+  border-radius:8px; border:1px solid var(--border);
+  background:transparent; color:var(--text-muted);
+  font-family:'DM Sans',sans-serif; font-size:12px; font-weight:600;
+  letter-spacing:1.5px; text-transform:uppercase;
+  cursor:pointer; text-align:left; transition:all 0.2s; position:relative;
+}
+.menu-categories-vertical button::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:2px;
+  background:var(--gold); transform:scaleY(0); transition:transform 0.2s; border-radius:0 2px 2px 0;
+}
+.menu-categories-vertical button:hover { color:var(--text); background:var(--border); }
+.menu-categories-vertical button.active { color:var(--gold); background:rgba(255,194,14,0.08); border-color:var(--border-gold); }
+.menu-categories-vertical button.active::before { transform:scaleY(1); }
+.burger-type-buttons-vertical { margin-top:8px; padding-top:12px; border-top:1px solid var(--border); }
+.burger-type-buttons-vertical button:hover { color:var(--text); background:var(--border); }
+.burger-type-buttons-vertical button.active { color:var(--gold); background:rgba(255,194,14,0.08); border-color:var(--border-gold); }
+
+/* Menu List */
+.menu-list-wrapper { flex:1; min-width:0; }
+.menu-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(210px,1fr)); gap:18px; }
+
+/* Menu Card */
+.menu-card {
+  background:var(--card-bg); border-radius:14px; overflow:hidden;
+  display:flex; flex-direction:column;
+  border:1px solid var(--card-border); box-shadow:var(--card-shadow);
+  transition:transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+}
+.menu-card:hover { transform:translateY(-6px); border-color:var(--border-gold); box-shadow:0 16px 40px rgba(0,0,0,0.15); }
+[data-theme="dark"] .menu-card:hover { box-shadow:0 16px 40px rgba(0,0,0,0.6); }
+
+.menu-img { width:100%; height:175px; overflow:hidden; }
+.menu-img img { width:100%; height:100%; object-fit:cover; cursor:pointer; transition:transform 0.5s; }
+.menu-card:hover .menu-img img { transform:scale(1.06); }
+
+.menu-info { padding:14px 16px 16px; display:flex; flex-direction:column; gap:8px; }
+
+.title-row { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.title-row h3 {
+  font-family:'DM Sans',sans-serif; font-size:15px; font-weight:700;
+  margin:0; color:var(--card-title) !important;
+  background:none !important;
+  -webkit-background-clip:unset !important;
+  -webkit-text-fill-color:var(--card-title) !important;
+  background-clip:unset !important;
 }
 
-.menu-categories-vertical button.active,
-.burger-type-buttons-vertical button.active {
-  background: #FFC20E;
-  border-color: #FFC20E;
-  color: white;
+/* In light mode, keep the gradient on card titles */
+:root .title-row h3 {
+  background:linear-gradient(90deg,#95b508 0%,#FFC20E 100%) !important;
+  -webkit-background-clip:text !important;
+  -webkit-text-fill-color:transparent !important;
+  background-clip:text !important;
 }
 
-.counter-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  position: relative;
+.price { font-weight:800; color:var(--green); font-size:15px; margin:0; }
+[data-theme="dark"] .price { color:var(--gold); }
+
+/* Counter */
+.counter-controls { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+
+.dynamic-add-btn {
+  width:34px; height:34px; border-radius:50%;
+  background:var(--gold); color:#0a0a0a; border:none;
+  font-size:20px; font-weight:900; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 4px 12px rgba(255,194,14,0.35); flex-shrink:0;
 }
+.dynamic-add-btn.has-items { background:var(--green); box-shadow:0 4px 12px rgba(149,181,8,0.35); font-size:14px; transform:scale(1.08); }
+.dynamic-add-btn:hover { transform:scale(1.12); }
+.dynamic-add-btn:active { transform:scale(0.92); }
 
 .qty-btn.minus {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 2px solid #95b508;
-  background: white;
-  color: #95b508;
-  font-size: 20px;
-  font-weight: 900;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  
-  /* --- Hidden Logic --- */
-  opacity: 0;
-  transform: translateX(15px); /* Bi-koun mkhabba wara el-plus */
-  transition: all 0.3s ease;
-  pointer-events: none;
+  width:30px; height:30px; border-radius:50%;
+  border:1px solid var(--border-2); background:var(--surface-2);
+  color:var(--text-muted); font-size:18px; font-weight:700;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  opacity:0; transform:translateX(14px); pointer-events:none;
 }
+.qty-btn.minus.show { opacity:1; transform:translateX(0); pointer-events:auto; }
+.qty-btn.minus:hover { color:var(--text); }
+.qty-btn.minus.hidden { display:none; }
 
-.qty-btn.minus.show {
-  opacity: 1;
-  transform: translateX(0);
-  pointer-events: auto;
-}
-
-.qty-btn.minus.hidden {
-  display: none; /* Optional: eza ma baddek animation, bas slide a7la */
-}
-
-/* --- Modal Background --- */
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.7);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
-  backdrop-filter: blur(5px);
-}
-
-/* --- Modal Container --- */
+/* Modal */
+.modal-overlay { position:fixed; inset:0; background:var(--modal-overlay); display:flex; justify-content:center; align-items:center; z-index:2000; backdrop-filter:var(--modal-blur); }
 .modal-content {
-  background: white;
-  width: 90%;
-  max-width: 450px;
-  max-height: 85vh; /* Lezim ykoun fī max height kirmal el-scroll */
-  border-radius: 25px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
-  animation: slideUp 0.3s ease-out;
-  scrollbar-width: none;       /* Firefox */
-  -ms-overflow-style: none;    /* IE/Edge */
-  animation: slideFade 0.4s ease-out;
-  transform-origin: center;
-  scroll-behavior: smooth;
+  background:var(--modal-bg); border:1px solid var(--border);
+  width:90%; max-width:450px; max-height:88vh;
+  border-radius:22px; position:relative; display:flex; flex-direction:column;
+  overflow-y:auto; overflow-x:hidden;
+  scrollbar-width:none; -ms-overflow-style:none;
+  animation:modalSlide 0.35s cubic-bezier(0.16,1,0.3,1);
+  box-shadow:0 40px 100px rgba(0,0,0,0.4);
 }
-@keyframes slideFade {
-  0% {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.modal-content::-webkit-scrollbar {
-  display: none;               /* Chrome/Safari */
-}
-.modal-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 12px;
-  margin-bottom: 15px;
-}
+[data-theme="dark"] .modal-content { box-shadow:0 40px 100px rgba(0,0,0,0.85); }
+.modal-content::-webkit-scrollbar { display:none; }
+@keyframes modalSlide { from{opacity:0;transform:translateY(28px) scale(0.96);}to{opacity:1;transform:translateY(0) scale(1);} }
 
-.menu-action-btn {
-  flex: 1;
-  padding: 12px 14px;
-  border: none;
-  border-radius: 8px; 
-  font-size: 13px;
-  font-weight: 800;
-  cursor: pointer;
-  background: #FFC20E;
-  color: white;
-  transition: all 0.2s ease;
-}
-
-/* hover */
-.menu-action-btn:hover {
-  background: #eab10d;
-  transform: translateY(-1px);
-}
-
-
-.modal-actions .menu-action-btn {
-  flex: 1;
-  padding: 12px 12px; /* نفس الشي للكل */
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 800;
-  border: 2px solid #FFC20E;
-  background: #FFC20E;
-  color: white;
-  box-sizing: border-box;
-
-  display: flex;              /* 🔥 الحل */
-  align-items: center;        /* vertical center */
-  justify-content: center;    /* horizontal center */
-}
-.menu-action-btn.remove-btn {
-  background: #FFC20E;
-  color: white;
-  border: 2px solid #FFC20E;
-  padding: 20px 12px;
-  font-size: 13px;
-  font-weight: 800;
-  
-}
-
-/* ============================================================ */
-/* 📝 NOTES TEXTAREA STYLING */
-/* ============================================================ */
-
-.notes-textarea {
-  width: 88%;
-  padding: 12px;
-  border: 2px solid #FFC20E;
-  border-radius: 25px;
-  font-family: 'Arial', sans-serif;
-  font-size: 15px;
-  color: #333;
-  background: #fafafa;
-  resize: vertical;
-  outline: none;
-  transition: all 0.3s ease;
-}
-
-.notes-textarea:focus {
-  border-color: #f5a623;
-  background: white;
-  box-shadow: 0 0 0 4px rgba(255, 194, 14, 0.1);
-}
-
-.notes-textarea::placeholder {
-  color: #999;
-  font-style: italic;
-}
-/* ============================================================ */
-/* MINI CART NOTE DISPLAY */
-/* ============================================================ */
-
-.item-note {
-  font-size: 0.7rem;
-  color: #FFC20E;
-  display: block;
-  margin-top: 2px;
-  font-weight: 600;
-  max-width: 90px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.extra-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 0;
-}
-.extra-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.extra-info span {
-  font-size: 18px;
-  font-weight: 700;
-  color: #95b508;
-  transition: 0.2s ease;
-}
-
-.extra-label:hover .extra-info span {
-  color: #FFC20E;
-  transform: translateX(4px);
-}
-.extra-info input[type="checkbox"] {
-  width: 22px;
-  height: 22px;
-  accent-color: #95b508;
-}
-.remove-modal-subtitle {
-  font-size: 19px !important;
-  font-weight: 700 !important;
-
-  background: linear-gradient(90deg, #95b508 0%, #FFC20E 100%);
-  
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-
-  text-align: center;
-  margin-top: 10px;
-}
-
-
-/* --- THE MODERN MINI CART --- */
-.mini-sidebar-cart {
-  width: 100%;
-  margin-top: 20px;
-  background: rgba(255, 255, 255, 0.9); /* Lon abyaḍ nā3im */
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  
-}
-
-.mini-cart-header {
-  padding: 15px;
-  background: #FFC20E; /* Lon Snack Attack */
-  color: white;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.mini-cart-header h4 {
-  margin: 0;
-  font-weight: 900;
-  text-transform: uppercase;
-  font-size: 13px;
-  letter-spacing: 1px;
-}
-
-.mini-cart-header button {
-  background: rgba(255, 255, 255, 0.2);
-  border: none; color: white;
-  width: 24px; height: 24px; border-radius: 50%;
-  cursor: pointer; font-size: 16px;
-}
-.mini-cart-body {
-  padding: 10px 15px;
-  max-height: 200px;
-  overflow-y: auto;
-  
-}
-.mini-cart-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.mini-cart-item .item-name {
-  color: #95b508 !important; /* Dark Grey / Aswad */
-  font-weight: 800 !important;
-  font-size: 18px;
-}
-.mini-cart-item .item-qty {
-  color: #95b508 !important; /* Aswad ghami2 lal quantity */
-  font-weight: 900 !important;
-  font-size: 15px;
-}
-
-.mini-cart-item .item-price {
-  color: #95b508 !important; /* Dark Grey lal se3er */
-  font-weight: 800 !important;
-  font-size: 15px;
-}
-
-.item-qty {
-  font-size: 11px;
-  color: #95b508; /* Green Snack Attack */
-  font-weight: 800;
-}
-
-.mini-checkout-btn {
-  width: calc(100% - 20px);
-  margin: 10px;
-  padding: 12px;
-  background: #95b508;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-weight: 900;
-  cursor: pointer;
-  transition: 0.3s;
-}
-
-.mini-checkout-btn:hover {
-  background: #84a207;
-  transform: scale(1.02);
-}
-.mini-cart-total-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 15px;
-  background: #f9f9f9; /* Lon khafif kirmal yfasil */
-  border-top: 1px solid #eee;
-  font-weight: 900;
-  font-size: 15px;
-  color: #95b508;
-}
-
-.mini-cart-total-row span:last-child {
-  color: #95b508; /* Lon el-price akhdar metel Snack Attack */
-}
-
-.mini-cart-body p { font-size: 13px; color: #888; margin: 0; }
-.mini-checkout-btn {
-  width: 100%;
-  padding: 12px;
-  background: #95b508;
-  color: white;
-  border: none;
-  font-weight: 900;
-  text-transform: uppercase;
-  cursor: pointer;
-  font-size: 13px;
-}
-@keyframes slideUp {
-  from { transform: translateY(100px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-.modal-scroll-area {
-  padding: 20px;
-  overflow-y: auto; /* HAYDE LI B-TA3MEL SCROLL */
-  flex: 1;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  overflow: visible !important;
-}
-.modal-scroll-area::-webkit-scrollbar {
-  display: none;
-}
-.close-modal {
-  position: absolute;
-  top: 15px; right: 20px;
-  font-size: 30px;
-  background: none; border: none;
-  cursor: pointer; z-index: 10;
-}
-
-.modal-header img {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-  border-radius: 5px;
-  margin-bottom: 1px;
-}
-
-.extras-section h3 {
-  color: #FFC20E; /* Aswad ḍābet */
-  font-size: 20px;
-  font-weight: 900;
-  border-bottom: 2px solid #FFC20E; /* Khaṭ asfar taḥet-ha */
-  padding-bottom: 10px;
-  margin: 20px 0 15px;
-}
-
-.extra-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #f9f9f9;
-  cursor: pointer;
-}
-
-.extra-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.extra-info input[type="checkbox"] {
-  width: 20px; height: 20px;
-  accent-color: #95b508;
-}
-.extra-price {
-  color: #95b508;
-  font-weight: 900;
-  font-size: 16px;
-}
-
-
-/* --- Footer Sticky Button --- */
-.modal-footer {
-  padding: 20px;
-  background: white;
-  box-shadow: 0 -5px 15px rgba(0,0,0,0.05);
-}
-
-.add-btn-final {
-  width: 100%;
-  padding: 15px;
-  border-radius: 15px;
-  background: #FFC20E;
-  border: none;
-  font-weight: 900;
-  font-size: 18px;
-  cursor: pointer;
-  transition: 0.3s;
-}
-
-.add-btn-final:hover { background: #eab10d; }
-
-.extra-group {
-  margin-bottom: 20px;
-}
-
-.extra-group-title {
-  
-  color: #95b508; /* Green Snack Attack */
-  font-size: 15px;
-  font-weight: 800;
-  text-transform: uppercase;
-  margin-bottom: 10px;
-  border-bottom: 1px dashed #ddd;
-  padding-bottom: 5px;
-}
-/* --- MODAL HEADER ITEM NAME --- */
+.modal-header img { width:100%; height:220px; object-fit:cover; border-radius:22px 22px 0 0; display:block; }
 .modal-header h2 {
-  /* 1. EL-GRADIENT COLORS (#95b508 to #FFC20E) */
-  background: linear-gradient(90deg, #95b508 0%, #FFC20E 100%);
-  
-  /* 2. CLIP THE BACKGROUND TO THE TEXT */
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  
-  /* 3. STYLING THE TEXT */
-  font-size: 28px;
-  font-weight: 900;
-  text-transform: uppercase;
-  margin-bottom: 10px;
-  display: inline-block; /* Daroure kirmal el-gradient y-bayyen mazzbout */
-  letter-spacing: -0.5px;
-  padding: 0 10px 10px 10px;
+  background:linear-gradient(90deg,#95b508 0%,#FFC20E 100%) !important;
+  -webkit-background-clip:text !important; -webkit-text-fill-color:transparent !important;
+  background-clip:text !important;
+  font-size:26px !important; font-weight:900 !important; text-transform:uppercase;
+  margin-bottom:0; padding:14px 20px 6px !important;
+}
+.modal-header p { color:var(--text-muted) !important; font-size:13px !important; line-height:1.5; padding:0 20px 14px !important; margin:0 !important; }
+
+.modal-actions { display:flex; gap:8px; margin:0 20px 16px; }
+.menu-action-btn {
+  flex:1; padding:12px 14px; border-radius:8px;
+  font-family:'DM Sans',sans-serif; font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+  cursor:pointer; border:1px solid rgba(255,194,14,0.3); background:rgba(255,194,14,0.1); color:var(--gold);
+  display:flex; align-items:center; justify-content:center; gap:6px;
+}
+.menu-action-btn:hover { background:rgba(255,194,14,0.18); transform:translateY(-1px); }
+.menu-action-btn.remove-btn { background:rgba(255,77,77,0.08); border-color:rgba(255,77,77,0.2); color:rgba(255,100,100,0.88); }
+.menu-action-btn.remove-btn:hover { background:rgba(255,77,77,0.15); }
+
+.modal-scroll-area { padding:0 20px 20px; overflow:visible !important; }
+
+.extras-section h3 { font-family:'DM Sans',sans-serif !important; font-size:11px !important; font-weight:700 !important; letter-spacing:3px; text-transform:uppercase; color:var(--text-muted) !important; border-bottom:1px solid var(--border) !important; padding-bottom:10px !important; margin:0 0 12px !important; }
+.extra-group-title { font-size:10px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:var(--text-faint); margin-bottom:12px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+
+.extra-label { display:flex; justify-content:space-between; align-items:center; padding:12px 4px; border-bottom:1px solid var(--border); cursor:pointer; border-radius:4px; }
+.extra-label:hover { background:var(--border); }
+.extra-label:last-child { border-bottom:none; }
+.extra-info { display:flex; align-items:center; gap:12px; }
+.extra-info span { font-size:14px; font-weight:600; color:var(--extra-name); }
+.extra-label:hover .extra-info span { color:var(--extra-name-hover); }
+.extra-info input[type="checkbox"] { width:18px; height:18px; accent-color:var(--gold); flex-shrink:0; cursor:pointer; }
+.extra-price { font-size:14px; font-weight:700; color:var(--gold); }
+
+.modal-footer { padding:16px 20px 20px; background:var(--modal-bg); border-top:1px solid var(--border); }
+.add-btn-final {
+  width:100%; padding:16px; border-radius:10px;
+  background:var(--gold); color:#0a0a0a; border:none;
+  font-family:'DM Sans',sans-serif; font-weight:800; font-size:14px; letter-spacing:1.5px; text-transform:uppercase;
+  cursor:pointer; transition:all 0.25s; position:relative; overflow:hidden;
+}
+.add-btn-final::before { content:''; position:absolute; inset:0; background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,0.25) 50%,transparent 60%); transform:translateX(-100%); transition:transform 0.5s; }
+.add-btn-final:hover::before { transform:translateX(200%); }
+.add-btn-final:hover { background:#f5b800; box-shadow:0 8px 24px rgba(255,194,14,0.4); transform:translateY(-1px); }
+.add-btn-final:disabled { background:var(--surface-3); color:var(--text-faint); cursor:not-allowed; }
+
+.close-modal {
+  position:absolute; top:14px; right:16px;
+  width:32px; height:32px; border-radius:50%;
+  background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.2);
+  color:rgba(255,255,255,0.8); font-size:18px; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; z-index:10; backdrop-filter:blur(8px);
+}
+.close-modal:hover { background:rgba(0,0,0,0.6); color:#fff; }
+
+/* Notes textarea */
+.notes-textarea {
+  width:100%; padding:12px 16px;
+  border:2px solid var(--border-gold); border-radius:12px;
+  font-family:'DM Sans',sans-serif; font-size:14px; color:var(--modal-text);
+  background:var(--surface-2); resize:vertical; outline:none; line-height:1.6;
+}
+.notes-textarea:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(255,194,14,0.1); }
+.notes-textarea::placeholder { color:var(--text-faint); font-style:italic; }
+
+.remove-modal-subtitle {
+  font-family:'DM Sans',sans-serif !important; font-size:13px !important; font-weight:500 !important;
+  color:var(--text-muted) !important;
+  background:none !important; -webkit-background-clip:unset !important;
+  -webkit-text-fill-color:unset !important; text-align:center;
 }
 
-/* Optional: Eza baddik el-description ta7to ykoun clean */
-.modal-header p {
-  color: #666;
-  font-size: 14px;
-  line-height: 1.5;
-  margin-top: 5px;
-  padding: 0 10px 10px 10px;
-
+/* Mini sidebar cart */
+.mini-sidebar-cart {
+  width:100%; margin-top:20px;
+  background:var(--mini-cart-bg); backdrop-filter:blur(16px);
+  border-radius:16px; border:1px solid var(--mini-cart-border);
+  box-shadow:var(--shadow-lg); overflow:hidden; display:flex; flex-direction:column;
 }
+.mini-cart-header { padding:13px 16px; background:rgba(255,194,14,0.1); border-bottom:1px solid var(--mini-cart-border); display:flex; justify-content:space-between; align-items:center; }
+.mini-cart-header h4 { font-size:10px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:var(--gold); margin:0; }
+.mini-cart-header button { background:rgba(255,255,255,0.08); border:1px solid var(--border); color:var(--text-muted); width:22px; height:22px; border-radius:50%; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; }
+.mini-cart-body { padding:8px 14px; max-height:200px; overflow-y:auto; scrollbar-width:none; }
+.mini-cart-body::-webkit-scrollbar { display:none; }
+.mini-cart-item { display:flex; justify-content:space-between; align-items:flex-start; padding:8px 0; border-bottom:1px solid var(--mini-cart-item-border); }
+.mini-cart-item:last-child { border-bottom:none; }
+.item-details { display:flex; flex-direction:column; gap:2px; }
+.mini-cart-item .item-name { font-size:13px !important; font-weight:600 !important; color:var(--mini-cart-name) !important; }
+.mini-cart-item .item-qty { font-size:11px !important; color:var(--text-muted) !important; }
+.mini-cart-item .item-price { font-size:13px !important; font-weight:700 !important; color:var(--gold) !important; flex-shrink:0; }
+.item-note { font-size:10px !important; color:rgba(255,194,14,0.75) !important; font-weight:500 !important; display:block; margin-top:2px; max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mini-cart-total-row { display:flex; justify-content:space-between; padding:12px 14px; background:var(--mini-cart-total-bg); border-top:1px solid var(--mini-cart-item-border); font-family:'DM Sans',sans-serif; font-size:13px; font-weight:700; color:var(--text-muted); }
+.mini-cart-total-row span:last-child { color:var(--gold); }
+.mini-checkout-btn { width:100%; padding:13px; background:var(--green); color:#fff; border:none; font-family:'DM Sans',sans-serif; font-weight:800; font-size:11px; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:0.25s; }
+.mini-checkout-btn:hover { background:var(--green-d); }
 
-.other-items {
-  border-top: 4px solid #FFC20E; /* Thick Orange/Yellow line */
-  margin-top: 25px;              /* Space above the line */
-  padding-top: 20px;             /* Space below the line before items start */
-  position: relative;
+/* Footer */
+.footer { width:100% !important; padding:14px 0; display:flex; justify-content:center; align-items:center; background:rgba(0,0,0,0.6) !important; backdrop-filter:blur(20px); position:relative; z-index:100; border-top:1px solid var(--border); }
+
+/* Side cart */
+.side-cart { position:fixed !important; top:0; right:-100%; width:400px; height:100vh; background:var(--surface); border-left:1px solid var(--border); transition:all 0.4s; z-index:9999 !important; display:flex; flex-direction:column; }
+.side-cart.open { right:0; }
+.cart-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(6px); z-index:2500; }
+.cart-header { padding:20px; background:rgba(255,194,14,0.1); border-bottom:1px solid var(--border); color:var(--text); display:flex; justify-content:space-between; align-items:center; }
+.cart-header h3 { margin:0; font-weight:700; font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--gold); }
+.close-cart { background:none; border:none; color:var(--text-muted); font-size:26px; cursor:pointer; }
+.cart-footer { padding:20px; border-top:1px solid var(--border); }
+.checkout-btn { width:100%; padding:14px; background:var(--green); color:#fff; border:none; border-radius:10px; font-weight:800; font-size:12px; letter-spacing:2px; text-transform:uppercase; cursor:pointer; }
+
+/* Mobile */
+@media (max-width:600px) {
+  .menu-page { padding:90px 0 0 0 !important; }
+  .menu-content { flex-direction:column; align-items:center; width:100% !important; padding:0 14px !important; }
+  .menu-list { grid-template-columns:1fr; width:100%; }
+  .menu-title { font-size:2rem; letter-spacing:5px; }
+  .menu-sidebar { position:static; width:100%; margin-bottom:16px; gap:8px; }
+  .menu-categories-vertical, .burger-type-buttons-vertical { display:flex !important; flex-direction:row !important; overflow-x:auto; gap:8px; padding:4px 0; scrollbar-width:none; }
+  .menu-categories-vertical::-webkit-scrollbar, .burger-type-buttons-vertical::-webkit-scrollbar { display:none; }
+  .menu-categories-vertical button, .burger-type-buttons-vertical button { display:inline-flex !important; width:auto !important; min-width:90px; height:40px !important; padding:0 16px !important; font-size:11px !important; border-radius:20px !important; flex-shrink:0; align-items:center; justify-content:center; white-space:nowrap; text-align:center; }
+  .menu-categories-vertical button::before { display:none; }
+  .modal-content { width:96%; max-width:96%; }
+  .mini-sidebar-cart { width:100%; margin-top:14px; }
 }
-.other-items::before {
-  position: absolute;
-  top: -12px;
-  left: 20px;
-  background: white;             /* Matches modal background */
-  padding: 0 10px;
-  color: #FFC20E;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 1px;
-}
-
-/* --- THE FLOATING SIDE CART --- */
-.side-cart {
-  position: fixed !important; /* Force it to stay fixed to the screen */
-  top: 0;
-  right: -100%; /* Hidden by default */
-  width: 400px;
-  height: 100vh;
-  background: white;
-  box-shadow: -10px 0 30px rgba(0,0,0,0.2);
-  transition: all 0.4s ease-in-out;
-  z-index: 9999 !important; /* A3la shi bel-shashe kalla */
-  display: flex;
-  flex-direction: column;
-}
-
-.side-cart.open {
-  right: 0; /* Slide in on Desktop */
-}
-
-
-.cart-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(4px);
-  z-index: 2500; /* Ta7et el-cart deghre */
-}
-
-
-
-/* --- MOBILE VIEW --- */
-@media (max-width: 600px) {
-  .menu-page {
-    padding: 100px 0 0 0 !important;
-  }
-
-  .menu-content {
-    flex-direction: column;
-    align-items: center;
-    width: 100% !important;
-    padding: 0 15px !important; /* El-masefe t-koun jawwa mesh barra */
-    box-sizing: border-box;
-  }
-
-  .menu-list {
-    grid-template-columns: 1fr; /* Card wa7de bel-saff */
-  }
-
-  .menu-img {
-    height: 220px;
-  }
-
-  .menu-sidebar {
-    display: flex !important;
-    flex-direction: column !important; /* Categories saff, w Beef/Chicken saff ta7to */
-    gap: 10px;
-    width: 100%;
-    margin-bottom: 20px;
-  }
-
-  .menu-categories-vertical, 
-  .burger-type-buttons-vertical {
-    display: flex !important;
-    flex-direction: row !important;
-    overflow-x: auto ;
-    gap: 10px;
-    padding: 5px 0;
-    white-space: nowrap;
-    -webkit-overflow-scrolling: touch;
-    
-  }
-  .menu-card-actions {
-    gap: 6px;
-  }
-
-  .menu-action-btn {
-    padding: 6px 8px;
-    font-size: 11px;
-  }
-
-  .modal-content {
-    width: 95%;
-    max-width: 95%;
-  }
-
-  .notes-textarea {
-    font-size: 13px;
-  }
-
-
-  .menu-categories-vertical button, 
-  .burger-type-buttons-vertical button {
-    display: inline-block !important;
-    width: auto !important;
-    min-width: 110px; /* Thabbeti el-3ard */
-    height: 50px !important; /* EL-HEIGHT EL-MRATAB */
-    padding: 0 20px !important;
-    font-size: 15px !important;
-    font-weight: 700 !important;
-    border-radius: 12px !important; /* Rectangle rounded metel awal mara */
-    border: 2px solid #B5CF45 !important;
-    background-color: #fdfdfd !important;
-    color: #95b508 !important;
-    margin-bottom: 0 !important;
-    flex-shrink: 0;
-    line-height: 50px; /* Kirmal el-text ykoun centered vertical */
-    text-align: center;
-  }
-  .menu-categories-vertical button.active, 
-  .burger-type-buttons-vertical button.active {
-    background-color: #FFC20E !important;
-    border-color: #FFC20E !important;
-    color: #fff !important;
-    box-shadow: 0 4px 10px rgba(255, 194, 14, 0.3);
-  }
-
-  /* Shīli el-scrollbar kirmal ykoun clean */
-  .menu-categories-vertical::-webkit-scrollbar,
-  .burger-type-buttons-vertical::-webkit-scrollbar {
-    display: none;
-  }
-
-  .menu-page { padding: 100px 0 0 0 !important; }
-  
-  .menu-content {
-    flex-direction: column;
-    align-items: center;
-    width: 100% !important;
-    padding: 0 15px !important;
-  }
-
-  .menu-list { grid-template-columns: 1fr; width: 100%; }
-
-  .menu-sidebar { width: 100%; margin-bottom: 20px; }
-
-  .menu-categories-vertical, .burger-type-buttons-vertical {
-    display: flex !important; flex-direction: row !important;
-    overflow-x: auto; gap: 10px; padding: 5px 0;
-  }
-
-  .mini-sidebar-cart {
-    width: 95%; align-self: center; margin-top: 10px;
-  }
-  
-}
-.footer {
-  width: 100% !important;
-  padding: 12px 0;
-  display: flex; justify-content: center; align-items: center;
-  background: rgba(0, 0, 0, 0.4) !important;
-  backdrop-filter: blur(10px);
-  position: relative;
-  z-index: 100;
-}
-
-.cart-header { padding: 20px; background: #FFC20E; color: white; display: flex; justify-content: space-between; align-items: center; }
-.cart-header h3 { margin: 0; font-weight: 900; }
-.close-cart { background: none; border: none; color: white; font-size: 30px; cursor: pointer; }
-.cart-footer { padding: 20px; border-top: 1px solid #eee; }
-.checkout-btn { width: 100%; padding: 15px; background: #95b508; color: white; border: none; border-radius: 12px; font-weight: 900; cursor: pointer; }
-
-

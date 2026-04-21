@@ -1,0 +1,82 @@
+.login-page {
+  min-height: 100vh;
+  background: #0f0f0f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', sans-serif;
+}
+
+.login-card {
+  width: 360px;
+  background: #1a1a1a;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  padding: 48px 36px;
+  text-align: center;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+  animation: loginSlide 0.4s ease-out;
+}
+@keyframes loginSlide {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.login-logo { font-size: 52px; margin-bottom: 8px; }
+.login-brand { color: #FFC20E; font-size: 1.8rem; font-weight: 900; margin: 0; letter-spacing: 1px; }
+.login-subtitle { color: rgba(255,255,255,0.35); font-size: 0.85rem; margin: 6px 0 32px; text-transform: uppercase; letter-spacing: 2px; }
+
+.login-form { display: flex; flex-direction: column; gap: 18px; }
+
+.login-field { display: flex; flex-direction: column; gap: 7px; text-align: left; }
+.login-field label { color: rgba(255,255,255,0.5); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+.login-field input {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 13px 16px;
+  color: #fff;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.login-field input:focus { border-color: rgba(255,194,14,0.5); }
+.login-field input::placeholder { color: rgba(255,255,255,0.25); }
+
+.login-error {
+  background: rgba(255,68,68,0.15);
+  border: 1px solid rgba(255,68,68,0.3);
+  color: #ff8080;
+  font-size: 0.82rem;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin: 0;
+}
+
+.login-btn {
+  background: #FFC20E;
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  padding: 15px;
+  font-size: 0.95rem;
+  font-weight: 900;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 50px;
+}
+.login-btn:hover:not(:disabled) { background: #f5ba10; transform: translateY(-1px); }
+.login-btn:disabled { opacity: 0.6; cursor: default; }
+
+.login-spinner {
+  width: 20px; height: 20px;
+  border: 3px solid rgba(0,0,0,0.2);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

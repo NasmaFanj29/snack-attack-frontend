@@ -1,538 +1,306 @@
-/* --- 1. PAGE SETUP --- */
+/* ================================================================
+   CHECKOUT.CSS — Snack Attack · Themed
+   Requires theme.css
+   ================================================================ */
+*, *::before, *::after { box-sizing:border-box; }
+
 .checkout-page {
-    width: 100%;
-    min-height: 100vh;
-    margin: 0 auto;
-    padding: 80px 20px 40px 20px;
-    font-family: 'Arial Rounded MT Bold', 'Inter', sans-serif;
-    box-sizing: border-box;
-    background: url('../assets/burger_fries_bg.jpg') no-repeat center center fixed;
-    background-size: cover;
-    position: relative;
-    overflow-x: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
+  width:100%; min-height:100vh; position:relative;
+  overflow-x:hidden; font-family:'DM Sans',sans-serif;
+  background:url('../assets/burger_fries_bg.jpg') no-repeat center center fixed;
+  background-size:cover;
 }
-
-/* ✅ Updated Overlay: Full Page Blur Wrapper */
+.checkout-page::before {
+  content:''; position:fixed; inset:0;
+  background: var(--page-overlay);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  z-index:1; pointer-events:none;
+}
 .checkout-page .overlay {
-    position: absolute; /* ✅ Not fixed, kirmal y-dal scrollable ma3 el-page */
-    top: 0;
-    left: 0;
-    width: 100%;
-    min-height: 100%;
-    background: rgba(145, 145, 145, 0.4); /* Gham-ma2na shway kirmal el-contrast */
-    backdrop-filter: blur(12px) saturate(140%); /* ✅ BLUR IS BACK */
-    z-index: 5;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding-top: 100px; /* ✅ Masāfé lal-navbar kirmal ma yilza2 fīha */
-    padding-bottom: 50px;
+  position:relative; z-index:5;
+  display:flex; justify-content:center; align-items:flex-start;
+  width:100%; min-height:100vh; 
+  padding: 120px 20px 60px; /* زدنا 120px مكان 100px عشان ينزل شوية */
 }
+.layout-wrapper { display:flex; gap:60px; justify-content:center; align-items:flex-start; width:100%; max-width:1400px; }
+.checkout-container { flex:0 0 480px; max-width:480px; }
 
-/* --- 2. MAIN LAYOUT (LEFT / RIGHT) --- */
-.layout-wrapper {
-    display: flex;
-    gap: 120px;
-    justify-content: center;
-    align-items: flex-start;
-    width: 100%;
-    max-width: 1600px;
-    margin: 0 auto;
-    z-index: 10;
-    position: relative;
-}
-
-/* LEFT (CHECKOUT) */
-.checkout-container {
-    flex: 1;
-    max-width: 460px;
-    margin-right: 40px;
-}
-
-/* RIGHT (RECEIPT) */
-.receipt-overlay {
-    flex: 0.8;
-    max-width: 500px;
-    display: flex;
-    align-items: flex-start;
-    margin-left: 40px;
-}
-
-/* --- 3. GLASS CARD --- */
+/* Glass Card */
 .info-form-card {
-    position: relative;
-    z-index: 1;
-    background: rgba(255, 255, 255, 0.12) !important;
-    backdrop-filter: blur(25px) saturate(180%);
-    padding: 50px 40px 60px 40px;
-    border-radius: 40px;
-    box-shadow: 0 20px 50px rgba(162, 162, 162, 0.4);
+  position:relative; z-index:1;
+  background:var(--glass-bg) !important;
+  backdrop-filter:var(--glass-blur);
+  -webkit-backdrop-filter:var(--glass-blur);
+  border:1px solid var(--glass-border); border-top:6px solid var(--green);
+  border-radius:32px; padding:36px 32px 42px; width:100%;
+  box-shadow:var(--shadow-lg); text-align:center;
+  display:flex; flex-direction:column; align-items:center;
+}
+
+/* Light mode mobile brighter glass */
+@media (max-width:900px) {
+  :root .info-form-card { background:rgba(200,195,188,0.65) !important; }
+  [data-theme="dark"] .info-form-card { background:rgba(255,255,255,0.06) !important; }
+}
+
+.info-form-card img { max-width:180px; width:100%; height:auto; margin-bottom:20px; filter:drop-shadow(0 6px 18px rgba(0,0,0,0.4)); }
+.info-form-card h2 { font-family:'Bebas Neue',sans-serif !important; font-size:1.6rem; font-weight:400; letter-spacing:4px; color:#fff !important; margin-bottom:6px; }
+.info-form-card > p { color:rgba(255,255,255,0.72) !important; font-size:13px; margin-bottom:18px; line-height:1.6; }
+.checkout-title { font-family:'Bebas Neue',sans-serif; font-size:1.5rem; letter-spacing:5px; color:#fff !important; text-transform:uppercase; margin-bottom:20px; font-weight:400; }
+
+.group-split-box { background:rgba(0,0,0,0.15) !important; border:1px solid rgba(255,255,255,0.12); border-radius:18px; padding:18px; margin-bottom:16px; width:100%; }
+
+/* Inputs */
+.glass-input-main, .glass-input-small, .glass-select {
+  background:rgba(255,255,255,0.12) !important; border:1px solid rgba(255,255,255,0.25);
+  border-radius:10px; padding:11px 14px; color:#fff;
+  font-family:'DM Sans',sans-serif; font-weight:500; font-size:14px;
+  outline:none; margin:5px 0;
+}
+.glass-input-small { width:90px; text-align:center; }
+.glass-input-main:focus, .glass-input-small:focus {
+  background:rgba(255,255,255,0.18) !important;
+  border-color:rgba(255,194,14,0.5); box-shadow:0 0 0 3px rgba(255,194,14,0.08);
+}
+.glass-input-main::placeholder, .glass-input-small::placeholder { color:rgba(255,255,255,0.42); font-weight:400; }
+
+/* Payer cards */
+.payer-card { background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.14); border-radius:16px; padding:14px; margin-bottom:12px; }
+.payer-card.payer-mine { border-color:rgba(255,194,14,0.35); background:rgba(255,194,14,0.07); }
+.payer-card.payer-others { opacity:0.7; }
+.payer-card-top { display:flex; gap:8px; align-items:center; margin-bottom:10px; }
+.payer-name-input { flex:1; min-width:0; text-align:left !important; padding:10px 12px !important; }
+.payer-phone-input { flex:1; min-width:0; text-align:left !important; padding:10px 12px !important; }
+.remove-payer-btn { background:rgba(255,77,77,0.15); border:1px solid rgba(255,77,77,0.4); color:#ff6b6b; border-radius:8px; width:32px; height:32px; cursor:pointer; font-size:14px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.remove-payer-btn:hover { background:rgba(255,77,77,0.28); }
+
+/* Method buttons */
+.method-btn-group { display:flex; gap:6px; margin-bottom:10px; }
+.method-btn { flex:1; padding:9px 8px; border:1px solid rgba(255,255,255,0.22); border-radius:10px; background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.65); font-family:'DM Sans',sans-serif; font-weight:700; font-size:12px; cursor:pointer; }
+.method-btn:hover:not(:disabled) { border-color:rgba(255,255,255,0.4); color:#fff; background:rgba(255,255,255,0.14); }
+.method-btn.active { background:rgba(255,194,14,0.2); border-color:var(--gold); color:var(--gold); box-shadow:0 0 10px rgba(255,194,14,0.15); }
+.method-btn:disabled { cursor:not-allowed; opacity:0.4; }
+
+/* Cash */
+.cash-extras-wrapper { display:flex; flex-direction:column; gap:8px; }
+.cash-amount-row { display:flex; align-items:center; gap:8px; }
+.cash-amount-input { flex:1 !important; min-width:0 !important; text-align:center !important; font-size:15px !important; padding:12px 10px !important; font-weight:700 !important; }
+.cash-currency-toggle { display:flex; gap:4px; flex-shrink:0; }
+.cc-btn { padding:9px 10px; border-radius:8px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:11px; cursor:pointer; border:1px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.58); white-space:nowrap; }
+.cc-btn:hover:not(:disabled) { border-color:rgba(255,255,255,0.35); color:#fff; }
+.cc-btn.active { background:rgba(149,181,8,0.2); border-color:var(--green); color:#c8e86a; }
+.cc-btn:disabled { cursor:not-allowed; opacity:0.4; }
+.cash-plus-btn { width:36px; height:36px; border-radius:8px; border:1px dashed rgba(255,194,14,0.45); background:rgba(255,194,14,0.08); color:var(--gold); font-size:1.2rem; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.cash-plus-btn:hover { background:rgba(255,194,14,0.18); border-style:solid; transform:scale(1.05); }
+.cash-minus-btn { width:36px; height:36px; border-radius:8px; border:1px solid rgba(255,77,77,0.35); background:rgba(255,77,77,0.1); color:#ff8080; font-size:1.2rem; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.cash-minus-btn:hover { background:rgba(255,77,77,0.22); transform:scale(1.05); }
+.cash-currency-locked { padding:9px 12px; border-radius:8px; font-size:11px; font-weight:700; color:rgba(255,255,255,0.45); background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); white-space:nowrap; flex-shrink:0; letter-spacing:1px; }
+.rate-hint-text { font-size:11px !important; color:rgba(255,255,255,0.42) !important; font-weight:500 !important; text-align:left !important; margin:0 !important; font-style:italic; }
+.second-cash-row { animation:slideDown 0.2s ease-out; margin-top:2px; }
+@keyframes slideDown { from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);} }
+
+/* Transfer */
+.transfer-flow-box { background:rgba(255,194,14,0.08); border:1px solid rgba(255,194,14,0.3); border-radius:16px; padding:16px; margin-top:6px; animation:slideDown 0.25s ease-out; }
+.transfer-header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.transfer-brand { font-size:14px; font-weight:800; color:var(--gold); letter-spacing:1px; }
+.transfer-number-tag { font-size:11px; font-weight:600; color:rgba(255,255,255,0.6); background:rgba(255,255,255,0.08); padding:3px 10px; border-radius:20px; border:1px solid rgba(255,255,255,0.14); }
+.transfer-code-block { display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.3); border-radius:8px; padding:10px 14px; margin-bottom:10px; }
+.tc-label { font-size:9px; color:rgba(255,255,255,0.42); font-weight:700; text-transform:uppercase; letter-spacing:2px; white-space:nowrap; }
+.tc-value { font-family:'Bebas Neue',monospace; font-size:1.1rem; color:var(--gold); letter-spacing:3px; word-break:break-all; }
+.transfer-instruction { font-size:12px !important; color:rgba(255,255,255,0.68) !important; line-height:1.5 !important; margin-bottom:12px !important; text-align:left !important; }
+.transfer-amount-input { width:100% !important; text-align:center !important; font-size:15px !important; padding:12px 14px !important; margin-bottom:10px !important; font-weight:700 !important; }
+.transfer-confirm-label { display:flex; align-items:flex-start; gap:10px; cursor:pointer; font-size:12px; color:rgba(255,255,255,0.68); line-height:1.5; margin-bottom:10px; text-align:left; }
+.transfer-confirm-label input[type="checkbox"] { width:17px; height:17px; margin-top:2px; accent-color:var(--gold); flex-shrink:0; cursor:pointer; }
+.transfer-tx-input { width:100% !important; margin-top:4px !important; text-align:left !important; }
+.transfer-tx-readonly { font-size:11px !important; color:rgba(255,194,14,0.65) !important; margin-top:6px !important; }
+
+/* Payer actions */
+.payer-actions-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+.add-payer-btn-glass { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.22); color:rgba(255,255,255,0.8); padding:9px 14px; border-radius:10px; font-family:'DM Sans',sans-serif; font-weight:600; font-size:12px; cursor:pointer; }
+.add-payer-btn-glass:hover { background:rgba(255,255,255,0.16); color:#fff; }
+.qr-split-btn { background:var(--gold) !important; color:#000 !important; border-color:var(--gold) !important; font-weight:800 !important; }
+.qr-split-btn:hover { background:#f5b800 !important; }
+.edit-order-btn { border-color:rgba(255,194,14,0.4) !important; color:var(--gold) !important; background:rgba(255,194,14,0.08) !important; }
+
+/* Labels */
+.scanner-share-label { color:var(--gold) !important; font-weight:800 !important; font-size:13px !important; margin-bottom:10px !important; letter-spacing:1px; }
+.others-label { color:rgba(255,255,255,0.45) !important; font-size:11px !important; letter-spacing:2px; text-transform:uppercase; margin:10px 0 6px 0 !important; }
+.others-row { display:flex; align-items:center; gap:10px; }
+.others-name { flex:1; font-size:13px; font-weight:600; color:rgba(255,255,255,0.8); text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.others-total { font-size:14px; font-weight:800; color:var(--gold); }
+.others-detail { font-size:11px !important; color:rgba(255,255,255,0.45) !important; text-align:left !important; margin:3px 0 0 0 !important; }
+
+/* --- Discount Toggle Switch --- */
+.discount-toggle-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.discount-label {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+.toggle-switch {
+  position: relative;
+  width: 50px;
+  height: 26px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.toggle-switch.active {
+  background: var(--green); 
+  box-shadow: 0 0 10px rgba(149,181,8,0.4);
+}
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+.toggle-switch.active .toggle-knob {
+  transform: translateX(24px);
+}
+
+/* Summary */
+.checkout-summary-mini-glass { background:rgba(0,0,0,0.25); padding:14px 18px; border-radius:16px; margin:16px 0; width:100%; border:1px solid rgba(255,255,255,0.1); }
+.summary-row { display:flex; justify-content:space-between; color:rgba(255,255,255,0.75); font-weight:600; font-size:14px; margin-bottom:6px; }
+.summary-row:last-child { margin-bottom:0; color:#fff; font-weight:800; }
+.summary-row span:last-child { color:var(--gold); }
+
+/* Place order */
+.place-order-btn-final {
+  width:100%; background:linear-gradient(135deg,var(--gold),#f2a800);
+  color:#0a0a0a; border:none; padding:17px;
+  font-family:'DM Sans',sans-serif; font-size:13px; font-weight:800;
+  letter-spacing:3px; text-transform:uppercase; border-radius:50px; cursor:pointer; margin-top:8px;
+  box-shadow:0 8px 28px rgba(255,194,14,0.35); transition:all 0.3s; position:relative; overflow:hidden;
+}
+.place-order-btn-final::before { content:''; position:absolute; inset:0; background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,0.25) 50%,transparent 60%); transform:translateX(-100%); transition:transform 0.5s; }
+.place-order-btn-final:hover::before { transform:translateX(200%); }
+.place-order-btn-final:hover { transform:translateY(-2px); box-shadow:0 14px 36px rgba(255,194,14,0.48); }
+.place-order-btn-final:disabled { opacity:0.5; cursor:not-allowed; transform:none; box-shadow:none; }
+
+.loader-line { width:100%; height:3px; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; margin-top:20px; position:relative; }
+.loader-line::after { content:''; position:absolute; left:-50%; height:100%; width:50%; background:var(--green); animation:loading 1.5s infinite linear; border-radius:2px; }
+@keyframes loading { 100%{left:100%;} }
+
+.qr-popup-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.82); backdrop-filter:blur(14px); display:flex; justify-content:center; align-items:center; z-index:10000; padding:20px; }
+.qr-popup-content { background:var(--glass-bg); backdrop-filter:var(--glass-blur); border:1px solid rgba(255,255,255,0.2); padding:36px 28px; border-radius:28px; text-align:center; box-shadow:0 30px 80px rgba(0,0,0,0.7); max-width:320px; width:100%; display:flex; flex-direction:column; align-items:center; gap:20px; animation:popupScale 0.35s cubic-bezier(0.16,1,0.3,1); }
+.qr-popup-content canvas { border-radius:12px; background:#fff; padding:14px; width:200px !important; height:200px !important; }
+.qr-popup-content button { width:100%; background:var(--gold); color:#0a0a0a; border:none; padding:14px; border-radius:50px; font-family:'DM Sans',sans-serif; font-weight:800; font-size:12px; letter-spacing:2px; text-transform:uppercase; cursor:pointer; }
+.qr-popup-content button:hover { background:#f5b800; transform:translateY(-2px); }
+@keyframes popupScale { from{transform:scale(0.88);opacity:0;}to{transform:scale(1);opacity:1;} }
+
+.receipt-paper { background:#fafafa; color:#111; padding:24px; border-radius:4px; box-shadow:10px 10px 40px rgba(0,0,0,0.5); font-family:'Courier New',monospace; width:100%; display:flex; flex-direction:column; border-top:3px solid var(--gold); }
+.receipt-logo-bw { width:160px !important; height:auto; display:block; margin:0 auto 6px; filter:grayscale(100%); }
+.receipt-branch-info { text-align:center; font-size:13px; font-weight:800; line-height:1.4; }
+.receipt-branch-info p { margin:2px 0; }
+.receipt-header-info p { font-size:13px; margin:4px 0; }
+.receipt-items { margin:10px 0; }
+.r-item-container { margin-bottom:10px; }
+.r-item-row { display:flex; justify-content:space-between; margin:3px 0; font-size:12px; }
+.r-extras { font-size:10px; font-style:italic; margin-left:14px; color:#555; }
+.receipt-divider { border-top:2px dashed #999; height:0; margin:10px 0; overflow:hidden; }
+.r-summary-line { display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; font-weight:700; }
+.receipt-total-row { display:flex; justify-content:space-between; font-size:17px; font-weight:900; border-top:2px solid #111; padding-top:8px; margin-top:8px; }
+
+.back-btn-new { width:100%; background:linear-gradient(135deg,var(--gold),#f2a800); color:#0a0a0a; border:none; padding:17px; font-family:'DM Sans',sans-serif; font-size:12px; font-weight:800; letter-spacing:3px; text-transform:uppercase; border-radius:50px; cursor:pointer; margin-top:20px; box-shadow:0 8px 24px rgba(255,194,14,0.35); transition:all 0.3s; }
+.back-btn-new:hover { transform:translateY(-2px); box-shadow:0 14px 32px rgba(255,194,14,0.45); }
+
+/* Mobile Responsive Fix */
+@media (max-width:900px) {
+  /* 1. Allow the wrapper to take full width */
+  .layout-wrapper {
     width: 100%;
-    max-width: 500px; /* Sar small box bel nos */
-    margin: 0 auto;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-top: 10px solid #95b508;
-    text-align: center;
-    display: flex;
+    max-width: 100%;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-}
-/* ✅ 3. Zabbte el-Logo kirmal ma y-koun ktīr kbir barra el-box */
-.info-form-card img {
-    max-width: 260px; /* Kān 140px → ṣār 180px */
-    width: 100%;
-    height: auto;
-    margin-top: -10px; 
-    margin-bottom: 35px;
-    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.2));
-}
+    gap: 30px;
+  }
 
-/* ✅ 4. El-Text spacing */
-.info-form-card h2 {
-    font-size: 28px;
-    color: #fff;
-    margin-bottom: 15px;
-    font-weight: 900;
-    letter-spacing: 1px;
-}
+  /* 2. CRITICAL FIX: Force container to be 100% width (not 480px) */
+  .checkout-container {
+    flex: 0 0 auto !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
 
-.info-form-card p {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 20px;
-    margin-bottom: 30px;
-}
+  .checkout-page .overlay { 
+    padding: 110px 14px 40px; /* زدنا 110px مكان 80px للموبايل */
+  }
 
-.checkout-title {
-    color: #ffffff;
-    font-size: 32px;
-    font-weight: 900;
-    text-transform: uppercase;
-    margin-bottom: 25px;
-}
+  /* 3. Adjust the card to fit perfectly */
+  .info-form-card {
+    padding: 24px 18px 32px !important;
+    border-radius: 24px !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box; /* Ensures padding doesn't increase width */
+  }
 
-/* --- 4. INNER BOX --- */
-.group-split-box {
-    background: rgba(255, 255, 255, 0.08) !important;
-    backdrop-filter: blur(10px);
-    padding: 20px;
-    border-radius: 25px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    margin-bottom: 20px;
-}
+  .info-form-card img { max-width: 140px !important; margin-bottom: 14px !important; }
+  .checkout-title { font-size: 1.3rem !important; letter-spacing: 3px !important; }
 
-/* --- 5. INPUTS --- */
-.glass-input-main,
-.glass-input-small,
-.glass-select {
+  .group-split-box {
+    padding: 14px 12px !important;
+    border-radius: 14px !important;
+    width: 100%; /* Ensure box fills card */
+    box-sizing: border-box;
+  }
+
+  .payer-card {
+    padding: 12px !important;
+    border-radius: 14px !important;
+    margin-bottom: 10px !important;
     width: 100%;
     box-sizing: border-box;
-    background: rgba(255, 255, 255, 0.1) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 15px;
-    padding: 12px 15px;
-    color: #ffffff;
-    font-weight: 700;
-    font-size: 1rem;
-    outline: none;
-    margin: 10px 0;
-    transition: all 0.3s ease;
-}
-.glass-input-main:focus {
-    background: rgba(255, 255, 255, 0.3) !important;
-    border-color: #FFC20E; /* Signature Yellow */
-    box-shadow: 0 0 10px rgba(255, 194, 14, 0.3);
-}
+  }
 
-.glass-input-main::placeholder {
-    color: rgba(255, 255, 255, 0.7);
-    font-weight: 500;
-}
+  /* 4. Fix Inputs layout inside payer card so they don't overflow */
+  .payer-card-top {
+    flex-wrap: wrap; /* Allows inputs to stack if screen is too narrow */
+    gap: 8px;
+  }
+  .payer-name-input, .payer-phone-input {
+    flex: 1 1 45%; /* Makes inputs flexible but gives them space */
+    min-width: 120px; /* Prevents them from becoming too small */
+    padding: 10px 8px !important;
+  }
 
-
-
-/* --- 7. BUTTONS (Confirm Button chic) --- */
-.place-order-btn-final {
+  .method-btn { padding: 8px 6px !important; font-size: 11px !important; flex: 1; }
+  .cash-amount-input { padding: 10px 8px !important; width: 100% !important; }
+  
+  .place-order-btn-final {
+    padding: 15px !important;
+    font-size: 12px !important;
     width: 100%;
-    background: #FFC20E; /* Yellow Palette */
-    color: #000;
-    border: none;
-    padding: 20px;
-    font-size: 1.4rem;
-    font-weight: 950;
-    border-radius: 60px;
-    cursor: pointer;
-    margin-top: 15px;
-    box-shadow: 0 8px 25px rgba(255, 194, 14, 0.4);
-    transition: all 0.3s ease;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+  }
+
+  .qr-popup-content { padding: 26px 16px !important; border-radius: 22px !important; width: 90%; }
+  .qr-popup-content canvas { width: 165px !important; height: 165px !important; }
 }
 
-.place-order-btn-final:hover {
-    background: #f2ba2c;
-    transform: translateY(-3px);
-    box-shadow: 0 12px 30px rgba(255, 194, 14, 0.5);
-}
-/* --- WAITING SCREEN (Small animation) --- */
-.loader-line {
-    width: 100%;
-    height: 4px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 10px;
-    overflow: hidden;
-    margin-top: 25px;
-    position: relative;
-}
-
-.loader-line::after {
-    content: "";
-    position: absolute;
-    left: -50%;
-    height: 100%;
-    width: 50%;
-    background: #95b508; /* Snack Attack Green */
-    animation: loading 1.5s infinite linear;
-}
-
-@keyframes loading {
-    100% { left: 100%; }
-}
-
-.glass-input-small {
-    width: 90px;
-    text-align: center;
-}
-
-/* --- 6. PAYER ROW --- */
-.payer-row-checkout {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 12px;
-    align-items: center;
-}
-
-/* --- 7. BUTTONS --- */
-.add-payer-btn-glass {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #fff;
-    padding: 10px;
-    border-radius: 12px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.place-order-btn-final {
-    width: 100%;
-    background: #FFC20E;
-    color: #000;
-    border: none;
-    padding: 18px;
-    font-size: 1.3rem;
-    font-weight: 900;
-    border-radius: 50px;
-    cursor: pointer;
-    margin-top: 15px;
-}
-
-/* --- 8. SUMMARY --- */
-.checkout-summary-mini-glass {
-    background: rgba(162, 161, 161, 0.3);
-    padding: 15px;
-    border-radius: 20px;
-    margin: 20px 0;
-}
-
-.summary-row {
-    display: flex;
-    justify-content: space-between;
-    color: #fff;
-    font-weight: 700;
-}
-
-/* --- 9. RECEIPT --- */
-.receipt-paper {
-    background: #fff;
-    color: #000;
-    padding: 20px;
-    border-radius: 6px;
-    box-shadow: 10px 10px 30px rgba(0,0,0,0.3);
-    font-family: 'Courier New', Courier, monospace;
-
-    width: 100%;
-    height: fit-content;
-    min-height: 100%;
-
-    display: flex;
-    flex-direction: column;
-}
-
-/* receipt content */
-.receipt-items {
-    margin: 10px 0;
-}
-
-.r-item-row {
-    display: flex;
-    justify-content: space-between;
-    margin: 5px 0;
-}
-.receipt-logo-bw {
-    width: 200px !important; /* Made it bigger */
-    height: auto;
-    display: block;
-    margin: 0 auto 1px auto;
-    opacity: 1; 
-    filter: grayscale(100%);
-    transform: scale(1.05);
-}
-.receipt-branch-info {
-    text-align: center;
-    font-size: 15px;
-    font-weight: 800;
-    margin: 0;
-    line-height: 1.2;
-}
-.r-item-container {
-    margin-bottom: 12px;
-}
-.receipt-branch-info p {
-    margin: 2px 0;
-}
-
-.receipt-header-info p {
-    font-size: 17px;
-    margin: 3px 0; /* Ba3edna el-asba7 shway kirmal el-readability */
-    
-}
-
-.r-extras {
-    font-size: 11px;
-    font-style: italic;
-    margin-left: 20px;
-    color: #444;
-}
-.r-summary-line {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-    margin-bottom: 5px;
-    font-weight: 600;
-}
-/* LEFT */
-.checkout-container {
-    flex: 0 0 420px;
-}
-
-/* RIGHT */
-.receipt-overlay {
-    flex: 0 0 420px;
-    display: flex;
-    align-items: flex-start;
-}
-/* RECEIPT */
-.receipt-paper {
-    width: 100%;
-    height: auto;
-    padding: 25px !important; /* Shwayyet breathing room 3al borders */
-    min-height: auto !important; /* Kirmal ma y-tammit el-wara2a */
-}
-
-/* Clearer Dividers */
-.receipt-divider {
-    text-align: center;
-    letter-spacing: -1px;
-    font-weight: 900;
-    margin: 8px 0;
-    color: #000;
-}
-
-.receipt-total-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 20px;
-    font-weight: 900;
-    border-top: 2px solid #000;
-    padding-top: 10px;
-    margin-top: 10px;
-}
-.layout-wrapper {
-    display: flex;
-    gap: 80px; 
-    justify-content: center;
-    align-items: flex-start;
-    width: 100%;
-    max-width: 1500px; 
-    margin: 0 auto;
-}
-/* --- 10. QR POPUP --- */
-/* ✅ QR POPUP ENHANCEMENT (Desktop & Mobile) */
-.qr-popup-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(77, 71, 71, 0.75); /* Darker backdrop */
-    backdrop-filter: blur(5px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-    padding: 20px;
-}
-
-.qr-popup-content {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(25px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 40px 30px;
-    border-radius: 40px;
-    text-align: center;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
-    max-width: 350px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 25px;
-    animation: popupScale 0.3s ease-out;
-}
-
-/* ✅ QR Canvas itself */
-.qr-popup-content canvas {
-    border-radius: 20px;
-    background: #fff;
-    padding: 15px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    width: 220px !important; /* Fixed size lal-mobile & desktop */
-    height: 220px !important;
-}
-
-/* ✅ Close Button Style */
-.qr-popup-content button {
-    width: 100%;
-    background: #FFC20E;
-    color: #000;
-    border: none;
-    padding: 15px;
-    border-radius: 50px;
-    font-weight: 900;
-    font-size: 1.1rem;
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: 0.3s ease;
-}
-
-.qr-popup-content button:hover {
-    background: #f2ba2c;
-    transform: translateY(-2px);
-}
-
-@keyframes popupScale {
-    from { transform: scale(0.8); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
-
-/* ✅ Final Receipt 'New Order' Button Design */
-.back-btn-new {
-    width: 100%;
-    background: #FFC20E; /* Signature Yellow */
-    color: #000;
-    border: none;
-    padding: 18px;
-    font-size: 1.2rem;
-    font-weight: 900;
-    border-radius: 50px;
-    cursor: pointer;
-    margin-top: 20px;
-    text-transform: uppercase;
-    box-shadow: 0 8px 20px rgba(255, 194, 14, 0.3);
-    transition: all 0.3s ease;
-}
-
-.back-btn-new:hover {
-    background: #f2ba2c;
-    transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(255, 194, 14, 0.4);
-}
-.receipt-divider {
-    border-top: 2px dashed #000; /* ✅ Hayda bi-dal khatt wa7ed m-zabbat mahma sār el-size */
-    height: 0;
-    margin: 15px 0;
-    width: 100%;
-    color: transparent; /* Khaffī el-text eza ba3do mawjoud bel-HTML */
-    overflow: hidden;
-}
-
-@media (max-width: 900px) {
-    /* ✅ 1. Shīlna el-aswad kirmal t-bay-yin ṣouret el-burger */
-    .checkout-page {
-        background: url('../assets/burger_fries_bg.jpg') no-repeat center center fixed !important;
-        background-size: cover !important;
-    }
-
-    /* ✅ 2. Glass Overlay: Khafīf ktīr kirmal ma ybayyen abyad wala aswad */
-    .checkout-page .overlay {
-        background: rgba(102, 100, 100, 0.05) !important; /* ✅ Lon abyad shif-fāf ktīr */
-        backdrop-filter: blur(6px) saturate(140%) !important; /* ✅ Blur lal-ṣoura */
-    }
-
-    /* 3. Gham-ma2na el-Payment Card kirmal ybayno el-inputs */
-    .info-form-card {
-        /* ✅ Ghay-yarna el-lon la grey ghamī2 shway kirmal el-contrast */
-        background: rgba(166, 166, 166, 0.45) !important; 
-        backdrop-filter: blur(20px) saturate(160%) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 35px 25px !important;
-        border-radius: 40px !important;
-        box-shadow: 0 15px 40px rgba(160, 160, 160, 0.4);
-    }
-    .info-form-card img {
-    max-width: 250px !important; 
-    margin-bottom: 20px !important;
-}
-
-    .layout-wrapper {
-        flex-direction: column !important;
-        align-items: center !important; /* ✅ FORCE CENTER */
-        justify-content: flex-start !important;
-        gap: 35px !important;
-        width: 100% !important;
-        margin: 0 auto !important;
-        padding: 20px 10px !important;
-    }
-    /* 2. Shīlna el-flex properties yalle 3am b-zi-7o el-boxes */
-    .checkout-container, 
-    .receipt-overlay {
-        flex: none !important; /* ✅ Disable flex-grow */
-        width: 90% !important; 
-        max-width: 360px !important; /* ✅ Sar el-box small metel ma baddik */
-        margin: 0 auto !important; /* ✅ Mandatory for centering */
-        display: flex;
-        justify-content: center;
-    }
-
-    /* ✅ N-za8er el-loader bar shway */
-    .loader-line {
-        height: 3px !important;
-        margin-top: 15px !important;
-    }
-    .receipt-paper {
-        padding: 20px !important;
-        font-size: 14px !important; /* Za8erne shwayet el-font kirmal ma ya3mel wrap */
-    }
-
-    .receipt-divider {
-        margin: 10px 0 !important;
-    }
-    .qr-popup-content {
-        padding: 30px 20px;
-        max-width: 300px;
-    }
-    .qr-popup-content canvas {
-        width: 180px !important;
-        height: 180px !important;
-    }
+@media (max-width:380px) {
+  .checkout-page .overlay { padding: 68px 10px 28px; }
+  .info-form-card { padding: 18px 12px 26px !important; border-radius: 18px !important; }
+  .place-order-btn-final { font-size: 11px !important; padding: 14px !important; }
+  
+  /* Allow name/phone to stack on very small screens */
+  .payer-name-input, .payer-phone-input {
+    flex: 1 1 100%;
+  }
 }

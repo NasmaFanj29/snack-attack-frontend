@@ -6,12 +6,17 @@ import '../style/checkout.css';
 import { QRCodeCanvas } from "qrcode.react";
 import socket from "../socket";
 
+const BACKEND = "https://snack-attack-backend.onrender.com";
+const WHISH_NUMBER = "+961 XX XXX XXX";
+const EXCHANGE_RATE = 89500;
+
+const generateWhishCode = () => Math.floor(100 + Math.random() * 900).toString();
+
 function Checkout({ setCart }) {
     const location = useLocation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
-    // ✅ Unified IDs men el URL aw el state
     const urlOrderId = searchParams.get('orderId');
     const {
         orderId: stateOrderId,
@@ -20,8 +25,6 @@ function Checkout({ setCart }) {
     } = location.state || {};
 
     const activeOrderId = stateOrderId || urlOrderId;
-
-    // ✅ isScanner = anyone who opened via QR link (?orderId=...&mode=add)
     const isScanner = !!(urlOrderId && searchParams.get("mode") === "add");
 
     const [orderedItems, setOrderedItems] = useState(stateCartItems);
@@ -31,186 +34,151 @@ function Checkout({ setCart }) {
     const [showQR, setShowQR] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    // ✅ Each scanner gets a stable local ID for their own row
     const myPayerIdRef = useRef(null);
-    const isEditingRef = useRef(false);
+    const ignoreUpdatesUntil = useRef(0);
+    const syncTimerRef = useRef(null);
 
     const myUserId = useRef(localStorage.getItem("userId"));
-
     if (!myUserId.current) {
         myUserId.current = Date.now().toString();
         localStorage.setItem("userId", myUserId.current);
     }
 
-    // ✅ Calculation Helpers
+    const isEditing = () => Date.now() < ignoreUpdatesUntil.current;
+
+    // ── Helpers ──────────────────────────────────────────────────────
     const getItemBasePrice = (item) => {
         if (!item) return 0;
         const extrasTotal = (item.selectedExtras && Array.isArray(item.selectedExtras))
-            ? item.selectedExtras.reduce((sum, e) => sum + Number(e.price || 0), 0)
-            : 0;
+            ? item.selectedExtras.reduce((sum, e) => sum + Number(e.price || 0), 0) : 0;
         return Number(item.price || item.price_at_time || 0) + extrasTotal;
     };
 
     const subtotal = (orderedItems && Array.isArray(orderedItems))
-        ? orderedItems.reduce((acc, item) => acc + (Number(item.price || item.price_at_time || 0) * (item.quantity || 1)), 0)
-        : 0;
-
+        ? orderedItems.reduce((acc, item) => acc + (Number(item.price || item.price_at_time || 0) * (item.quantity || 1)), 0) : 0;
     const totalVAT = subtotal * 0.11;
     const finalTotal = subtotal + totalVAT;
-    const totalPaidSoFar = payers.reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+
+    const getPayerUsdTotal = (payer) => {
+        if (payer.method === 'card') return Number(payer.amount) || 0;
+        let total = 0;
+        const first = Number(payer.amount) || 0;
+        const second = Number(payer.cashSecondAmount) || 0;
+        const secondCurrency = payer.currency === 'USD' ? 'LBP' : 'USD';
+        total += payer.currency === 'USD' ? first : first / EXCHANGE_RATE;
+        if (payer.cashHasSplit) {
+            total += secondCurrency === 'USD' ? second : second / EXCHANGE_RATE;
+        }
+        return total;
+    };
+
+    const totalPaidSoFar = payers.reduce((acc, p) => acc + getPayerUsdTotal(p), 0);
     const remainingBalance = finalTotal - totalPaidSoFar;
-const lockedRef = useRef(false);
+
     const qrValue = `${window.location.origin}/checkout?orderId=${activeOrderId}&mode=add`;
 
-    // ✅ Sync full payers array to backend (replace mode)
+    const defaultPayer = (id) => ({
+        id: id || Date.now(),
+        name: "",
+        phone: "",
+        amount: 0,
+        method: "cash",
+        currency: "USD",
+        cashHasSplit: false,
+        cashSecondAmount: 0,
+        whishCode: null,
+        whishConfirmed: false,
+        ownerId: myUserId.current,
+    });
+
     const syncPayersToBackend = async (updatedPayers) => {
         if (!activeOrderId) return;
         try {
-            await axios.put(
-                `https://snack-attack-backend.onrender.com/admin/orders/${activeOrderId}/status`,
-                {
-                    payment_splits: updatedPayers,
-                    replace_splits: true
-                }
-            );
-        } catch (err) {
-            console.error("Sync payers error:", err);
-        }
+            await axios.put(`${BACKEND}/admin/orders/${activeOrderId}/status`, {
+                payment_splits: updatedPayers,
+                replace_splits: true
+            });
+        } catch (err) { console.error("Sync error:", err); }
     };
 
-    // ✅ STEP 1: On mount — fetch order data
-   
-   useEffect(() => {
-    if (!activeOrderId) return;
+    // ── Fetch order on mount ──────────────────────────────────────────
+    useEffect(() => {
+        if (!activeOrderId) return;
+        axios.get(`${BACKEND}/orders/${activeOrderId}`)
+            .then(res => {
+                setOrderedItems(res.data.items || []);
+                setTableId(res.data.order?.table_id || "1");
 
-    axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`)
-        .then(res => {
+                let existingSplits = [];
+                try {
+                    const raw = res.data.order?.payment_splits;
+                    if (raw) {
+                        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                        existingSplits = Array.isArray(parsed) ? parsed : [];
+                    }
+                } catch { existingSplits = []; }
 
-            setOrderedItems(res.data.items || []);
-            setTableId(res.data.order?.table_id || "1");
+                const status = res.data.order?.status?.toLowerCase();
 
-            let existingSplits = [];
-            try {
-                const raw = res.data.order?.payment_splits;
-                if (raw) {
-                    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-                    existingSplits = Array.isArray(parsed) ? parsed : [];
+                if (status === "paid") { setStep("receipt"); return; }
+                if (status === "rejected") { setStep("rejected"); return; }
+
+                if (isScanner) {
+                    const newId = Date.now();
+                    myPayerIdRef.current = newId;
+                    const myRow = defaultPayer(newId);
+                    const merged = [...existingSplits, myRow];
+                    setPayers(merged);
+                    syncPayersToBackend(merged);
+                    setStep("payment");
+                    return;
                 }
-            } catch {
-                existingSplits = [];
-            }
 
-            const status = res.data.order?.status?.toLowerCase();
+                if (["accepted", "preparing", "ready", "served", "paymentpending"].includes(status)) {
+                    setStep("payment");
+                }
 
-            // ✅ FINAL STATES FIRST (IMPORTANT)
-            if (status === "paid") {
-                setStep("receipt");
-                return;
-            }
+                if (existingSplits.length > 0) {
+                    setPayers(existingSplits.map(p => ({
+                        ...defaultPayer(),
+                        ...p,
+                        ownerId: p.ownerId || "legacy",
+                        cashHasSplit: p.cashHasSplit || false,
+                        cashSecondAmount: p.cashSecondAmount || 0,
+                    })));
+                } else {
+                    setPayers([defaultPayer(1)]);
+                }
+            })
+            .catch(err => console.error(err));
+    }, [activeOrderId]);
 
-            if (status === "rejected") {
-                setStep("rejected");
-                return;
-            }
-
-            if (isScanner) {
-                const newId = Date.now();
-                myPayerIdRef.current = newId;
-
-                const myRow = {
-                    id: newId,
-                    name: "",
-                    amount: 0,
-                    method: "cash",
-                    ownerId: myUserId.current
-                };
-
-                const merged = [...existingSplits, myRow];
-                setPayers(merged);
-                syncPayersToBackend(merged);
-
-                setStep("payment");
-                return;
-            }
-
-            // ✅ ONLY fallback state
-            if (["accepted", "preparing", "ready", "served", "paymentpending"].includes(status)) {
-                setStep("payment");
-            }
-
-            // default fallback
-            if (existingSplits.length > 0) {
-                const safeSplits = existingSplits.map(p => ({
-                    ...p,
-                    ownerId: p.ownerId || "legacy"
-                }));
-                setPayers(safeSplits);
-            } else {
-                setPayers([{
-                    id: 1,
-                    name: "",
-                    amount: 0,
-                    method: "cash",
-                    ownerId: myUserId.current
-                }]);
-            }
-
-        })
-        .catch(err => console.error(err));
-
-},  [activeOrderId]);
-
-    // ✅ STEP 2: Socket — join order room + listen for payer updates
+    // ── Socket — only for status/cart, NOT payers ────────────────────
     useEffect(() => {
         if (!activeOrderId) return;
         socket.emit("joinOrder", activeOrderId);
-
-        socket.on("payersUpdated", (updated) => {
-            if (!isEditingRef.current) {
-                setPayers(updated);
-            }
-        });
-
         socket.on("cartUpdated", () => {
-            axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`)
-                .then(res => setOrderedItems(res.data.items || []));
+            axios.get(`${BACKEND}/orders/${activeOrderId}`)
+                .then(res => setOrderedItems(res.data.items || []))
+                .catch(() => {});
         });
-
-        return () => {
-            socket.off("payersUpdated");
-            socket.off("cartUpdated");
-        };
+        return () => { socket.off("cartUpdated"); };
     }, [activeOrderId]);
 
-    // ✅ STEP 3: Polling — order status + payer sync fallback
+    // ── Polling — status only, skip payers if user is typing ─────────
     useEffect(() => {
         if (!activeOrderId) return;
-
         const interval = setInterval(async () => {
             try {
-                const res = await axios.get(`https://snack-attack-backend.onrender.com/orders/${activeOrderId}`);
-                const rawStatus = res.data.order?.status || "";
-                    const status = (res.data.order?.status || "").trim().toLowerCase();
-                       if (status === "paid" || ((step === "waitingForPayment" || step === "receipt") && ["accepted", "preparing", "ready", "served"].includes(status))) {
-                            setStep("receipt");
-                            return;
-                        }
-                        if (status === "rejected") {
-                            setStep("rejected");
-                            return;
-                        }
-
-                   // ✅ 2. Prevent falling back to payment eza 5alasna w wselna 3al receipt
-                        if (step !== "waitingForPayment" && step !== "receipt" && status !== "paymentpending") {
-                            if (status === "accepted" || status === "preparing" || status === "paymentpending") {
-                                setStep("payment");
-                            }
-                        }
-                    
-                
-
-                // Sync payers from backend only when not editing
-                if (!isEditingRef.current) {
+                const res = await axios.get(`${BACKEND}/orders/${activeOrderId}`);
+                const status = (res.data.order?.status || "").trim().toLowerCase();
+                if (status === "paid") { setStep("receipt"); return; }
+                if (status === "rejected") { setStep("rejected"); return; }
+                if (step !== "waitingForPayment" && step !== "receipt" && step !== "rejected") {
+                    if (["accepted", "preparing", "paymentpending"].includes(status)) setStep("payment");
+                }
+                // Only sync payers from server when user is NOT actively editing
+                if (!isEditing()) {
                     const raw = res.data.order?.payment_splits;
                     if (raw) {
                         try {
@@ -218,52 +186,48 @@ const lockedRef = useRef(false);
                             if (Array.isArray(parsed) && parsed.length > 0) {
                                 setPayers(parsed);
                             }
-                        } catch { /* keep current */ }
+                        } catch {}
                     }
                 }
-            } catch { /* silent */ }
-        }, 1500);
-
+            } catch {}
+        }, 2000);
         return () => clearInterval(interval);
-    },  [activeOrderId, step]);
+    }, [activeOrderId, step]);
 
-    // ✅ Auto-fill amount for single payer
-    useEffect(() => {
-        if (payers.length === 1 && finalTotal > 0) {
-            setPayers(p => [{ ...p[0], amount: parseFloat(finalTotal.toFixed(2)) }]);
-        }
-    }, [finalTotal]);
-
-    // ✅ Payer handlers
-    const addPayer = () => {
-        const updated = [...payers, { id: Date.now(), name: "", amount: 0, method: 'cash', ownerId: myUserId.current }];
-        setPayers(updated);
-        syncPayersToBackend(updated);
-    };
-
+    // ── Payer handlers ────────────────────────────────────────────────
     const updatePayer = (id, field, value) => {
-        isEditingRef.current = true;
-        const updated = payers.map((p) => (p.id === id ? { ...p, [field]: value } : p));
-        setPayers(updated);
-        clearTimeout(window._payerSyncTimeout);
-        window._payerSyncTimeout = setTimeout(() => {
-            syncPayersToBackend(updated);
-            isEditingRef.current = false;
-        }, 800);
+        // Block incoming updates for 2.5 seconds after any user input
+        ignoreUpdatesUntil.current = Date.now() + 2500;
+
+        setPayers(prev => {
+            const updated = prev.map((p) => {
+                if (p.id !== id) return p;
+                const next = { ...p, [field]: value };
+                if (field === 'method' && value === 'card' && !p.whishCode) {
+                    next.whishCode = generateWhishCode();
+                }
+                if (field === 'currency' && p.cashHasSplit) {
+                    next.cashHasSplit = false;
+                    next.cashSecondAmount = 0;
+                }
+                return next;
+            });
+
+            // Debounced sync
+            if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+            syncTimerRef.current = setTimeout(() => {
+                syncPayersToBackend(updated);
+            }, 1000);
+
+            return updated;
+        });
     };
 
-    // ✅ FIX #2: Better delete validation - prevent deleting own last row (scanners)
     const removePayer = (payer) => {
-        const isMine = payer.ownerId === myUserId.current;
-        
-        // Rule 1: Can only delete your own rows
-        if (!isMine) return;
-
-        // Rule 2: Cannot delete if it's your only row (prevent empty submission)
+        if (payer.ownerId !== myUserId.current) return;
         const myRows = payers.filter(p => p.ownerId === myUserId.current);
         if (myRows.length <= 1) return;
-
-        // Safe to delete
+        ignoreUpdatesUntil.current = Date.now() + 2500;
         const updated = payers.filter((p) => p.id !== payer.id);
         setPayers(updated);
         syncPayersToBackend(updated);
@@ -271,26 +235,238 @@ const lockedRef = useRef(false);
 
     const handleConfirmPayment = async (e) => {
         e.preventDefault();
+        const unconfirmed = payers.find(p =>
+            p.ownerId === myUserId.current &&
+            p.method === 'card' &&
+            !p.whishConfirmed
+        );
+        if (unconfirmed) {
+            alert("⚠️ You must check the confirmation box before proceeding!");
+            return;
+        }
+        const invalidCash = payers.find(p => {
+            if (p.ownerId !== myUserId.current || p.method !== 'cash') return false;
+            return (Number(p.amount) || 0) + (Number(p.cashSecondAmount) || 0) <= 0;
+        });
+        if (invalidCash) {
+            alert("⚠️ Please enter a payment amount!");
+            return;
+        }
+        const invalidCard = payers.find(p =>
+            p.ownerId === myUserId.current &&
+            p.method === 'card' &&
+            (Number(p.amount) || 0) <= 0
+        );
+        if (invalidCard) {
+            alert("⚠️ Please enter a payment amount!");
+            return;
+        }
         setLoading(true);
         try {
-            await axios.put(`https://snack-attack-backend.onrender.com/admin/orders/${activeOrderId}/status`, {
+            await axios.put(`${BACKEND}/admin/orders/${activeOrderId}/status`, {
                 status: "PaymentPending",
                 payment_splits: payers,
                 replace_splits: true
             });
-            lockedRef.current = false;
             setStep("waitingForPayment");
-            } catch {
+        } catch {
             alert("Error confirming payment!");
-            } finally {
+        } finally {
             setLoading(false);
+        }
+    };
+
+    // ── Render helpers ────────────────────────────────────────────────
+    const renderMethodSelector = (payer, isMine) => (
+        <div className="method-btn-group">
+            {[{ id: 'cash', label: '💵 Cash' }, { id: 'card', label: '💳 Card' }].map(m => (
+                <button
+                    key={m.id}
+                    type="button"
+                    className={`method-btn ${payer.method === m.id ? 'active' : ''}`}
+                    onClick={() => isMine && updatePayer(payer.id, 'method', m.id)}
+                    disabled={!isMine}
+                >
+                    {m.label}
+                </button>
+            ))}
+        </div>
+    );
+
+    const renderCashExtras = (payer, isMine) => {
+        const secondCurrency = payer.currency === 'USD' ? 'LBP' : 'USD';
+        const showRate = payer.currency === 'LBP' || payer.cashHasSplit;
+
+        return (
+            <div className="cash-extras-wrapper">
+                <div className="cash-amount-row">
+                    <input
+                        type="number"
+                        placeholder="0"
+                        className="glass-input-small cash-amount-input"
+                        value={payer.amount || ""}
+                        disabled={!isMine}
+                        onChange={(e) => updatePayer(payer.id, 'amount', e.target.value)}
+                    />
+                    <div className="cash-currency-toggle">
+                        <button
+                            type="button"
+                            className={`cc-btn ${payer.currency === 'USD' ? 'active' : ''}`}
+                            onClick={() => isMine && updatePayer(payer.id, 'currency', 'USD')}
+                            disabled={!isMine}
+                        >🇺🇸 USD</button>
+                        <button
+                            type="button"
+                            className={`cc-btn ${payer.currency === 'LBP' ? 'active' : ''}`}
+                            onClick={() => isMine && updatePayer(payer.id, 'currency', 'LBP')}
+                            disabled={!isMine}
+                        >🇱🇧 LBP</button>
+                    </div>
+                    {isMine && !payer.cashHasSplit && (
+                        <button
+                            type="button"
+                            className="cash-plus-btn"
+                            onClick={() => updatePayer(payer.id, 'cashHasSplit', true)}
+                        >+</button>
+                    )}
+                </div>
+
+                {showRate && (
+                    <p className="rate-hint-text">Rate: 1$ = {EXCHANGE_RATE.toLocaleString()} LBPs</p>
+                )}
+
+                {payer.cashHasSplit && (
+                    <div className="cash-amount-row second-cash-row">
+                        <input
+                            type="number"
+                            placeholder="0"
+                            className="glass-input-small cash-amount-input"
+                            value={payer.cashSecondAmount || ""}
+                            disabled={!isMine}
+                            onChange={(e) => updatePayer(payer.id, 'cashSecondAmount', e.target.value)}
+                        />
+                        <span className="cash-currency-locked">
+                            {secondCurrency === 'USD' ? '🇺🇸 USD' : '🇱🇧 LBP'}
+                        </span>
+                        {isMine && (
+                            <button
+                                type="button"
+                                className="cash-minus-btn"
+                                onClick={() => updatePayer(payer.id, 'cashHasSplit', false)}
+                            >−</button>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const renderTransferFlow = (payer, isMine) => {
+        const ref = `ORD-${activeOrderId}-${payer.whishCode || '???'}`;
+        return (
+            <div className="transfer-flow-box">
+                <div className="transfer-header-row">
+                    <span className="transfer-brand">📱 Money Transfer</span>
+                    <span className="transfer-number-tag">{WHISH_NUMBER}</span>
+                </div>
+                <div className="transfer-code-block">
+                    <span className="tc-label">Transfer Note:</span>
+                    <span className="tc-value">{ref}</span>
+                </div>
+                <p className="transfer-instruction">
+                    Send the amount to the number above and include <strong>"{ref}"</strong> in the transfer notes.
+                </p>
+                {isMine && (
+                    <>
+                        <input
+                            type="number"
+                            placeholder="Amount $"
+                            className="glass-input-small transfer-amount-input"
+                            value={payer.amount || ""}
+                            onChange={(e) => updatePayer(payer.id, 'amount', e.target.value)}
+                        />
+                        <label className="transfer-confirm-label">
+                            <input
+                                type="checkbox"
+                                checked={payer.whishConfirmed || false}
+                                onChange={(e) => updatePayer(payer.id, 'whishConfirmed', e.target.checked)}
+                            />
+                            <span>
+                                I confirm I included <strong>"{ref}"</strong> in the transfer notes
+                            </span>
+                        </label>
+                    </>
+                )}
+            </div>
+        );
+    };
+
+    const renderPayerCard = (payer) => {
+        const isMine = payer.ownerId === myUserId.current;
+        const myRowsCount = payers.filter(p => p.ownerId === myUserId.current).length;
+
+        return (
+            <div key={payer.id} className={`payer-card ${isMine ? 'payer-mine' : 'payer-others'}`}>
+                <div className="payer-card-top">
+                    <input
+                        type="text"
+                        placeholder="Name *"
+                        className="glass-input-small payer-name-input"
+                        value={payer.name || ""}
+                        disabled={!isMine}
+                        onChange={(e) => updatePayer(payer.id, 'name', e.target.value)}
+                    />
+                    <input
+                        type="tel"
+                        placeholder="Phone"
+                        className="glass-input-small payer-phone-input"
+                        value={payer.phone || ""}
+                        disabled={!isMine}
+                        onChange={(e) => updatePayer(payer.id, 'phone', e.target.value)}
+                    />
+                    {isMine && myRowsCount > 1 && (
+                        <button type="button" className="remove-payer-btn" onClick={() => removePayer(payer)}>✕</button>
+                    )}
+                </div>
+
+                {renderMethodSelector(payer, isMine)}
+
+                {payer.method === 'cash' && renderCashExtras(payer, isMine)}
+
+                {payer.method === 'card' && renderTransferFlow(payer, isMine)}
+            </div>
+        );
+    };
+
+    const renderOtherPayerRow = (payer, i) => {
+        const usdTotal = getPayerUsdTotal(payer);
+        let detailParts = [];
+        if (payer.method === 'cash') {
+            if (Number(payer.amount) > 0) detailParts.push(`${Number(payer.amount).toLocaleString()} ${payer.currency}`);
+            if (payer.cashHasSplit && Number(payer.cashSecondAmount) > 0) {
+                const sc = payer.currency === 'USD' ? 'LBP' : 'USD';
+                detailParts.push(`${Number(payer.cashSecondAmount).toLocaleString()} ${sc}`);
             }
+        }
+        const icon = payer.method === 'cash' ? '💵' : '💳';
+
+        return (
+            <div key={payer.id} className="payer-card payer-others">
+                <div className="others-row">
+                    <span className="others-name">{payer.name || `Person ${i + 1}`}</span>
+                    <span className="others-total">${usdTotal.toFixed(2)}</span>
+                    <span className="others-icon">{icon}</span>
+                </div>
+                {detailParts.length > 0 && (
+                    <p className="others-detail">{detailParts.join(' + ')}</p>
+                )}
+            </div>
+        );
     };
 
     // ============================================================
-    // RENDER
+    // RENDER STEPS
     // ============================================================
-
     if (step === "waiting" || step === "waitingForPayment") {
         return (
             <div className="checkout-page">
@@ -310,7 +486,6 @@ const lockedRef = useRef(false);
         return (
             <div className="checkout-page">
                 <div className="overlay">
-
                     {showQR && (
                         <div className="qr-popup-overlay">
                             <div className="qr-popup-content slide-down">
@@ -323,207 +498,50 @@ const lockedRef = useRef(false);
                     <div className="layout-wrapper">
                         <div className="checkout-container">
                             <div className="info-form-card glass-effect">
-
                                 <h2 className="checkout-title">✅ COMPLETE PAYMENT</h2>
-                                <p style={{ color: '#606060', marginBottom: '15px' }}>
+                                <p style={{ color: '#aaa', marginBottom: '15px', fontSize: '14px' }}>
                                     Order #{activeOrderId} | Table #{tableId}
                                 </p>
 
                                 <div className="checkout-section group-split-box">
-
                                     {isScanner ? (
                                         <>
-                                            <p style={{ color: '#FFC20E', fontWeight: 'bold', marginBottom: '8px' }}>
-                                                👤 Your Share
-                                            </p>
-
+                                            <p className="scanner-share-label">👤 Your Share</p>
                                             {payers
                                                 .filter(p => p.id === myPayerIdRef.current)
-                                                .map((payer) => (
-                                                    <div
-                                                        key={payer.id}
-                                                        className="payer-row-checkout"
-                                                        style={{
-                                                            border: '1px solid #FFC20E',
-                                                            borderRadius: '8px',
-                                                            padding: '6px',
-                                                            marginBottom: '10px'
-                                                        }}
-                                                    >
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Your Name *"
-                                                            className="glass-input-small"
-                                                            style={{ width: '100px' }}
-                                                            value={payer.name || ""}
-                                                            onChange={(e) =>
-                                                                updatePayer(payer.id, 'name', e.target.value)
-                                                            }
-                                                            autoFocus
-                                                        />
-
-                                                        <input
-                                                            type="number"
-                                                            placeholder="Amount"
-                                                            className="glass-input-small"
-                                                            value={payer.amount || ""}
-                                                            onChange={(e) =>
-                                                                updatePayer(payer.id, 'amount', e.target.value)
-                                                            }
-                                                        />
-
-                                                        <select
-                                                            className="glass-select"
-                                                            value={payer.method}
-                                                            onChange={(e) =>
-                                                                updatePayer(payer.id, 'method', e.target.value)
-                                                            }
-                                                        >
-                                                            <option value="cash">💵 Cash</option>
-                                                            <option value="card">💳 Card</option>
-                                                        </select>
-                                                    </div>
-                                                ))}
+                                                .map(payer => renderPayerCard(payer))}
 
                                             {payers.filter(p => p.id !== myPayerIdRef.current).length > 0 && (
                                                 <>
-                                                    <p style={{ color: '#595858', fontSize: '0.9rem', marginTop: '8px', marginBottom: '4px' }}>
-                                                        Others at this table:
-                                                    </p>
-
+                                                    <p className="others-label">Others at this table:</p>
                                                     {payers
                                                         .filter(p => p.id !== myPayerIdRef.current)
-                                                        .map((payer, i) => (
-                                                            <div
-                                                                key={payer.id}
-                                                                className="payer-row-checkout"
-                                                                style={{ opacity: 0.6 }}
-                                                            >
-                                                                <span className="glass-input-small" style={{ width: '100px', display: 'inline-block', padding: '6px', color: '#222' }}>
-                                                                    {payer.name || `Person ${i + 1}`}
-                                                                </span>
-
-                                                                <span className="glass-input-small" style={{ display: 'inline-block', padding: '6px', color: '#222' }}>
-                                                                    ${Number(payer.amount || 0).toFixed(2)}
-                                                                </span>
-
-                                                                <span style={{ color: '#aaa', fontSize: '0.8rem' }}>
-                                                                    {payer.method === 'cash' ? '💵' : '💳'}
-                                                                </span>
-                                                            </div>
-                                                        ))}
+                                                        .map((payer, i) => renderOtherPayerRow(payer, i))}
                                                 </>
                                             )}
                                         </>
                                     ) : (
                                         <>
-                                            {payers.map((payer) => {
-                                                const isMine = payer.ownerId === myUserId.current;
-                                                const myRowsCount = payers.filter(p => p.ownerId === myUserId.current).length;
+                                            {payers.map(payer => renderPayerCard(payer))}
 
-                                                return (
-                                                    <div key={payer.id} className="payer-row-checkout">
-
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Name *"
-                                                            className="glass-input-small"
-                                                            style={{ width: '80px' }}
-                                                            value={payer.name || ""}
-                                                            disabled={!isMine}
-                                                            onChange={(e) =>
-                                                                updatePayer(payer.id, 'name', e.target.value)
-                                                            }
-                                                        />
-
-                                                        {payer.method === 'card' && (
-                                                            <input
-                                                                type="tel"
-                                                                placeholder="Phone *"
-                                                                className="glass-input-small"
-                                                                style={{ width: '80px' }}
-                                                                value={payer.phone || ""}
-                                                                disabled={!isMine}
-                                                                onChange={(e) =>
-                                                                    updatePayer(payer.id, 'phone', e.target.value)
-                                                                }
-                                                            />
-                                                        )}
-
-                                                        <input
-                                                            type="number"
-                                                            value={payer.amount}
-                                                            className="glass-input-small"
-                                                            disabled={!isMine}
-                                                            onChange={(e) =>
-                                                                updatePayer(payer.id, 'amount', e.target.value)
-                                                            }
-                                                        />
-
-                                                        <select
-                                                            className="glass-select"
-                                                            value={payer.method}
-                                                            disabled={!isMine}
-                                                            onChange={(e) =>
-                                                                updatePayer(payer.id, 'method', e.target.value)
-                                                            }
-                                                        >
-                                                            <option value="cash">💵 Cash</option>
-                                                            <option value="card">💳 Card</option>
-                                                        </select>
-
-                                                        {isMine && myRowsCount > 1 && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => removePayer(payer)}
-                                                                style={{
-                                                                    color: '#ff4d4d',
-                                                                    border: 'none',
-                                                                    background: 'transparent'
-                                                                }}
-                                                            >
-                                                                ✕
-                                                            </button>
-                                                        )}
-
-                                                    </div>
-                                                );
-                                            })}
-
-                                            {!isScanner && (
+                                            <div className="payer-actions-row">
                                                 <button
                                                     type="button"
-                                                    className="add-payer-btn-glass"
+                                                    className="add-payer-btn-glass qr-split-btn"
                                                     onClick={() => setShowQR(true)}
-                                                    style={{
-                                                        width: '100%',
-                                                        marginTop: '10px',
-                                                        background: '#FFC20E',
-                                                        color: '#000',
-                                                        fontWeight: 'bold'
-                                                    }}
                                                 >
-                                                    Scan to split payment 📲
+                                                    Scan to split 📲
                                                 </button>
-                                            )}
-
-                                            <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
                                                 <button
                                                     type="button"
-                                                    className="add-payer-btn-glass"
+                                                    className="add-payer-btn-glass edit-order-btn"
                                                     onClick={() => navigate(`/cart/${activeOrderId}`)}
-                                                    style={{
-                                                        background: 'transparent',
-                                                        border: '1px solid #FFC20E',
-                                                        color: '#FFC20E'
-                                                    }}
                                                 >
                                                     ✏️ Edit Order
                                                 </button>
                                             </div>
                                         </>
                                     )}
-
                                 </div>
 
                                 <form onSubmit={handleConfirmPayment}>
@@ -532,40 +550,27 @@ const lockedRef = useRef(false);
                                             <span>Total Bill:</span>
                                             <span>${finalTotal.toFixed(2)}</span>
                                         </div>
-
-                                        <div
-                                            className="summary-row"
-                                            style={{ color: remainingBalance > 0 ? '#d90d0d' : '#95b508' }}
-                                        >
+                                        <div className="summary-row" style={{ color: remainingBalance > 0.01 ? '#ff6b6b' : '#95b508' }}>
                                             <span>Remaining:</span>
                                             <span>${remainingBalance.toFixed(2)}</span>
                                         </div>
                                     </div>
-
-                                    <button
-                                        type="submit"
-                                        className="place-order-btn-final"
-                                        disabled={loading}
-                                    >
+                                    <button type="submit" className="place-order-btn-final" disabled={loading}>
                                         {loading ? "CONFIRMING..." : "CONFIRM PAYMENT 💳"}
                                     </button>
                                 </form>
-
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         );
     }
-   if (step === "receipt") {
+
+    if (step === "receipt") {
         return (
             <div className="checkout-page">
-               
                 <div className="overlay" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: '120px', paddingBottom: '60px', minHeight: '100vh', overflowY: 'auto' }}>
-                    
-                    
                     <div className="receipt-paper" style={{ maxWidth: '420px', width: '85%', margin: '0 auto' }}>
                         <img src={logo} alt="Logo" className="receipt-logo-bw" />
                         <div className="receipt-branch-info">
@@ -578,7 +583,7 @@ const lockedRef = useRef(false);
                             <p><strong>Table:</strong> #{tableId}</p>
                             <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
                         </div>
-                        <div className="receipt-divider">-------------------------------------------</div>
+                        <div className="receipt-divider"></div>
                         <div className="receipt-items">
                             {orderedItems.map((item, index) => (
                                 <div key={index} className="r-item-container">
@@ -589,24 +594,19 @@ const lockedRef = useRef(false);
                                 </div>
                             ))}
                         </div>
-                        <div className="receipt-divider">-------------------------------------------</div>
+                        <div className="receipt-divider"></div>
                         <div className="receipt-summary">
                             <div className="r-summary-line"><span>Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
                             <div className="r-summary-line"><span>VAT (11%):</span><span>${totalVAT.toFixed(2)}</span></div>
                             <div className="receipt-total-row"><span>TOTAL:</span><span>${finalTotal.toFixed(2)}</span></div>
                         </div>
                     </div>
-
-                    {/* ✅ El Text w el Button ta7t el wara2a msh 7adda */}
                     <div style={{ textAlign: 'center', width: '100%', maxWidth: '420px' }}>
                         <h2 style={{ color: '#fff', fontSize: '32px', fontWeight: '900', textShadow: '0px 4px 15px rgba(0,0,0,0.6)', marginBottom: '20px' }}>
                             ✅ PAID! ENJOY!
                         </h2>
-                        <button className="back-btn-new" onClick={() => window.location.href = '/'}>
-                            New Order
-                        </button>
+                        <button className="back-btn-new" onClick={() => window.location.href = '/'}>New Order</button>
                     </div>
-
                 </div>
             </div>
         );
@@ -624,8 +624,6 @@ const lockedRef = useRef(false);
             </div>
         );
     }
-
 }
-
 
 export default Checkout;

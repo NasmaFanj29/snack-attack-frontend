@@ -1,0 +1,177 @@
+/* ================================================================
+   THEME.CSS — Snack Attack · Unified Light / Dark System
+   Add to index.html BEFORE all other CSS imports:
+   <link rel="stylesheet" href="/src/style/theme.css" />
+   ================================================================ */
+
+/* ── LIGHT MODE (default) ──────────────────────────────────────── */
+:root {
+  --gold:           #FFC20E;
+  --gold-d:         #f5b800;
+  --green:          #95b508;
+  --green-d:        #7a9406;
+
+  /* Backgrounds */
+  --bg:             #f0f2f5;
+  --surface:        #ffffff;
+  --surface-2:      #f8f9fa;
+  --surface-3:      #f0f2f5;
+  --surface-4:      #e8eaed;
+
+  /* Text */
+  --text:           #111111;
+  --text-muted:     rgba(0,0,0,0.55);
+  --text-faint:     rgba(0,0,0,0.32);
+
+  /* Borders */
+  --border:         rgba(0,0,0,0.08);
+  --border-2:       rgba(0,0,0,0.14);
+  --border-gold:    rgba(255,194,14,0.35);
+
+  /* Navbar */
+  --nav-bg:         rgba(255,255,255,0.92);
+  --nav-border:     rgba(0,0,0,0.08);
+  --nav-link:       rgba(0,0,0,0.55);
+  --nav-link-hover: #111111;
+  --nav-shadow:     0 2px 16px rgba(0,0,0,0.08);
+
+  /* Drawer (mobile) */
+  --drawer-bg:      rgba(255,255,255,0.97);
+  --drawer-border:  rgba(0,0,0,0.1);
+  --drawer-link:    #1a1a1a;
+
+  /* Glass cards (cart / checkout pages) */
+  --glass-bg:       rgba(255,255,255,0.14);
+  --glass-border:   rgba(255,255,255,0.25);
+  --glass-blur:     blur(28px) saturate(180%);
+  --page-overlay:   rgba(120,100,80,0.45);
+
+  /* Menu cards */
+  --card-bg:        #ffffff;
+  --card-border:    rgba(0,0,0,0.06);
+  --card-shadow:    0 4px 16px rgba(0,0,0,0.08);
+  --card-title:     #111111;
+
+  /* Inputs */
+  --input-bg:       rgba(255,255,255,0.12);
+  --input-border:   rgba(255,255,255,0.28);
+  --input-text:     #ffffff;        /* on glass backgrounds */
+  --input-placeholder: rgba(255,255,255,0.45);
+
+  /* Mini cart sidebar */
+  --mini-cart-bg:   rgba(255,255,255,0.92);
+  --mini-cart-border: rgba(255,255,255,0.3);
+  --mini-cart-item-border: #f0f0f0;
+  --mini-cart-name: #95b508;
+  --mini-cart-total-bg: #f9f9f9;
+
+  /* Modal */
+  --modal-bg:       #ffffff;
+  --modal-text:     #111;
+  --modal-overlay:  rgba(0,0,0,0.6);
+  --modal-blur:     blur(6px);
+  --extra-name:     #95b508;
+  --extra-name-hover: #FFC20E;
+
+  /* General */
+  --shadow:         0 4px 20px rgba(0,0,0,0.1);
+  --shadow-lg:      0 20px 50px rgba(0,0,0,0.18);
+  --radius-lg:      28px;
+
+  /* Scrollbar */
+  --scrollbar-thumb: rgba(0,0,0,0.15);
+}
+
+/* ── DARK MODE ─────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  /* Backgrounds */
+  --bg:             #080808;
+  --surface:        #0d0d0d;
+  --surface-2:      #111111;
+  --surface-3:      #171717;
+  --surface-4:      #1e1e1e;
+
+  /* Text */
+  --text:           #ffffff;
+  --text-muted:     rgba(255,255,255,0.48);
+  --text-faint:     rgba(255,255,255,0.22);
+
+  /* Borders */
+  --border:         rgba(255,255,255,0.07);
+  --border-2:       rgba(255,255,255,0.12);
+  --border-gold:    rgba(255,194,14,0.15);
+
+  /* Navbar */
+  --nav-bg:         rgba(8,8,8,0.85);
+  --nav-border:     rgba(255,255,255,0.07);
+  --nav-link:       rgba(255,255,255,0.45);
+  --nav-link-hover: #ffffff;
+  --nav-shadow:     0 2px 16px rgba(0,0,0,0.4);
+
+  /* Drawer */
+  --drawer-bg:      rgba(10,10,10,0.97);
+  --drawer-border:  rgba(255,194,14,0.1);
+  --drawer-link:    rgba(255,255,255,0.65);
+
+  /* Glass cards */
+  --glass-bg:       rgba(255,255,255,0.06);
+  --glass-border:   rgba(255,255,255,0.1);
+  --glass-blur:     blur(28px) saturate(180%);
+  --page-overlay:   rgba(20,12,5,0.58);
+
+  /* Menu cards */
+  --card-bg:        #111111;
+  --card-border:    rgba(255,255,255,0.07);
+  --card-shadow:    0 4px 20px rgba(0,0,0,0.4);
+  --card-title:     rgba(255,255,255,0.92);
+
+  /* Inputs */
+  --input-bg:       rgba(255,255,255,0.06);
+  --input-border:   rgba(255,255,255,0.15);
+  --input-text:     rgba(255,255,255,0.88);
+  --input-placeholder: rgba(255,255,255,0.35);
+
+  /* Mini cart sidebar */
+  --mini-cart-bg:   rgba(17,17,17,0.95);
+  --mini-cart-border: rgba(255,194,14,0.1);
+  --mini-cart-item-border: rgba(255,255,255,0.06);
+  --mini-cart-name: rgba(255,255,255,0.88);
+  --mini-cart-total-bg: rgba(255,255,255,0.03);
+
+  /* Modal */
+  --modal-bg:       #141414;
+  --modal-text:     rgba(255,255,255,0.88);
+  --modal-overlay:  rgba(0,0,0,0.85);
+  --modal-blur:     blur(12px);
+  --extra-name:     rgba(255,255,255,0.82);
+  --extra-name-hover: #ffffff;
+
+  /* General */
+  --shadow:         0 4px 20px rgba(0,0,0,0.5);
+  --shadow-lg:      0 30px 80px rgba(0,0,0,0.7);
+
+  /* Scrollbar */
+  --scrollbar-thumb: rgba(255,255,255,0.1);
+}
+
+/* ── SMOOTH TRANSITIONS ────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+/* Don't transition transforms and animations */
+button, a, img, svg, .sticker-logo-img, .dynamic-add-btn {
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.25s ease,
+    opacity 0.25s ease;
+}

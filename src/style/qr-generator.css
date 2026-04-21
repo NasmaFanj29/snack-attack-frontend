@@ -1,0 +1,183 @@
+/* ================================================================
+   QR-GENERATOR.CSS — Snack Attack
+   ================================================================ */
+
+.qr-page {
+  min-height: 100vh;
+  background: var(--bg, #f0f2f5);
+  font-family: 'DM Sans', sans-serif;
+  padding: 90px 32px 60px;
+}
+
+/* Header */
+.qr-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.qr-header-left h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  font-weight: 400;
+  letter-spacing: 6px;
+  color: var(--gold, #FFC20E);
+  margin: 0 0 2px;
+}
+
+.qr-header-left p {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted, #666);
+  margin: 0;
+}
+
+.qr-header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.qr-url-badge {
+  font-family: 'DM Sans', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #666);
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, rgba(0,0,0,0.08));
+  padding: 7px 14px;
+  border-radius: 20px;
+  word-break: break-all;
+}
+
+.qr-print-btn {
+  background: var(--gold, #FFC20E);
+  color: #0a0a0a;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.25s;
+  box-shadow: 0 4px 16px rgba(255,194,14,0.3);
+}
+.qr-print-btn:hover { background: #f5b800; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,194,14,0.4); }
+
+/* Grid */
+.qr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+/* Card */
+.qr-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  border: 2px solid rgba(0,0,0,0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.qr-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,0,0,0.15); }
+
+.qr-card-restaurant {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 13px;
+  letter-spacing: 3px;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.qr-code-wrapper {
+  background: #fff;
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  line-height: 0;
+}
+
+.qr-table-number {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 3.5rem;
+  font-weight: 400;
+  color: #FFC20E;
+  line-height: 1;
+  margin-top: 4px;
+}
+
+.qr-table-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: #aaa;
+  margin-top: -4px;
+}
+
+.qr-instruction {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: #bbb;
+  margin: 4px 0 0;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.qr-download-btn {
+  background: none;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: all 0.2s;
+}
+.qr-download-btn:hover { border-color: #FFC20E; color: #FFC20E; background: rgba(255,194,14,0.06); }
+
+/* ── PRINT STYLES ──────────────────────────────────────────────── */
+@media print {
+  .qr-page { padding: 0; background: white; }
+  .qr-page-header { display: none; }
+  .qr-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 12px; }
+
+  .qr-card {
+    border-radius: 12px;
+    box-shadow: none;
+    border: 2px solid #eee;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .qr-card:hover { transform: none; box-shadow: none; }
+
+  .no-print { display: none !important; }
+}
+
+/* Dark mode */
+[data-theme="dark"] .qr-page { background: var(--bg, #080808); }
+[data-theme="dark"] .qr-card { background: var(--surface-2, #111); border-color: var(--border, rgba(255,255,255,0.07)); }
+[data-theme="dark"] .qr-card-restaurant { color: var(--text-faint, rgba(255,255,255,0.22)); }
+[data-theme="dark"] .qr-table-label { color: var(--text-faint, rgba(255,255,255,0.22)); }
+[data-theme="dark"] .qr-instruction { color: var(--text-faint, rgba(255,255,255,0.22)); }
+[data-theme="dark"] .qr-download-btn { border-color: var(--border, rgba(255,255,255,0.07)); color: var(--text-muted, rgba(255,255,255,0.48)); }
+[data-theme="dark"] .qr-url-badge { background: var(--surface-2, #111); border-color: var(--border, rgba(255,255,255,0.07)); color: var(--text-muted); }
+[data-theme="dark"] .qr-code-wrapper { background: #fff; } /* QR always white bg */
+
+@media (max-width: 600px) {
+  .qr-page { padding: 80px 16px 40px; }
+  .qr-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .qr-table-number { font-size: 2.8rem; }
+}

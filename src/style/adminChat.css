@@ -1,0 +1,239 @@
+/* ── Panel Layout ──────────────────────────────────────────────────────────── */
+.admin-chat-panel {
+  display: flex;
+  height: 640px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #1a1a1a;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+  margin: 24px 0;
+}
+
+/* ── Sidebar ───────────────────────────────────────────────────────────────── */
+.acp-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #141414;
+  border-right: 1px solid rgba(255,255,255,0.07);
+}
+.acp-sidebar-header {
+  display: flex;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.acp-tab {
+  flex: 1;
+  padding: 14px 8px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-bottom: 2px solid transparent;
+  transition: 0.2s;
+}
+.acp-tab.active { color: #FFC20E; border-bottom-color: #FFC20E; }
+.acp-tab:hover:not(.active) { color: rgba(255,255,255,0.7); }
+
+.acp-badge {
+  background: #555;
+  color: #fff;
+  font-size: 0.68rem;
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+.acp-badge.urgent { background: #d63030; }
+
+.acp-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.acp-list::-webkit-scrollbar { width: 4px; }
+.acp-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.acp-empty { color: rgba(255,255,255,0.3); font-size: 0.85rem; text-align: center; padding: 30px 0; }
+
+.acp-conv-item {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.acp-conv-item:hover { background: rgba(255,255,255,0.08); }
+.acp-conv-item.selected { background: rgba(255,194,14,0.1); border-color: rgba(255,194,14,0.4); }
+.acp-conv-item.urgent { border-left: 3px solid #ff4444; }
+
+.acp-conv-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.acp-table-name { color: #fff; font-weight: 700; font-size: 0.9rem; }
+.acp-conv-preview { color: rgba(255,255,255,0.4); font-size: 0.78rem; margin: 0; }
+
+.acp-join-btn {
+  margin-top: 8px; width: 100%; padding: 6px;
+  background: #d63030; color: #fff; border: none;
+  border-radius: 8px; font-size: 0.8rem; font-weight: 700;
+  cursor: pointer; transition: 0.2s;
+}
+.acp-join-btn:hover { background: #b52828; }
+
+/* Status pills */
+.acp-status-pill {
+  font-size: 0.68rem; font-weight: 700;
+  padding: 3px 9px; border-radius: 12px; text-transform: uppercase;
+}
+.acp-status-pill.bot      { background: rgba(149,181,8,0.2);  color: #b5d400; }
+.acp-status-pill.admin    { background: rgba(255,68,68,0.2);  color: #ff8080; }
+.acp-status-pill.resolved { background: rgba(50,200,100,0.2); color: #50d080; }
+
+/* Custom order cards */
+.acp-order-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px; padding: 12px 14px;
+}
+.acp-order-card.confirmed { opacity: 0.5; }
+.acp-order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; color: #fff; }
+.acp-order-details { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.acp-order-details span {
+  font-size: 0.75rem; background: rgba(255,255,255,0.07);
+  padding: 3px 8px; border-radius: 8px; color: rgba(255,255,255,0.7);
+}
+.acp-order-status { font-size: 0.7rem; font-weight: 700; padding: 3px 9px; border-radius: 10px; text-transform: uppercase; }
+.acp-order-status.pending   { background: rgba(255,194,14,0.2); color: #FFC20E; }
+.acp-order-status.confirmed { background: rgba(50,200,100,0.2); color: #50d080; }
+.acp-order-status.declined  { background: rgba(255,68,68,0.2);  color: #ff8080; }
+.acp-order-actions { display: flex; gap: 8px; }
+.acp-confirm, .acp-decline {
+  flex: 1; padding: 7px; border: none; border-radius: 8px;
+  font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: 0.2s;
+}
+.acp-confirm { background: rgba(50,200,100,0.2); color: #50d080; }
+.acp-confirm:hover { background: rgba(50,200,100,0.35); }
+.acp-decline { background: rgba(255,68,68,0.2); color: #ff8080; }
+.acp-decline:hover { background: rgba(255,68,68,0.35); }
+
+/* ── Main Chat Area ────────────────────────────────────────────────────────── */
+.acp-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+.acp-placeholder {
+  flex: 1; display: flex; justify-content: center; align-items: center;
+  text-align: center; color: rgba(255,255,255,0.3);
+}
+.acp-placeholder-icon { font-size: 3rem; margin-bottom: 10px; }
+.acp-urgent-hint { color: #ff8080; font-weight: 700; margin-top: 8px; }
+
+.acp-main-header {
+  padding: 14px 20px;
+  background: rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0;
+}
+.acp-main-header h3 { margin: 0; color: #fff; font-size: 1rem; }
+.acp-header-actions { display: flex; gap: 8px; }
+
+.acp-action-btn {
+  padding: 7px 14px; border: none; border-radius: 10px;
+  font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: 0.2s;
+}
+.acp-action-btn.join       { background: rgba(28,110,170,0.35); color: #7cc4f5; }
+.acp-action-btn.join:hover { background: rgba(28,110,170,0.55); }
+/* ✅ Fix #3: Return to Bot button style */
+.acp-action-btn.return-bot       { background: rgba(149,181,8,0.25); color: #c8e840; }
+.acp-action-btn.return-bot:hover { background: rgba(149,181,8,0.4); }
+.acp-action-btn.resolve       { background: rgba(50,200,100,0.2); color: #50d080; }
+.acp-action-btn.resolve:hover { background: rgba(50,200,100,0.35); }
+
+/* ✅ Fix #5: Proper chat bubble layout ─────────────────────────────────────── */
+.acp-messages {
+  flex: 1; overflow-y: auto;
+  padding: 20px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.acp-messages::-webkit-scrollbar { width: 5px; }
+.acp-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 5px; }
+
+/* Row alignment */
+.acp-msg-row { display: flex; flex-direction: column; max-width: 70%; }
+.acp-row-left  { align-self: flex-start; align-items: flex-start; }
+.acp-row-right { align-self: flex-end;   align-items: flex-end; }
+
+.acp-msg-sender-label {
+  font-size: 0.68rem; font-weight: 700;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 4px; padding: 0 4px;
+}
+.acp-label-right { text-align: right; }
+
+/* Bubble styles */
+.acp-msg-bubble {
+  padding: 10px 15px;
+  border-radius: 18px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+/* Customer = left, grey */
+.acp-bubble-user {
+  background: rgba(255,255,255,0.1);
+  color: #ddd;
+  border-bottom-left-radius: 4px;
+}
+/* Bot = left, green tint */
+.acp-bubble-bot {
+  background: rgba(149,181,8,0.18);
+  color: #c8e840;
+  border-bottom-left-radius: 4px;
+}
+/* Admin = right, blue */
+.acp-bubble-admin {
+  background: #1c6eaa;
+  color: #fff;
+  font-weight: 600;
+  border-bottom-right-radius: 4px;
+}
+
+.acp-sys-msg {
+  align-self: center;
+  font-size: 0.75rem; color: #ff9090;
+  background: rgba(255,80,80,0.12);
+  border-radius: 14px; padding: 5px 14px;
+}
+
+/* ── Reply Box ─────────────────────────────────────────────────────────────── */
+.acp-reply {
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  display: flex; gap: 10px; flex-shrink: 0;
+}
+.acp-reply input {
+  flex: 1;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 22px;
+  padding: 11px 18px;
+  color: #fff; font-family: inherit; font-size: 0.9rem;
+  outline: none; transition: border-color 0.2s;
+}
+.acp-reply input:focus { border-color: rgba(28,110,170,0.6); }
+.acp-reply input::placeholder { color: rgba(255,255,255,0.3); }
+.acp-reply input:disabled { opacity: 0.4; cursor: not-allowed; }
+.acp-reply button {
+  background: #1c6eaa; color: #fff; border: none;
+  padding: 0 20px; border-radius: 22px;
+  font-weight: 700; cursor: pointer; transition: 0.2s;
+}
+.acp-reply button:hover:not(:disabled) { background: #1a5e94; }
+.acp-reply button:disabled { opacity: 0.4; cursor: not-allowed; }

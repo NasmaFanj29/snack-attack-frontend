@@ -1,0 +1,168 @@
+/* ================================================================
+   WAITER.CSS — Snack Attack · Fresh Light Edition
+   ================================================================ */
+:root {
+  --gold:   #FFC20E; --gold-d: #f5b800;
+  --green:  #95b508; --green-l: #e8f5e9; --green-d: #2e7d32;
+  --red:    #ef4444; --red-l: #ffebee;
+  --blue:   #3b82f6; --blue-l: #e3f2fd;
+  --orange: #f97316; --orange-l: #fff3e0;
+  --bg:     #f0f4f8;
+  --surface:#ffffff;
+  --surface2:#f8fafc;
+  --border: rgba(0,0,0,0.07);
+  --border2: rgba(0,0,0,0.12);
+  --text:   #111827; --muted: #6b7280; --faint: #9ca3af;
+  --r8: 8px; --r12: 12px; --r16: 16px; --r20: 20px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
+
+/* ── Page ──────────────────────────────────────────────────────── */
+.waiter-page { min-height: 100vh; background: var(--bg); }
+
+/* ── Header ────────────────────────────────────────────────────── */
+.waiter-header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0 28px; height: 64px;
+  display: flex; justify-content: space-between; align-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  position: sticky; top: 0; z-index: 100;
+}
+.waiter-header::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--green) 40%, var(--green) 60%, transparent);
+}
+
+.waiter-header-left { display: flex; align-items: center; gap: 12px; font-size: 2rem; }
+.waiter-header-left h1 { font-family: 'Bebas Neue', sans-serif; margin: 0; font-size: 1.3rem; font-weight: 400; letter-spacing: 4px; color: var(--text); }
+.waiter-header-left p  { margin: 0; font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--faint); }
+.waiter-header-right   { display: flex; align-items: center; gap: 10px; }
+
+.w-stat { padding: 7px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+.w-stat.deliver { background: var(--green-l); color: var(--green-d); border: 1px solid #c8e6c9; }
+.w-stat.cash    { background: #fffde7; color: #e65100; border: 1px solid #fff176; }
+.w-stat.notify  { background: var(--red-l); color: var(--red); border: 1px solid #ffcdd2; animation: wPulse 1.5s infinite; }
+@keyframes wPulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.3);}50%{box-shadow:0 0 0 5px rgba(239,68,68,0);} }
+
+.waiter-logout { background: var(--surface2); border: 1px solid var(--border2); color: var(--muted); border-radius: var(--r8); padding: 7px 14px; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.waiter-logout:hover { background: #eee; color: var(--text); }
+
+/* ── Daily Summary Bar ─────────────────────────────────────────── */
+.waiter-summary-bar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 12px 28px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.date-nav { display: flex; align-items: center; gap: 8px; }
+.date-nav-btn { width: 30px; height: 30px; border-radius: var(--r8); border: 1px solid var(--border2); background: var(--surface2); color: var(--muted); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.date-nav-btn:hover { background: var(--green); color: #fff; border-color: var(--green); }
+.date-nav-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.date-display { font-size: 12px; font-weight: 700; color: var(--text); min-width: 110px; text-align: center; }
+.date-input-btn { background: none; border: 1px solid var(--border2); border-radius: var(--r8); padding: 5px 12px; font-size: 11px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all 0.2s; position: relative; }
+.date-input-btn:hover { color: var(--text); border-color: var(--green); }
+.date-picker-input { position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; cursor: pointer; }
+.today-btn { padding: 5px 12px; border-radius: var(--r8); border: 1px solid #c8e6c9; background: var(--green-l); color: var(--green-d); font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.today-btn:hover { background: #c8e6c9; }
+
+.w-summary-stats { display: flex; gap: 10px; margin-left: auto; flex-wrap: wrap; }
+.w-sum-stat { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r12); padding: 8px 16px; display: flex; flex-direction: column; align-items: center; min-width: 80px; }
+.w-sum-val { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; font-weight: 400; letter-spacing: 1px; line-height: 1; color: var(--text); }
+.w-sum-val.green { color: var(--green-d); }
+.w-sum-val.gold  { color: #c8960a; }
+.w-sum-label { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--faint); margin-top: 2px; }
+
+/* ── CASH NOTIFICATION BANNER ─────────────────────────────────── */
+.cash-alert-banner {
+  background: #fffde7; border-bottom: 2px solid var(--gold);
+  padding: 12px 28px; display: flex; align-items: center; gap: 12px;
+  animation: slideDown 0.3s ease-out;
+}
+@keyframes slideDown { from {opacity:0;transform:translateY(-8px);} to {opacity:1;transform:translateY(0);} }
+.cash-alert-icon { font-size: 1.4rem; flex-shrink: 0; }
+.cash-alert-text { flex: 1; }
+.cash-alert-text strong { font-size: 13px; font-weight: 800; color: var(--text); display: block; }
+.cash-alert-text span   { font-size: 12px; color: var(--muted); }
+.cash-alert-dismiss { background: var(--gold); border: none; border-radius: var(--r8); padding: 6px 14px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.cash-alert-dismiss:hover { background: var(--gold-d); }
+
+/* ── Tabs ──────────────────────────────────────────────────────── */
+.waiter-tabs { display: flex; gap: 0; border-bottom: 2px solid var(--border); background: var(--surface); padding: 0 28px; }
+.w-tab { padding: 13px 20px; border: none; background: none; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--faint); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: 0.2s; white-space: nowrap; }
+.w-tab.active { color: var(--green-d); border-bottom-color: var(--green); }
+.w-tab:hover:not(.active) { color: var(--muted); }
+
+/* ── Content ───────────────────────────────────────────────────── */
+.waiter-content { padding: 20px 28px; }
+.w-empty { text-align: center; padding: 60px; color: var(--faint); font-size: 14px; font-weight: 500; letter-spacing: 1px; }
+
+/* ── Grid ──────────────────────────────────────────────────────── */
+.w-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 16px; }
+
+/* ── Card ──────────────────────────────────────────────────────── */
+.w-card {
+  background: var(--surface); border-radius: var(--r16);
+  padding: 18px 20px; border: 1px solid var(--border);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  display: flex; flex-direction: column; gap: 12px;
+  animation: wSlide 0.3s ease-out; transition: transform 0.2s, box-shadow 0.2s;
+}
+.w-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+@keyframes wSlide { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+.w-card-ready { border-top: 3px solid var(--green); }
+.w-card-cash  { border-top: 3px solid var(--gold); }
+
+.w-card-top { display: flex; justify-content: space-between; align-items: center; }
+.w-order-id { font-family: 'Bebas Neue', sans-serif; font-weight: 400; font-size: 1.1rem; letter-spacing: 2px; color: var(--text); }
+.w-table-big { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; font-weight: 400; letter-spacing: 2px; color: var(--green-d); }
+
+/* Kitchen ready badge — pulses green */
+.w-ready-badge {
+  background: var(--green-l); color: var(--green-d);
+  font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  padding: 7px 14px; border-radius: 20px; text-align: center;
+  border: 1px solid #a5d6a7;
+  animation: readyPulse 1.8s infinite;
+}
+@keyframes readyPulse { 0%,100%{box-shadow:0 0 0 0 rgba(149,181,8,0.3);}50%{box-shadow:0 0 0 7px rgba(149,181,8,0);} }
+
+.w-time { color: var(--faint); font-size: 11px; font-weight: 500; margin: 0; }
+
+.w-btn { padding: 12px; border: none; border-radius: var(--r12); font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.w-btn:hover { transform: translateY(-2px); }
+.w-btn.green { background: var(--green); color: #fff; box-shadow: 0 4px 14px rgba(149,181,8,0.3); }
+.w-btn.green:hover { background: var(--green-d); box-shadow: 0 8px 22px rgba(149,181,8,0.4); }
+
+/* Cash card */
+.w-cash-amount { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; font-weight: 400; letter-spacing: 2px; color: #c8960a; }
+.w-cash-payers { display: flex; flex-wrap: wrap; gap: 6px; }
+.w-payer-chip { background: #fffde7; color: #c8960a; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 10px; border: 1px solid #fff176; }
+
+/* Track list */
+.w-track-list { display: flex; flex-direction: column; gap: 8px; }
+.w-track-row {
+  background: var(--surface); border-radius: var(--r12);
+  padding: 12px 18px; display: flex; align-items: center; gap: 14px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05); flex-wrap: wrap;
+  border: 1px solid var(--border); transition: border-color 0.2s;
+}
+.w-track-row:hover { border-color: var(--border2); }
+.w-track-id    { font-family: 'Bebas Neue', sans-serif; font-weight: 400; font-size: 1rem; letter-spacing: 1.5px; color: var(--text); min-width: 55px; }
+.w-track-table { font-weight: 700; color: var(--green-d); min-width: 60px; font-size: 13px; }
+.w-track-name  { color: var(--muted); flex: 1; font-size: 13px; }
+.w-track-status{ padding: 3px 12px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+.w-track-total { font-weight: 800; color: var(--text); font-size: 13px; }
+
+/* ── RESPONSIVE ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .waiter-header { height: auto; padding: 14px 16px; }
+  .waiter-header-left h1 { font-size: 1.1rem; letter-spacing: 3px; }
+  .waiter-summary-bar { padding: 12px 16px; }
+  .w-summary-stats { margin-left: 0; }
+  .waiter-tabs { padding: 0 12px; }
+  .w-tab { padding: 11px 14px; font-size: 11px; }
+  .waiter-content { padding: 14px 16px; }
+  .w-grid { grid-template-columns: 1fr; gap: 12px; }
+  .cash-alert-banner { padding: 12px 16px; }
+}

@@ -1,0 +1,182 @@
+/* ================================================================
+   KITCHEN.CSS — Snack Attack · Operational Dark Edition
+   ================================================================ */
+:root {
+  --gold:    #FFC20E;
+  --green:   #95b508;
+  --red:     #ef4444;
+  --orange:  #f97316;
+  --bg:      #0a0a0a;
+  --surface: #111111;
+  --surface2:#181818;
+  --surface3:#1f1f1f;
+  --border:  rgba(255,255,255,0.08);
+  --text:    #f5f5f5;
+  --muted:   rgba(255,255,255,0.5);
+  --faint:   rgba(255,255,255,0.25);
+  --r8:  8px; --r14: 14px; --r20: 20px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+
+.kitchen-page {
+  min-height: 100vh;
+  background: var(--bg);
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255,194,14,0.04) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(239,68,68,0.04) 0%, transparent 50%);
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text);
+  padding-bottom: 60px;
+}
+
+/* ── Header ────────────────────────────────────────────────────── */
+.kitchen-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px; height: 64px;
+  display: flex; justify-content: space-between; align-items: center;
+  position: sticky; top: 0; z-index: 100;
+}
+.kitchen-header::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--red) 0%, var(--gold) 50%, var(--green) 100%);
+}
+
+.kitchen-header-left { display: flex; align-items: center; gap: 12px; }
+.kitchen-icon { font-size: 1.6rem; }
+.kitchen-header-left h1 {
+  font-family: 'Bebas Neue', sans-serif; margin: 0;
+  font-size: 1.3rem; font-weight: 400; letter-spacing: 5px; color: var(--gold);
+}
+.kitchen-header-left p { margin: 0; font-size: 9px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--faint); }
+.kitchen-header-right { display: flex; align-items: center; gap: 10px; }
+
+.kitchen-stat { padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+.kitchen-stat.new  { background: rgba(239,68,68,0.12); color: #fca5a5; border: 1px solid rgba(239,68,68,0.2); }
+.kitchen-stat.prep { background: rgba(255,194,14,0.1); color: var(--gold); border: 1px solid rgba(255,194,14,0.2); }
+
+.kitchen-logout { background: transparent; border: 1px solid var(--border); color: var(--muted); border-radius: var(--r8); padding: 7px 14px; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.kitchen-logout:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+
+/* ── Summary Bar ───────────────────────────────────────────────── */
+.kitchen-summary-bar {
+  background: var(--surface2); border-bottom: 1px solid var(--border);
+  padding: 12px 28px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.date-nav { display: flex; align-items: center; gap: 8px; }
+.date-nav-btn { width: 30px; height: 30px; border-radius: var(--r8); border: 1px solid var(--border); background: var(--surface3); color: var(--muted); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.date-nav-btn:hover { background: var(--gold); color: #000; border-color: var(--gold); }
+.date-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.date-display { font-size: 12px; font-weight: 700; color: var(--text); min-width: 110px; text-align: center; }
+.date-input-btn { background: none; border: 1px solid var(--border); border-radius: var(--r8); padding: 5px 12px; font-size: 11px; font-weight: 600; color: var(--muted); cursor: pointer; position: relative; }
+.date-input-btn:hover { color: var(--text); border-color: var(--gold); }
+.date-picker-input { position: absolute; opacity: 0; width: 100%; height: 100%; top: 0; left: 0; cursor: pointer; }
+.today-btn { padding: 5px 12px; border-radius: var(--r8); border: 1px solid rgba(255,194,14,0.25); background: rgba(255,194,14,0.06); color: var(--gold); font-size: 11px; font-weight: 700; cursor: pointer; }
+.today-btn:hover { background: rgba(255,194,14,0.12); }
+
+.k-summary-stats { display: flex; gap: 10px; margin-left: auto; flex-wrap: wrap; }
+.k-sum-stat { background: var(--surface3); border: 1px solid var(--border); border-radius: var(--r8); padding: 8px 16px; display: flex; flex-direction: column; align-items: center; min-width: 78px; }
+.k-sum-val { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; font-weight: 400; letter-spacing: 1px; line-height: 1; }
+.k-sum-val.gold  { color: var(--gold); }
+.k-sum-val.red   { color: #fca5a5; }
+.k-sum-val.green { color: #b8d45a; }
+.k-sum-label { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--faint); margin-top: 2px; }
+
+/* ── Filters ───────────────────────────────────────────────────── */
+.kitchen-filters { display: flex; gap: 6px; padding: 14px 28px 6px; }
+.kf-btn { padding: 8px 18px; border-radius: 4px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+.kf-btn:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+.kf-btn.active { background: rgba(255,194,14,0.1); border-color: rgba(255,194,14,0.3); color: var(--gold); }
+
+/* ── Empty ─────────────────────────────────────────────────────── */
+.kitchen-empty { text-align: center; padding: 80px 20px; color: var(--faint); font-size: 14px; letter-spacing: 1px; }
+.kitchen-empty p:first-child { font-size: 3rem; margin-bottom: 10px; opacity: 0.4; }
+
+/* ── Grid ──────────────────────────────────────────────────────── */
+.kitchen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap: 18px; padding: 16px 28px; }
+
+/* ── Card ──────────────────────────────────────────────────────── */
+.kitchen-card {
+  background: var(--surface);
+  border-radius: var(--r20); overflow: hidden;
+  border: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 0;
+  transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+  animation: kSlide 0.35s cubic-bezier(0.16,1,0.3,1);
+  position: relative;
+}
+.kitchen-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.kitchen-card:hover { transform: translateY(-4px); box-shadow: 0 20px 50px rgba(0,0,0,0.6); border-color: rgba(255,255,255,0.12); }
+@keyframes kSlide { from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);} }
+
+.k-new { border-left: 3px solid rgba(239,68,68,0.7); }
+.k-new::before { background: linear-gradient(90deg, var(--red), var(--orange)); }
+.k-cooking { border-left: 3px solid rgba(255,194,14,0.6); }
+.k-cooking::before { background: linear-gradient(90deg, var(--gold), #f97316); }
+
+/* ── Card Header ───────────────────────────────────────────────── */
+.k-card-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 16px 12px; border-bottom: 1px solid var(--border); }
+.k-order-id { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; font-weight: 400; letter-spacing: 2px; color: var(--text); }
+.k-table-badge { background: rgba(255,255,255,0.06); border: 1px solid var(--border); padding: 3px 10px; border-radius: 10px; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+.k-status-badge { margin-left: auto; padding: 4px 12px; border-radius: 10px; font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+.k-status-badge.new { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.22); }
+.k-status-badge.cooking { background: rgba(255,194,14,0.12); color: var(--gold); border: 1px solid rgba(255,194,14,0.22); }
+.k-time { padding: 6px 16px 8px; font-size: 11px; color: var(--faint); font-weight: 500; display: block; }
+
+/* ── Items List ────────────────────────────────────────────────── */
+.k-items-list {
+  background: rgba(0,0,0,0.25); margin: 0 14px 14px;
+  border-radius: var(--r14); border: 1px solid rgba(255,255,255,0.05);
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 12px;
+  min-height: 60px;
+}
+
+.k-item-row { display: flex; align-items: flex-start; gap: 10px; }
+.k-item-qty {
+  font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; font-weight: 400;
+  letter-spacing: 1px; color: var(--gold); min-width: 28px; line-height: 1; flex-shrink: 0;
+}
+.k-item-name { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3; }
+
+.k-item-extras {
+  font-size: 11px; color: rgba(255,194,14,0.7);
+  display: block; margin-top: 3px; line-height: 1.4;
+}
+.k-item-removed {
+  font-size: 11px; color: #fca5a5;
+  display: block; margin-top: 2px; line-height: 1.4;
+}
+.k-item-note {
+  display: inline-block; margin-top: 4px;
+  font-size: 12px; font-weight: 600; color: var(--gold);
+  background: rgba(255,194,14,0.08); border: 1px solid rgba(255,194,14,0.2);
+  border-radius: 6px; padding: 3px 8px; line-height: 1.4;
+}
+.k-no-items { color: var(--faint); font-size: 12px; margin: 0; text-align: center; letter-spacing: 1px; padding: 8px 0; }
+
+/* ── Actions ───────────────────────────────────────────────────── */
+.k-actions { padding: 0 14px 14px; margin-top: auto; }
+.k-btn {
+  width: 100%; padding: 14px; border: 1px solid transparent;
+  border-radius: var(--r14); font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase;
+  cursor: pointer; transition: all 0.25s; position: relative; overflow: hidden;
+}
+.k-btn::before { content:''; position:absolute; inset:0; background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,0.12) 50%,transparent 60%); transform:translateX(-100%); transition:transform 0.5s; }
+.k-btn:hover::before { transform:translateX(200%); }
+.k-btn:hover { transform: translateY(-2px); }
+.k-btn.start { background: rgba(239,68,68,0.12); color: #fca5a5; border-color: rgba(239,68,68,0.25); }
+.k-btn.start:hover { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.45); box-shadow: 0 8px 24px rgba(239,68,68,0.2); }
+.k-btn.ready { background: rgba(149,181,8,0.12); color: #b8d45a; border-color: rgba(149,181,8,0.25); }
+.k-btn.ready:hover { background: rgba(149,181,8,0.22); border-color: rgba(149,181,8,0.45); box-shadow: 0 8px 24px rgba(149,181,8,0.2); }
+
+/* ── Mobile ────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .kitchen-header { height: auto; padding: 14px 16px; }
+  .kitchen-header-left h1 { font-size: 1.1rem; letter-spacing: 3px; }
+  .kitchen-summary-bar { padding: 12px 16px; }
+  .k-summary-stats { margin-left: 0; }
+  .kitchen-filters { padding: 12px 16px 4px; gap: 6px; }
+  .kf-btn { padding: 7px 14px; font-size: 10px; }
+  .kitchen-grid { grid-template-columns: 1fr; gap: 14px; padding: 14px 16px; }
+}

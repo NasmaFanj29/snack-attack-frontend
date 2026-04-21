@@ -36,6 +36,8 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
   const [removableExtras, setRemovableExtras] = useState([]);
   const [selectedRemoveExtras, setSelectedRemoveExtras] = useState([]);
 
+<link rel="stylesheet" href="/src/style/theme.css" />
+
   useEffect(() => {
     axios.get("https://snack-attack-backend.onrender.com/menu")
       .then((res) => {
@@ -76,6 +78,7 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
     if (change > 0) {
       addToCart({
         id: item.id,
+        databaseId: item.id,
         name: item.name,
         price: item.price,
         image: item.image,
@@ -89,6 +92,7 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
   };
 
   const handleOpenModal = async (item) => {
+    
     setSelectedItem(item);
     setSelectedExtras([]);
     try {
