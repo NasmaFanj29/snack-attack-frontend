@@ -15,7 +15,7 @@ import Login from './pages/Login';
 import Chatbot from "./components/Chatbot";
 import './style/theme.css';
 import QRGenerator from './pages/QRGenerator';
-import { useSearchParams } from "react-router-dom";
+
 
 // ── Protected route helper ─────────────────────────────────────────────────
 function ProtectedRoute({ allowedRoles, children }) {
@@ -82,16 +82,7 @@ function App() {
   const [menuItems, setMenuItems] = useState([]);
   const [searchParams] = useSearchParams();
 
-useEffect(() => {
-  // Bnel2at ra2em l table mn l link
-  const tableNum = searchParams.get("table");
-  
-  if (tableNum) {
-    // Mnsayvo bl browser kermel l Chatbot w l Cart yes7abou
-    localStorage.setItem("activeTable", tableNum);
-    console.log("Welcome! You are at Table:", tableNum);
-  }
-}, [searchParams]);
+
 
   useEffect(() => {
     localStorage.setItem('snackAttackCart', JSON.stringify(cart));
