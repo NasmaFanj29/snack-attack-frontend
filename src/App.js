@@ -80,7 +80,7 @@ function App() {
   });
 
   const [menuItems, setMenuItems] = useState([]);
-  const [searchParams] = useSearchParams();
+ 
 
 
 
