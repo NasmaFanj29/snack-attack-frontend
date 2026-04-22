@@ -14,32 +14,44 @@ const generateMealImage = async (order) => {
 };
 
 // ── Auto-response rules (no API call needed) ─────────────────────
+// Chatbot.js - Update these arrays and variables
+
 const AUTO_RULES = [
   {
-    match: /\b(sa3at|hours|mta|meta|awkat|wa2t|open|close|closes|w2t|working hours|bta7do|bta5do|btfe7o|btsakro)\b/i,
-    reply: "We are open every day from 11:00 AM to 11:00 PM. Feel free to visit us or order anytime within those hours!",
+    match: /\b(sa3at|hours|mta|meta|awkat|wa2t|open|close|closes|w2t| wa2et|working hours|bta7do|btft7o|btefta7o|btsakro)\b/i,
+    reply: "Mnefta7 kel yom mn l 11:00 AM lal 11:00 PM. Fik tcharrefna aw totlob ayya wa2et fiyoun!",
   },
   {
     match: /^(hi|hello|hey|marhaba|ahla|salam|3ammeh|3amo|kifak|kif|sup)\b/i,
-    reply: "Welcome to Snack Attack! Great to have you here. What can I get started for you today?",
+    reply: "Ahla w sahla bi Snack Attack! Kif fina nse3dak l yom?",
   },
   {
-    match: /\b(shukran|thank|thanks|merci|3anjad|cool|perfect|great)\b/i,
-    reply: "Happy to help! Let me know if there is anything else you need.",
+    match: /\b(shukran|thank|thanks|merci|3anjad|cool|perfect|great|ysalmo| ok | okay)\b/i,
+    reply: "Tekram 3aynak! 5abberni eza baddak shi tene.",
   },
   {
     match: /\b(bye|goodbye|yalla bye|tc|take care|ciao)\b/i,
-    reply: "Take care! We hope to see you again soon at Snack Attack.",
+    reply: "Yalla bye! Nshalla mneshoufak 2ariban bi Snack Attack.",
   },
   {
-    match: /\b(wifi|wi-fi|password|internet)\b/i,
-    reply: "Our Wi-Fi network is SnackAttack_Guest. Please ask a staff member for the current password.",
+    match: /wifi|wi-fi|password|internet|net\b/i,
+    reply: "fi kabse 3l yameen fo2 b2alba password el Wi-Fi",
   },
   {
     match: /\b(toilet|bathroom|restroom|wc|7ammam)\b/i,
-    reply: "The restrooms are located at the back of the restaurant, just past the counter on your right.",
+    reply: "L 7ammam maojoud b ekher l mat3am, 3a yamin l counter.",
   },
+  {
+  match: /\b(sandwich|sandwiche|sandwij|sub sandwich|3ayez sandwich|bde sandwich|bade sandwich)\b/i,
+  reply: "Ehh akid! Shu naw3 l khebez baddak — brioche bun, white bun, aw submarine bread?",
+},
 ];
+
+// Inside your useEffect for loading the saved conversation:
+const welcome = {
+  sender: "bot",
+  text: "Ahla w sahla bi Snack Attack! Ana hon la se3dak totlob, t2allef custom burger, aw jewbak 3a ayya sou2al. Shu 3abelak l yom?",
+};
 
 function Chatbot({ menuItems = [], addToCart }) {
   const tableId = String(localStorage.getItem("activeTable") || "1");
