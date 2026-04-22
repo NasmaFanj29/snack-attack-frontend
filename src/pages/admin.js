@@ -280,7 +280,7 @@ function Admin() {
                     {order.status==='Accepted' && <button className="btn-action cook" onClick={()=>handleStatusUpdate(order.id,'Preparing')}>START COOKING 👨‍🍳</button>}
                     {order.status==='Preparing' && <button className="btn-action ready" onClick={()=>handleStatusUpdate(order.id,'Ready')}>MARK READY 🔔</button>}
                     {order.status==='Ready' && <button className="btn-action serve" onClick={()=>handleStatusUpdate(order.id,'Served')}>MARK SERVED ✅</button>}
-                    {order.status!=='Paid'&&order.status!=='Rejected'&&getPaidTotal(order.payment_splits)>=Number(order.total_price) && (
+                   {order.status !== 'Paid' && order.status !== 'Rejected' && (
                       <button className="btn-action pay" onClick={()=>handleStatusUpdate(order.id,'Paid')}>CONFIRM PAYMENT 💰</button>
                     )}
                   </>
