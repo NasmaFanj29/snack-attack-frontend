@@ -13,75 +13,26 @@ const fmtDisplay = (str) => {
   return (str === today() ? '📅 Today — ' : '') + d.toLocaleDateString('en-US', opts);
 };
 
-// ── Parse items from order (handles all formats) ──────────────────
-// ── Parse items from order (handles all formats) ──────────────────
+// ── Parse items from order (Robust & Clean) ──────────────────
 const parseItems = (order) => {
   try {
-    console.log("🔍 Parsing items for order #" + order.id, order);
-    
-    // FIX 1: Check ALL possible item location formats
-    let raw = order.items || order.order_items || order.itemList || null;
-    
-    if (!raw) {
-      console.warn("⚠️ No items found in order #" + order.id);
-      return [];
-    }
-    
-    // FIX 2: Handle if items is a string (JSON from database)
+    let raw = order.items || order.order_items || [];
     let arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
     
-    // FIX 3: Ensure it's an array
-    if (!Array.isArray(arr)) {
-      console.warn("⚠️ Items is not an array:", typeof arr, arr);
-      return [];
-    }
- 
-    // FIX 4: Map and clean each item thoroughly
+    if (!Array.isArray(arr)) return [];
+
     return arr.map((item, idx) => {
-      if (!item || typeof item !== 'object') return null;
- 
-      // Try ALL possible name fields
-      let name = 
-        item.name || 
-        item.item_name || 
-        item.menu_item_name ||
-        item.menuItemName ||
-        (item.MenuItem?.name) ||
-        (item.menuItem?.name) ||
-        `Item #${item.item_id || item.id || idx + 1}`;
- 
-      // Ensure quantity is a number
-      const qty = Number(item.quantity || 1);
-      
-      // Parse extras (could be string or array)
-      let selectedExtras = item.selectedExtras || item.selected_extras || [];
-      if (typeof selectedExtras === 'string') {
-        try { selectedExtras = JSON.parse(selectedExtras); } 
-        catch { selectedExtras = []; }
-      }
-      
-      // Parse removed extras
-      let removedExtras = item.removedExtras || item.removed_extras || [];
-      if (typeof removedExtras === 'string') {
-        try { removedExtras = JSON.parse(removedExtras); } 
-        catch { removedExtras = []; }
-      }
- 
-      // Special note
-      const specialNote = item.specialNote || item.special_note || null;
- 
+      if (!item) return null;
       return {
-        ...item,
-        name: name,
-        quantity: qty,
-        selectedExtras: Array.isArray(selectedExtras) ? selectedExtras : [],
-        removedExtras: Array.isArray(removedExtras) ? removedExtras : [],
-        specialNote: specialNote
+        name: item.name || item.item_name || `Item #${item.item_id || idx + 1}`,
+        quantity: Number(item.quantity || 1),
+        selectedExtras: Array.isArray(item.selected_extras) ? item.selected_extras : (Array.isArray(item.selectedExtras) ? item.selectedExtras : []),
+        removedExtras: Array.isArray(item.removed_extras) ? item.removed_extras : (Array.isArray(item.removedExtras) ? item.removedExtras : []),
+        specialNote: item.special_note || item.specialNote || null
       };
     }).filter(i => i && i.name);
- 
   } catch (e) {
-    console.error("❌ Error parsing items for order #" + order.id + ":", e);
+    console.error("❌ Error parsing items for order #" + order.id, e);
     return []; 
   }
 };
@@ -132,7 +83,7 @@ export default function Kitchen() {
   const totalToday   = dateOrders.length;
   const activeCount  = dateOrders.filter(o => ['Accepted','Preparing'].includes(o.status)).length;
   const doneCount    = dateOrders.filter(o => ['Ready','Served','Paid'].includes(o.status)).length;
- console.log("Raw Orders Data:", allOrders);
+
   return (
     <div className="kitchen-page">
 

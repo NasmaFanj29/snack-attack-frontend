@@ -133,8 +133,14 @@
 
 .k-item-row { display: flex; align-items: flex-start; gap: 10px; }
 .k-item-qty {
-  font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; font-weight: 400;
-  letter-spacing: 1px; color: var(--gold); min-width: 28px; line-height: 1; flex-shrink: 0;
+  font-family: 'Bebas Neue', sans-serif; 
+  font-size: 1.4rem; /* Kabbarna shway sghire */
+  font-weight: bold; /* Sammakna l khatt */
+  letter-spacing: 1px; 
+  color: #1a1a1a; /* Ghayyarna l lawn la aswad ghamik */
+  min-width: 28px; 
+  line-height: 1; 
+  flex-shrink: 0;
 }
 .k-item-name { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.3; }
 

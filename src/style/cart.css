@@ -72,8 +72,12 @@
 
 .cart-item-left { display:flex; flex-direction:column; gap:4px; flex:1; min-width:0; }
 .cart-item-name { color:#fff; font-weight:700; font-size:14px; line-height:1.2; }
-.cart-item-extras { color:rgba(255,194,14,0.88); font-size:11px; font-weight:500; }
-.cart-item-each { color:rgba(255,255,255,0.42); font-size:11px; }
+.cart-item-extras { 
+  color: rgba(255, 255, 255, 0.85); /* Abyad shaffaf shwaytein kermal l elegance */
+  font-size: 15px; 
+  font-weight: 500; 
+}
+.cart-item-each { color:rgba(255,255,255,0.42); font-size:15px; }
 .cart-item-right { display:flex; align-items:center; gap:14px; flex-shrink:0; }
 .cart-item-total { color:var(--gold); font-weight:800; font-size:14px; min-width:55px; text-align:right; }
 
