@@ -110,6 +110,9 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
           quantity:    Number(item.quantity || 1),
           specialNote: item.specialNote || item.special_note || null,
           removedExtras: item.removedExtras || item.removed_extras || null,
+          isCustom: item.isCustom || false,
+          selectedExtras: item.selectedExtras || item.selected_extras || [],
+          customOrderData: item.customOrderData || null
         };
       });
 
