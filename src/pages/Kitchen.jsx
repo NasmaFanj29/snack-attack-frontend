@@ -13,28 +13,21 @@ const fmtDisplay = (str) => {
   return (str === today() ? '📅 Today — ' : '') + d.toLocaleDateString('en-US', opts);
 };
 
-// ── Parse items from order (Robust & Clean) ──────────────────
 const parseItems = (order) => {
   try {
     let raw = order.items || order.order_items || [];
     let arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    
     if (!Array.isArray(arr)) return [];
-
     return arr.map((item, idx) => {
       if (!item) return null;
       return {
         name: item.name || item.item_name || `Item #${item.item_id || idx + 1}`,
         quantity: Number(item.quantity || 1),
         selectedExtras: Array.isArray(item.selected_extras) ? item.selected_extras : (Array.isArray(item.selectedExtras) ? item.selectedExtras : []),
-        removedExtras: Array.isArray(item.removed_extras) ? item.removed_extras : (Array.isArray(item.removedExtras) ? item.removedExtras : []),
         specialNote: item.special_note || item.specialNote || null
       };
     }).filter(i => i && i.name);
-  } catch (e) {
-    console.error("❌ Error parsing items for order #" + order.id, e);
-    return []; 
-  }
+  } catch (e) { return []; }
 };
 
 export default function Kitchen() {
@@ -43,6 +36,7 @@ export default function Kitchen() {
   const [allOrders, setAllOrders] = useState([]);
   const [filter, setFilter] = useState('all');
   const [selectedDate, setSelectedDate] = useState(today());
+  const [expandedId, setExpandedId] = useState(null);
 
   const fetchOrders = async () => {
     try {
@@ -69,24 +63,31 @@ export default function Kitchen() {
 
   const dateOrders = allOrders.filter(o => o.created_at?.slice(0,10) === selectedDate);
 
-  // Live: show Accepted + Preparing always. Past dates: show all
-  const liveOrders = selectedDate === today()
-    ? allOrders.filter(o => ['Accepted','Preparing'].includes(o.status))
+  // Show Accepted + PaymentConfirmed (New) + Preparing (Cooking)
+   const liveOrders = selectedDate === today()
+    ? allOrders.filter(o =>
+        ['Paid-Accepted', 'Paid-Preparing', 'Paid-Ready'].includes(o.status)
+      )
     : dateOrders;
 
-  const visible = liveOrders.filter(o =>
+  // Treat 'PaymentConfirmed' as NEW
+ const visible = liveOrders.filter(o =>
     filter === 'all' ? true :
-    filter === 'new' ? o.status === 'Accepted' :
-    o.status === 'Preparing'
+    filter === 'new' ? o.status === 'Paid-Accepted' :
+    filter === 'preparing' ? o.status === 'Paid-Preparing' : true
   );
 
   const totalToday   = dateOrders.length;
-  const activeCount  = dateOrders.filter(o => ['Accepted','Preparing'].includes(o.status)).length;
-  const doneCount    = dateOrders.filter(o => ['Ready','Served','Paid'].includes(o.status)).length;
-
+  const activeCount = dateOrders.filter(o =>
+    ['Paid-Accepted', 'Paid-Preparing', 'Paid-Ready'].includes(o.status)
+  ).length;
+  const doneCount = dateOrders.filter(o => o.status === 'Paid').length;
+  
+  // ✅ FIX: Removed the lines that caused the error. 
+  // 's' and 'order' are not defined here. They belong inside the map below.
+  
   return (
     <div className="kitchen-page">
-
       {/* HEADER */}
       <header className="kitchen-header">
         <div className="kitchen-header-left">
@@ -98,14 +99,12 @@ export default function Kitchen() {
         </div>
         <div className="kitchen-header-right">
           <div className="kitchen-stat new">
-            {allOrders.filter(o=>o.status==='Accepted').length} New
+           {allOrders.filter(o => o.status === 'Paid-Accepted').length} New
           </div>
           <div className="kitchen-stat prep">
-            {allOrders.filter(o=>o.status==='Preparing').length} Cooking
+            {allOrders.filter(o => o.status === 'Preparing').length} Cooking
           </div>
-          <button className="kitchen-logout" onClick={()=>{logout();navigate('/login');}}>
-            Logout
-          </button>
+          <button className="kitchen-logout" onClick={()=>{logout();navigate('/login');}}>Logout</button>
         </div>
       </header>
 
@@ -116,16 +115,6 @@ export default function Kitchen() {
           <span className="date-display">{fmtDisplay(selectedDate)}</span>
           <button className="date-nav-btn" onClick={()=>changeDate(1)} disabled={selectedDate===today()}>›</button>
         </div>
-        <div style={{position:'relative',display:'inline-block'}}>
-          <button className="date-input-btn">
-            📅 Pick Date
-            <input type="date" className="date-picker-input" value={selectedDate} max={today()}
-              onChange={e => { if(e.target.value) setSelectedDate(e.target.value); }} />
-          </button>
-        </div>
-        {selectedDate !== today() && (
-          <button className="today-btn" onClick={()=>setSelectedDate(today())}>Go to Today</button>
-        )}
         <div className="k-summary-stats">
           <div className="k-sum-stat"><span className="k-sum-val gold">{totalToday}</span><span className="k-sum-label">Orders</span></div>
           <div className="k-sum-stat"><span className="k-sum-val red">{activeCount}</span><span className="k-sum-label">Active</span></div>
@@ -149,90 +138,75 @@ export default function Kitchen() {
         </div>
       )}
 
-      {/* ORDERS GRID */}
-      <div className="kitchen-grid">
+     
+     <div className="kitchen-grid">
         {visible.map(order => {
           const items = parseItems(order);
+          const s = order.status || "";
+          
+          // Logic inside the map so it knows WHICH order we are talking about
+          const isAcceptedStage  = s === 'Paid-Accepted';
+          const isPreparingStage = s === 'Paid-Preparing';
+          const isReadyStage     = s === 'Paid-Ready';
+          const isExpanded       = expandedId === order.id;
 
           return (
-            <div key={order.id} className={`kitchen-card ${order.status==='Accepted'?'k-new':'k-cooking'}`}>
+            <div
+              key={order.id}
+              className={`kitchen-card ${isAcceptedStage ? 'k-new' : isPreparingStage ? 'k-cooking' : 'k-ready'}`}
+              onClick={() => setExpandedId(isExpanded ? null : order.id)}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="k-card-header" style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', background: 'rgba(0,0,0,0.05)', borderBottom: '1px solid #ddd', fontWeight: 'bold' }}>
+                <span className="k-order-id">#ORD-{order.id}</span>
+                <span className="k-table-badge">TABLE {order.table_id || '1'}</span>
+                <span style={{ fontSize: '12px', color: '#aaa' }}>{isExpanded ? '▲' : '▼'}</span>
+              </div>
 
-              {/* Items List */}
-              <div className="k-items-list">
-                {items.length === 0 ? (
-                  <p className="k-no-items">❌ No items in this order</p>
-                ) : (
-                  items.map((item, i) => {
-                    const itemName = item.name || `Item #${i + 1}`;
-                    const qty = item.quantity || 1;
-              
-                    // Format extras nicely
-                    const extras = (item.selectedExtras || []);
-                    const extrasText = extras.length > 0
-                      ? extras.map(e => {
-                          if (typeof e === 'string') return e;
-                          if (typeof e === 'object') return e.name || e;
-                          return '';
-                        }).filter(Boolean).join(', ')
-                      : null;
-              
-                    // Format removed items
-                    const removed = (item.removedExtras || []);
-                    const removedText = removed.length > 0
-                      ? removed.map(e => {
-                          if (typeof e === 'string') return e;
-                          if (typeof e === 'object') return e.name || e.extra_name || e;
-                          return '';
-                        }).filter(Boolean).join(', ')
-                      : null;
-              
-                    const note = item.specialNote || null;
-              
-                    return (
-                      <div key={i} className="k-item-row">
-                        <span className="k-item-qty">{qty}×</span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <span className="k-item-name">🍔 {itemName}</span>
-                          {extrasText && (
-                            <span className="k-item-extras">
-                              ➕ {extrasText}
-                            </span>
-                          )}
-                          {removedText && (
-                            <span className="k-item-removed">
-                              ✂️ No: {removedText}
-                            </span>
-                          )}
-                          {note && (
-                            <span className="k-item-note">
-                              📝 {note}
-                            </span>
-                          )}
+              {!isExpanded ? (
+                <div style={{ padding: '8px 12px', fontSize: '13px', color: '#888' }}>
+                  {items.length} item{items.length !== 1 ? 's' : ''} — tap to view
+                </div>
+              ) : (
+                <div className="k-items-list">
+                  {items.length === 0 ? (
+                    <p className="k-no-items">❌ No items</p>
+                  ) : (
+                    items.map((item, i) => {
+                      const extras = item.selectedExtras || [];
+                      const extrasText = extras.map(e => typeof e === 'object' ? e.name : e).join(', ');
+                      return (
+                        <div key={i} className="k-item-row">
+                          <span className="k-item-qty">{item.quantity}×</span>
+                          <div style={{ flex: 1 }}>
+                            <span className="k-item-name">🍔 {item.name}</span>
+                            {extrasText && <span className="k-item-extras" style={{ display: 'block', fontSize: '12px', color: '#555' }}>➕ {extrasText}</span>}
+                            {item.specialNote && <span className="k-item-note" style={{ display: 'block', fontSize: '11px', fontStyle: 'italic', color: '#777' }}>📝 {item.specialNote}</span>}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    })
+                  )}
+                </div>
+              )}
+
+              <div className="k-actions" onClick={e => e.stopPropagation()}>
+                {isAcceptedStage && (
+                  <button className="k-btn start" onClick={() => update(order.id, 'Paid-Preparing')}>🔥 START COOKING</button>
+                )}
+                {isPreparingStage && (
+                  <button className="k-btn ready" onClick={() => update(order.id, 'Paid-Ready')}>✅ MARK READY</button>
+                )}
+                {isReadyStage && (
+                  <div style={{ padding: '8px', textAlign: 'center', color: '#95b508', fontWeight: 'bold' }}>
+                    🔔 WAITING FOR WAITER
+                  </div>
                 )}
               </div>
-
-              {/* Action */}
-              <div className="k-actions">
-                {order.status==='Accepted' && (
-                  <button className="k-btn start" onClick={()=>update(order.id,'Preparing')}>
-                    🔥 START COOKING
-                  </button>
-                )}
-                {order.status==='Preparing' && (
-                  <button className="k-btn ready" onClick={()=>update(order.id,'Ready')}>
-                    ✅ MARK READY
-                  </button>
-                )}
-              </div>
-
-            </div>
+            </div> 
           );
         })}
-      </div>
-    </div>
+      </div> 
+    </div> 
   );
 }

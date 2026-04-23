@@ -78,18 +78,27 @@ export default function Waiter() {
   };
 
   // ── Filtered orders ───────────────────────────────────────────────
-  const dateOrders  = orders.filter(o => o.created_at?.slice(0,10) === selectedDate);
-  const readyOrders = orders.filter(o => o.status === 'Ready'); // always live
-  const cashOrders  = orders.filter(o => {
-    if (o.status !== 'PaymentPending' && o.status !== 'Serving') return false;
+  
+  // ✅ FIX: Define dateOrders first by filtering main orders list
+  const dateOrders = orders.filter(o => {
+    if (!o.created_at) return false;
+    return o.created_at.slice(0, 10) === selectedDate;
+  });
+
+  // Now use dateOrders
+  const activeOrders = dateOrders.filter(o => !['Paid', 'Rejected'].includes(o.status));
+
+  // Keep readyOrders and cashOrders always live (not date-filtered) for action tabs:
+  const readyOrders = orders.filter(o => o.status === 'Paid-Ready');
+  const cashOrders = orders.filter(o => {
+    if (o.status !== 'PaymentPending') return false;
     return getParsedSplits(o.payment_splits).some(s => s.method === 'cash');
   });
-  const activeOrders = orders.filter(o => !['Paid','Rejected'].includes(o.status));
 
   // ── Daily stats ───────────────────────────────────────────────────
   const totalD   = dateOrders.length;
-  const servedD  = dateOrders.filter(o => ['Served','Paid'].includes(o.status)).length;
-  const paidD    = dateOrders.filter(o => o.status === 'Paid').length;
+  const servedD = dateOrders.filter(o => o.status === 'Paid').length;
+  const paidD   = dateOrders.filter(o => o.status === 'Paid').length;
 
   const statusColor = { Requested:'#9ca3af', Accepted:'#f59e0b', Preparing:'#f97316', Ready:'#95b508', Served:'#3b82f6', PaymentPending:'#a855f7' };
 
@@ -186,7 +195,7 @@ export default function Waiter() {
                     </div>
                     <div className="w-ready-badge">🔔 READY TO DELIVER</div>
                     <p className="w-time">🕒 {new Date(order.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</p>
-                    <button className="w-btn green" onClick={()=>update(order.id,'Served')}>
+                    <button className="w-btn green" onClick={() => update(order.id, 'Paid')}>
                       ✅ DELIVERED TO TABLE
                     </button>
                   </div>

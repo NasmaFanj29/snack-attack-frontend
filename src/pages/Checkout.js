@@ -5,6 +5,7 @@ import logo from "../assets/logo.png";
 import '../style/checkout.css';
 import { QRCodeCanvas } from "qrcode.react";
 import socket from "../socket";
+import useTheme from '../hooks/useTheme';
 
 const BACKEND = "https://snack-attack-backend.onrender.com";
 const WHISH_NUMBER = "+961 XX XXX XXX";
@@ -23,7 +24,8 @@ function Checkout({ setCart }) {
         cartItems: stateCartItems = [],
         tableId: stateTableId = "1",
     } = location.state || {};
-
+    
+    const { isDark } = useTheme(); 
     const activeOrderId = stateOrderId || urlOrderId;
     const isScanner = !!(urlOrderId && searchParams.get("mode") === "add");
 
@@ -47,13 +49,6 @@ function Checkout({ setCart }) {
     const isEditing = () => Date.now() < ignoreUpdatesUntil.current;
 
     // ── Helpers ──────────────────────────────────────────────────────
-    const getItemBasePrice = (item) => {
-        if (!item) return 0;
-        const extrasTotal = (item.selectedExtras && Array.isArray(item.selectedExtras))
-            ? item.selectedExtras.reduce((sum, e) => sum + Number(e.price || 0), 0) : 0;
-        return Number(item.price || item.price_at_time || 0) + extrasTotal;
-    };
-
     const subtotal = (orderedItems && Array.isArray(orderedItems))
         ? orderedItems.reduce((acc, item) => acc + (Number(item.price || item.price_at_time || 0) * (item.quantity || 1)), 0) : 0;
     const totalVAT = subtotal * 0.11;
@@ -74,7 +69,6 @@ function Checkout({ setCart }) {
 
     const totalPaidSoFar = payers.reduce((acc, p) => acc + getPayerUsdTotal(p), 0);
     const remainingBalance = finalTotal - totalPaidSoFar;
-
     const qrValue = `${window.location.origin}/checkout?orderId=${activeOrderId}&mode=add`;
 
     const defaultPayer = (id) => ({
@@ -88,6 +82,8 @@ function Checkout({ setCart }) {
         cashSecondAmount: 0,
         whishCode: null,
         whishConfirmed: false,
+        transactionId: "",       
+        txIdRequested: false,    
         ownerId: myUserId.current,
     });
 
@@ -122,6 +118,14 @@ function Checkout({ setCart }) {
 
                 if (status === "paid") { setStep("receipt"); return; }
                 if (status === "rejected") { setStep("rejected"); return; }
+                
+                if (status === "paymentpending") {
+                    setStep("waitingForPayment");
+                } else if (["paid-accepted", "paid-preparing"].includes(status)) {
+                    setStep("receipt");
+                } else if (["accepted", "preparing", "ready", "served"].includes(status)) {
+                    setStep("payment");
+                }
 
                 if (isScanner) {
                     const newId = Date.now();
@@ -132,10 +136,6 @@ function Checkout({ setCart }) {
                     syncPayersToBackend(merged);
                     setStep("payment");
                     return;
-                }
-
-                if (["accepted", "preparing", "ready", "served", "paymentpending"].includes(status)) {
-                    setStep("payment");
                 }
 
                 if (existingSplits.length > 0) {
@@ -153,7 +153,7 @@ function Checkout({ setCart }) {
             .catch(err => console.error(err));
     }, [activeOrderId]);
 
-    // ── Socket — only for status/cart, NOT payers ────────────────────
+    // ── Socket — only for status/cart ────────────────────
     useEffect(() => {
         if (!activeOrderId) return;
         socket.emit("joinOrder", activeOrderId);
@@ -165,19 +165,25 @@ function Checkout({ setCart }) {
         return () => { socket.off("cartUpdated"); };
     }, [activeOrderId]);
 
-    // ── Polling — status only, skip payers if user is typing ─────────
+    // ── Polling — status & payers ─────────
     useEffect(() => {
         if (!activeOrderId) return;
         const interval = setInterval(async () => {
             try {
                 const res = await axios.get(`${BACKEND}/orders/${activeOrderId}`);
                 const status = (res.data.order?.status || "").trim().toLowerCase();
+
                 if (status === "paid") { setStep("receipt"); return; }
                 if (status === "rejected") { setStep("rejected"); return; }
-                if (step !== "waitingForPayment" && step !== "receipt" && step !== "rejected") {
-                    if (["accepted", "preparing", "paymentpending"].includes(status)) setStep("payment");
-                }
-                // Only sync payers from server when user is NOT actively editing
+
+                if (status === "paymentpending") {
+                    setStep("waitingForPayment");
+                } else if (["paid-accepted", "paid-preparing", "paid-ready"].includes(status)) {
+                    setStep("receipt");
+                } else if (["accepted", "ready", "served"].includes(status)) {
+                    setStep("payment");
+                }         
+
                 if (!isEditing()) {
                     const raw = res.data.order?.payment_splits;
                     if (raw) {
@@ -196,7 +202,6 @@ function Checkout({ setCart }) {
 
     // ── Payer handlers ────────────────────────────────────────────────
     const updatePayer = (id, field, value) => {
-        // Block incoming updates for 2.5 seconds after any user input
         ignoreUpdatesUntil.current = Date.now() + 2500;
 
         setPayers(prev => {
@@ -213,7 +218,6 @@ function Checkout({ setCart }) {
                 return next;
             });
 
-            // Debounced sync
             if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
             syncTimerRef.current = setTimeout(() => {
                 syncPayersToBackend(updated);
@@ -363,6 +367,8 @@ function Checkout({ setCart }) {
 
     const renderTransferFlow = (payer, isMine) => {
         const ref = `ORD-${activeOrderId}-${payer.whishCode || '???'}`;
+        const showTxInput = isMine && payer.txIdRequested && !payer.transactionId;
+
         return (
             <div className="transfer-flow-box">
                 <div className="transfer-header-row">
@@ -376,6 +382,7 @@ function Checkout({ setCart }) {
                 <p className="transfer-instruction">
                     Send the amount to the number above and include <strong>"{ref}"</strong> in the transfer notes.
                 </p>
+                
                 {isMine && (
                     <>
                         <input
@@ -385,6 +392,37 @@ function Checkout({ setCart }) {
                             value={payer.amount || ""}
                             onChange={(e) => updatePayer(payer.id, 'amount', e.target.value)}
                         />
+
+                        {/* TRANSACTION ID INPUT */}
+                        {showTxInput && (
+                            <div style={{ 
+                                marginTop: '10px', 
+                                padding: '12px', 
+                                background: 'rgba(245, 158, 11, 0.15)', 
+                                borderRadius: '8px', 
+                                border: '1px solid rgba(245, 158, 11, 0.4)',
+                                animation: 'slideDown 0.3s ease'
+                            }}>
+                                <p style={{ color: '#f59e0b', fontSize: '12px', margin: '0 0 8px 0', fontWeight: 'bold' }}>
+                                    📩 Admin Requested Transaction ID
+                                </p>
+                                <input
+                                    type="text"
+                                    placeholder="Enter Transaction ID..."
+                                    className="glass-input-main"
+                                    style={{ width: '100%', textAlign: 'center', marginTop: '5px' }}
+                                    value={payer.transactionId || ""}
+                                    onChange={(e) => updatePayer(payer.id, 'transactionId', e.target.value)}
+                                />
+                            </div>
+                        )}
+
+                        {isMine && payer.transactionId && (
+                             <div style={{ marginTop: '8px', fontSize: '12px', color: '#95b508', textAlign: 'left' }}>
+                                ✅ TX ID Sent: <strong>{payer.transactionId}</strong>
+                             </div>
+                        )}
+
                         <label className="transfer-confirm-label">
                             <input
                                 type="checkbox"
@@ -407,23 +445,29 @@ function Checkout({ setCart }) {
 
         return (
             <div key={payer.id} className={`payer-card ${isMine ? 'payer-mine' : 'payer-others'}`}>
-                <div className="payer-card-top">
-                    <input
+                <div className="payer-card-top" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '15px' }}>
+                   <input
                         type="text"
-                        placeholder="Name *"
-                        className="glass-input-small payer-name-input"
-                        value={payer.name || ""}
-                        disabled={!isMine}
-                        onChange={(e) => updatePayer(payer.id, 'name', e.target.value)}
-                    />
-                    <input
+                        placeholder="Full Name"
+                        value={payer.name || ''}
+                        onChange={(e) => {
+                            const val = e.target.value.replace(/[0-9]/g, '');
+                            updatePayer(payer.id, 'name', val);
+                        }}
+                        className="glass-input-main"
+                        style={{ width: '100%', textAlign: 'left' }}
+                        />
+                   <input
                         type="tel"
-                        placeholder="Phone"
-                        className="glass-input-small payer-phone-input"
-                        value={payer.phone || ""}
-                        disabled={!isMine}
-                        onChange={(e) => updatePayer(payer.id, 'phone', e.target.value)}
-                    />
+                        placeholder="Phone Number"
+                        value={payer.phone || ''}
+                        onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9+\s\-]/g, '');
+                            updatePayer(payer.id, 'phone', val);
+                        }}
+                        className="glass-input-main"
+                        style={{ width: '100%', textAlign: 'left' }}
+                        />
                     {isMine && myRowsCount > 1 && (
                         <button type="button" className="remove-payer-btn" onClick={() => removePayer(payer)}>✕</button>
                     )}
@@ -467,13 +511,45 @@ function Checkout({ setCart }) {
     // ============================================================
     // RENDER STEPS
     // ============================================================
+    
+    // ✅ FIX: Check if Admin needs input while waiting
     if (step === "waiting" || step === "waitingForPayment") {
-        return (
+         const myPayers = payers.filter(p => p.ownerId === myUserId.current);
+         const needsAction = myPayers.find(p => p.txIdRequested && !p.transactionId);
+
+         // If admin needs ID, show a special screen with the input
+         if (needsAction) {
+             return (
+                <div className="checkout-page">
+                    <div className="overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+                        <div className="info-form-card glass-effect" style={{ padding: '30px', maxWidth: '400px' }}>
+                            <img src={logo} alt="Logo" width="120" style={{ marginBottom: '20px' }} />
+                            <h2 style={{ color: '#f59e0b' }}>ACTION REQUIRED 📩</h2>
+                            <p style={{ color: '#fff', marginBottom: '20px' }}>
+                                Admin requested the Transaction ID for your transfer.
+                            </p>
+                            
+                            {/* Render the specific payer card that needs action */}
+                            {myPayers.filter(p => p.txIdRequested && !p.transactionId).map(payer => (
+                                <div key={payer.id} className="payer-card payer-mine">
+                                    {renderTransferFlow(payer, true)}
+                                </div>
+                            ))}
+
+                            <div className="loader-line" style={{ marginTop: '20px' }}></div>
+                        </div>
+                    </div>
+                </div>
+             );
+         }
+
+         // Default waiting screen
+         return (
             <div className="checkout-page">
                 <div className="overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
                     <div className="info-form-card glass-effect" style={{ padding: '50px' }}>
                         <img src={logo} alt="Logo" width="160" style={{ marginBottom: '20px' }} />
-                        <h2>{step === "waiting" ? "WAITING FOR APPROVAL... 👨‍🍳" : "WAITING FOR ADMIN... 💰"}</h2>
+                        <h2>{step === "waiting" ? "KITCHEN IS COOKING... 👨‍🍳" : "WAITING FOR ADMIN... 💰"}</h2>
                         <p>Order #{activeOrderId} — Stay on this page.</p>
                         <div className="loader-line"></div>
                     </div>
@@ -584,15 +660,58 @@ function Checkout({ setCart }) {
                             <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
                         </div>
                         <div className="receipt-divider"></div>
+                        
+                       
                         <div className="receipt-items">
-                            {orderedItems.map((item, index) => (
-                                <div key={index} className="r-item-container">
-                                    <div className="r-item-row">
-                                        <span>{item.quantity}x {item.name}</span>
-                                        <span>${(getItemBasePrice(item) * item.quantity).toFixed(2)}</span>
+                            {orderedItems.map((item, index) => {
+                                const isCustom = item.isCustom || (item.name && item.name.toLowerCase().includes('custom'));
+                                const extras = item.selected_extras || item.selectedExtras || [];
+                                const extrasText = extras.map(e => typeof e === 'object' ? e.name : e).join(', ');
+
+                                let displayTitle = item.name || "Custom Burger";
+                                if (isCustom) {
+                                    try {
+                                        const data = typeof item.customOrderData === 'string' 
+                                            ? JSON.parse(item.customOrderData) 
+                                            : item.customOrderData;
+                                        
+                                        if (data && (data.bread || data.protein)) {
+                                            displayTitle = `Custom Burger (${data.bread || 'bun'}, ${data.protein || 'beef'})`;
+                                        } else if (!item.name || item.name.toLowerCase().includes('custom')) {
+                                            displayTitle = "Custom Burger";
+                                        }
+                                    } catch (e) { 
+                                        displayTitle = item.name || "Custom Burger";
+                                    }
+                                }
+
+                                const unitPrice = item.price || item.price_at_time || 12.99;
+
+                                return (
+                                    <div key={index} className="r-item-container" style={{ marginBottom: '12px' }}>
+                                        <div className="r-item-row" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span style={{ fontWeight: isCustom ? 'bold' : 'normal', fontSize: '14px' }}>
+                                                {item.quantity}x {displayTitle}
+                                            </span>
+                                            <span style={{ fontSize: '14px' }}>
+                                                ${(unitPrice * item.quantity).toFixed(2)}
+                                            </span>
+                                        </div>
+                                        
+                                        {extrasText && (
+                                            <div className="r-item-extras" style={{ 
+                                                fontSize: '11px', 
+                                                color: '#666', 
+                                                paddingLeft: '20px', 
+                                                marginTop: '2px',
+                                                fontStyle: 'italic'
+                                            }}>
+                                                + {extrasText}
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                         <div className="receipt-divider"></div>
                         <div className="receipt-summary">

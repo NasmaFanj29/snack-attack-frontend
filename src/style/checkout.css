@@ -261,6 +261,33 @@
     width: 100%; /* Ensure box fills card */
     box-sizing: border-box;
   }
+  /* src/style/checkout.css */
+
+/* Add this to the bottom of your file */
+
+/* Light Mode: Dark placeholder */
+.checkout-input::placeholder {
+  color: rgba(0, 0, 0, 0.5);
+  opacity: 1;
+}
+
+/* Dark Mode: White/Light placeholder */
+[data-theme="dark"] .checkout-input-clear::placeholder {
+  color: #ffffff !important;      /* Force White */
+  opacity: 0.9 !important;        /* Make it solid, no fade */
+  font-weight: 500;
+}
+
+/* === FIX: White Placeholder for Name/Phone in Dark Mode === */
+[data-theme="dark"] .glass-input-main::placeholder {
+  color: #ffffff !important;
+  opacity: 0.9 !important;
+}
+/* Light mode placeholder */
+.checkout-input-clear::placeholder {
+  color: #555;
+  opacity: 1;
+}
 
   .payer-card {
     padding: 12px !important;
