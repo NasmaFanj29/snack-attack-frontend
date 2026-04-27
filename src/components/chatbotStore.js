@@ -3,9 +3,9 @@
 //  Handles: messages, bot/admin mode, custom orders
 // ═══════════════════════════════════════════════════
 
-const CHATS_KEY   = 'snack_chats';
-const ORDERS_KEY  = 'snack_custom_orders';
-const CART_KEY    = 'snack_cart';
+const CHATS_KEY  = 'snack_chats';
+const ORDERS_KEY = 'snack_custom_orders';
+const CART_KEY   = 'snack_cart';
 
 // BroadcastChannel — syncs between customer tab & admin tab
 let chatChannel  = null;
@@ -27,20 +27,25 @@ export const getTableConversation = (tableId) => {
   return all[String(tableId)] ?? {
     tableId: String(tableId),
     messages: [],
-    status: 'bot',   // 'bot' | 'admin'
+    status: 'bot',
   };
 };
 
-// Export this so AdminChatPanel can use it
+// ── saveConversations: fires BOTH cross-tab AND same-tab events ──
 export const saveConversations = (all) => {
   localStorage.setItem(CHATS_KEY, JSON.stringify(all));
+
+  // Cross-tab sync (BroadcastChannel)
   chatChannel?.postMessage({ type: 'UPDATE', conversations: all });
+
+  // Same-tab sync (CustomEvent) — this is what was missing!
+  window.dispatchEvent(new CustomEvent('snackChatUpdate', { detail: all }));
 };
 
-// Keep the internal 'saveAll' name working for the rest of this file
+// Alias for internal use
 const saveAll = saveConversations;
 
-// Create an alias so AdminChatPanel can import 'getConversations'
+// Alias for AdminChatPanel imports
 export const getConversations = getAllConversations;
 
 export const addMessage = (tableId, message) => {
@@ -66,19 +71,35 @@ export const clearTableChat = (tableId) => {
   saveAll(all);
 };
 
-// Subscribe — used by both Chatbot.jsx and Admin panel
+// ── subscribeToChats: listens to ALL 3 channels ──────────────────
+// 1. localStorage 'storage' event (cross-tab, different tabs)
+// 2. BroadcastChannel (cross-tab, faster)
+// 3. CustomEvent 'snackChatUpdate' (same-tab — was missing before!)
 export const subscribeToChats = (callback) => {
+  // Cross-tab via localStorage event
   const onStorage = (e) => {
     if (e.key === CHATS_KEY) {
       try { callback(JSON.parse(e.newValue || '{}')); } catch (_) {}
     }
   };
   window.addEventListener('storage', onStorage);
-  if (chatChannel) chatChannel.onmessage = (e) => {
-    if (e.data?.conversations) callback(e.data.conversations);
+
+  // Cross-tab via BroadcastChannel
+  if (chatChannel) {
+    chatChannel.onmessage = (e) => {
+      if (e.data?.conversations) callback(e.data.conversations);
+    };
+  }
+
+  // ✅ Same-tab via CustomEvent (fixes admin panel not seeing updates)
+  const onSameTab = (e) => {
+    if (e.detail) callback(e.detail);
   };
+  window.addEventListener('snackChatUpdate', onSameTab);
+
   return () => {
     window.removeEventListener('storage', onStorage);
+    window.removeEventListener('snackChatUpdate', onSameTab);
     if (chatChannel) chatChannel.onmessage = null;
   };
 };

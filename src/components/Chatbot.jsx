@@ -5,20 +5,10 @@ import {
   subscribeToChats, addCustomOrder
 } from "./chatbotStore";
 
-// ── Image generation for custom orders ───────────────────────────
-const generateMealImage = async (order) => {
-  const desc = encodeURIComponent(
-    `professional food photography, custom burger, ${order.bread} bun, ${order.protein}, ${order.cheese} cheese, ${order.veggies}, ${order.sauce} sauce, restaurant quality, bright lighting`
-  );
-  return `https://image.pollinations.ai/prompt/${desc}?width=280&height=280&nologo=true&seed=${Date.now()}`;
-};
-
 // ── Auto-response rules (no API call needed) ─────────────────────
-// Chatbot.js - Update these arrays and variables
-
 const AUTO_RULES = [
   {
-    match: /\b(sa3at|hours|mta|meta|awkat|wa2t|open|close|closes|w2t| wa2et|working hours|bta7do|btft7o|btefta7o|btsakro)\b/i,
+    match: /\b(sa3at|hours|mta|meta|awkat|wa2t|open|close|closes|w2t|wa2et|working hours|bta7do|bteft7o|btefta7o|btsakro)\b/i,
     reply: "Mnefta7 kel yom mn l 11:00 AM lal 11:00 PM. Fik tcharrefna aw totlob ayya wa2et fiyoun!",
   },
   {
@@ -26,7 +16,7 @@ const AUTO_RULES = [
     reply: "Ahla w sahla bi Snack Attack! Kif fina nse3dak l yom?",
   },
   {
-    match: /\b(shukran|thank|thanks|merci|3anjad|cool|perfect|great|ysalmo| ok | okay)\b/i,
+    match: /\b(shukran|thank|thanks|merci|3anjad|cool|perfect|great|ysalmo|ok|okay)\b/i,
     reply: "Tekram 3aynak! 5abberni eza baddak shi tene.",
   },
   {
@@ -42,12 +32,11 @@ const AUTO_RULES = [
     reply: "L 7ammam maojoud b ekher l mat3am, 3a yamin l counter.",
   },
   {
-  match: /\b(sandwich|sandwiche|sandwij|sub sandwich|3ayez sandwich|bde sandwich|bade sandwich)\b/i,
-  reply: "Ehh akid! Shu naw3 l khebez baddak — brioche bun, white bun, aw submarine bread?",
-},
+    match: /\b(sandwich|sandwiche|sandwij|sub sandwich|3ayez sandwich|bde sandwich|bade sandwich)\b/i,
+    reply: "Ehh akid! Shu naw3 l khebez baddak — brioche bun, white bun, aw submarine bread?",
+  },
 ];
 
-// Inside your useEffect for loading the saved conversation:
 const welcome = {
   sender: "bot",
   text: "Ahla w sahla bi Snack Attack! Ana hon la se3dak totlob, t2allef custom burger, aw jewbak 3a ayya sou2al. Shu 3abelak l yom?",
@@ -83,10 +72,6 @@ function Chatbot({ menuItems = [], addToCart }) {
       });
       prevMsgCount.current = conv.messages.length;
     } else {
-      const welcome = {
-        sender: "bot",
-        text: "Welcome to Snack Attack! I am here to help you order, build a custom burger, or answer any questions. What can I do for you today?",
-      };
       setMessages([welcome]);
       addMessage(tableId, welcome);
     }
@@ -98,8 +83,9 @@ function Chatbot({ menuItems = [], addToCart }) {
       const conv = conversations[tableId];
       if (!conv) return;
       setMessages([...conv.messages]);
-      setChatStatus(conv.status || "bot");
-      chatStatusRef.current = conv.status || "bot";
+      const newStatus = conv.status || "bot";
+      setChatStatus(newStatus);
+      chatStatusRef.current = newStatus;
       if (!isOpen && conv.messages.length > prevMsgCount.current) {
         const latest = conv.messages[conv.messages.length - 1];
         if (latest?.sender === "admin") setHasNewAdminMsg(true);
@@ -202,7 +188,7 @@ function Chatbot({ menuItems = [], addToCart }) {
     // If admin is active, just save the message and wait
     if (chatStatusRef.current === "admin") return;
 
-    // ── Auto-response check (no API needed) ──────────────────────
+    // ── Auto-response check ───────────────────────────────────────
     const autoReply = checkAutoRules(text);
     if (autoReply) {
       conversationHistory.current.push({ role: "user", content: text });
@@ -234,42 +220,26 @@ function Chatbot({ menuItems = [], addToCart }) {
 
       conversationHistory.current.push({ role: "assistant", content: raw });
 
-      // ── Handle CUSTOM_ORDER ──────────────────────────────────
+      // ── Handle CUSTOM_ORDER ─────────────────────────────────────
       if (raw.includes("CUSTOM_ORDER:")) {
         const match = raw.match(/CUSTOM_ORDER:(\{[\s\S]*?\})/);
         if (match) {
           try {
             const orderData = JSON.parse(match[1]);
 
-            // Save to store
+            // Save to store + add to cart
             addCustomOrder(tableId, orderData);
-
-            // Add to cart immediately
             addCustomOrderToCart(orderData);
 
             const cleanText = raw.replace(/CUSTOM_ORDER:[\s\S]*/, "").trim();
-            if (cleanText) {
-              const botMsg = { sender: "bot", text: cleanText };
-              setMessages((prev) => [...prev, botMsg]);
-              addMessage(tableId, botMsg);
-            }
 
-            // Generate preview image
-            const loadingMsg = { sender: "bot", text: "Generating your burger preview, please wait..." };
-            setMessages((prev) => [...prev, loadingMsg]);
-
-            const imageUrl = await generateMealImage(orderData);
-            const imageMsg = {
+            // Show confirmation message (NO image generation)
+            const confirmMsg = {
               sender: "bot",
-              text: "Here is your custom creation! It has been added to your cart.",
-              image: imageUrl,
+              text: cleanText || "Your custom burger has been added to your cart!",
             };
-            setMessages((prev) => {
-              const updated = [...prev];
-              updated[updated.length - 1] = imageMsg;
-              return updated;
-            });
-            addMessage(tableId, imageMsg);
+            setMessages((prev) => [...prev, confirmMsg]);
+            addMessage(tableId, confirmMsg);
 
             setIsLoading(false);
             return;
@@ -280,7 +250,7 @@ function Chatbot({ menuItems = [], addToCart }) {
         raw = raw.replace(/CUSTOM_ORDER:[\s\S]*/, "").trim();
       }
 
-      // ── Handle CART_ADD ──────────────────────────────────────
+      // ── Handle CART_ADD ─────────────────────────────────────────
       if (raw.includes("CART_ADD:")) {
         const itemName = raw.match(/CART_ADD:([^\n]+)/)?.[1]?.trim();
         if (itemName) addItemToCartByName(itemName);
@@ -289,7 +259,7 @@ function Chatbot({ menuItems = [], addToCart }) {
 
       if (chatStatusRef.current === "admin") { setIsLoading(false); return; }
 
-      // ── Handle NEED_ADMIN ────────────────────────────────────
+      // ── Handle NEED_ADMIN ───────────────────────────────────────
       if (raw.includes("NEED_ADMIN:")) {
         const reason = raw.match(/NEED_ADMIN:(\w+)/)?.[1] || "assistance";
         raw = raw.replace(/NEED_ADMIN:\w+/, "").trim();
@@ -376,14 +346,6 @@ function Chatbot({ menuItems = [], addToCart }) {
                     }`}
                   >
                     {msg.text}
-                    {msg.image && (
-                      <img
-                        src={msg.image}
-                        alt="Custom meal"
-                        className="chat-meal-image"
-                        onError={(e) => (e.target.style.display = "none")}
-                      />
-                    )}
                   </div>
                 </div>
               );

@@ -53,7 +53,7 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
     }
   }, [isJoinMode, urlOrderId]);
 
-  // ── Polling ──
+  // ── Polling Logic ──
   useEffect(() => {
     let interval;
     const activeId = orderId || urlOrderId;
@@ -64,11 +64,26 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
           const currentStatus = res.data.order?.status || "";
           setOrderStatus(currentStatus);
           if (Array.isArray(res.data.items)) setDisplayCart(res.data.items);
+          
           const s = String(currentStatus).toLowerCase();
-          if (["preparing", "paid", "served", "ready"].includes(s)) {
+          
+          // ✅ FIX: If PAID -> Redirect to Receipt & Clear Cart
+          if (s === "paid") {
+            setIsWaiting(false);
+            setIsOrdered(true);
+            clearInterval(interval);
+            // Clear local cart storage so it's empty next time
+            localStorage.removeItem("cart");
+            // Redirect to checkout receipt
+            navigate(`/checkout?orderId=${activeId}`);
+          }
+          
+          // Kitchen working states
+          if (["preparing", "paid-accepted", "paid-preparing", "paid-ready", "ready", "served"].includes(s)) {
             setIsWaiting(false);
             setIsOrdered(true);
           }
+
           if (s === "rejected") {
             setIsRejected(true);
             clearInterval(interval);
@@ -77,7 +92,7 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
       }, 3000);
     }
     return () => clearInterval(interval);
-  }, [isWaiting, orderId, urlOrderId, isJoinMode]);
+  }, [isWaiting, orderId, urlOrderId, isJoinMode, navigate]);
 
   // ── Place Order ──
   const handleProceedToPayment = async () => {
@@ -91,20 +106,18 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
         (item) => item && typeof item === "object" && item.name
       );
 
-      // ✅ FIX: Map items with all possible ID fields so backend finds itemId
       const mappedItems = validItems.map((item) => {
-        // The menu item's DB id — check all possible field names
         const dbId =
-          item.databaseId ||   // set explicitly in some flows
-          item.item_id  ||     // from DB fetch
-          item.menu_id  ||     // alternative name
-          item.id       ||     // set in Menu.jsx addToCart
+          item.databaseId ||
+          item.item_id  ||
+          item.menu_id  ||
+          item.id       ||
           null;
 
         return {
           id:          dbId,
-          databaseId:  dbId,   // ← backend reads this first
-          item_id:     dbId,   // ← fallback
+          databaseId:  dbId,
+          item_id:     dbId,
           name:        item.name        || "Item",
           price:       Number(item.price || item.price_at_time || 0),
           quantity:    Number(item.quantity || 1),
@@ -116,7 +129,6 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
         };
       });
 
-      // Log so you can verify IDs in browser console
       console.log("Placing order with items:", mappedItems);
 
       const res = await axios.post(`${BACKEND}/place-order`, {
@@ -129,6 +141,9 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
       });
 
       if (res.data && res.data.success) {
+        // ✅ Clear cart immediately after placing order
+        localStorage.removeItem("cart");
+        
         navigate("/checkout", {
           state: {
             orderId: res.data.orderId,
@@ -177,7 +192,9 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
       </div>
     );
 
-  if (isOrdered)
+  if (isOrdered) {
+    // If paid, we already navigated away in useEffect. 
+    // This is for "Preparing" etc. where we wait.
     return (
       <div className="cart-page">
         <div className="cart-container">
@@ -191,6 +208,7 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
         </div>
       </div>
     );
+  }
 
   // ── Main Render ──
   return (

@@ -153,7 +153,7 @@ function Checkout({ setCart }) {
             .catch(err => console.error(err));
     }, [activeOrderId]);
 
-    // ── Socket — only for status/cart ────────────────────
+    // ── Socket
     useEffect(() => {
         if (!activeOrderId) return;
         socket.emit("joinOrder", activeOrderId);
@@ -165,7 +165,7 @@ function Checkout({ setCart }) {
         return () => { socket.off("cartUpdated"); };
     }, [activeOrderId]);
 
-    // ── Polling — status & payers ─────────
+    // ── Polling
     useEffect(() => {
         if (!activeOrderId) return;
         const interval = setInterval(async () => {
@@ -248,23 +248,6 @@ function Checkout({ setCart }) {
             alert("⚠️ You must check the confirmation box before proceeding!");
             return;
         }
-        const invalidCash = payers.find(p => {
-            if (p.ownerId !== myUserId.current || p.method !== 'cash') return false;
-            return (Number(p.amount) || 0) + (Number(p.cashSecondAmount) || 0) <= 0;
-        });
-        if (invalidCash) {
-            alert("⚠️ Please enter a payment amount!");
-            return;
-        }
-        const invalidCard = payers.find(p =>
-            p.ownerId === myUserId.current &&
-            p.method === 'card' &&
-            (Number(p.amount) || 0) <= 0
-        );
-        if (invalidCard) {
-            alert("⚠️ Please enter a payment amount!");
-            return;
-        }
         setLoading(true);
         try {
             await axios.put(`${BACKEND}/admin/orders/${activeOrderId}/status`, {
@@ -280,7 +263,6 @@ function Checkout({ setCart }) {
         }
     };
 
-    // ── Render helpers ────────────────────────────────────────────────
     const renderMethodSelector = (payer, isMine) => (
         <div className="method-btn-group">
             {[{ id: 'cash', label: '💵 Cash' }, { id: 'card', label: '💳 Card' }].map(m => (
@@ -334,11 +316,9 @@ function Checkout({ setCart }) {
                         >+</button>
                     )}
                 </div>
-
                 {showRate && (
                     <p className="rate-hint-text">Rate: 1$ = {EXCHANGE_RATE.toLocaleString()} LBPs</p>
                 )}
-
                 {payer.cashHasSplit && (
                     <div className="cash-amount-row second-cash-row">
                         <input
@@ -367,7 +347,7 @@ function Checkout({ setCart }) {
 
     const renderTransferFlow = (payer, isMine) => {
         const ref = `ORD-${activeOrderId}-${payer.whishCode || '???'}`;
-        const showTxInput = isMine && payer.txIdRequested && !payer.transactionId;
+        const showTxInput = isMine && payer.txIdRequested;
 
         return (
             <div className="transfer-flow-box">
@@ -388,12 +368,12 @@ function Checkout({ setCart }) {
                         <input
                             type="number"
                             placeholder="Amount $"
-                            className="glass-input-small transfer-amount-input"
+                            className="glass-input-main"
+                            style={{ width: '100%', marginBottom: '10px' }}
                             value={payer.amount || ""}
                             onChange={(e) => updatePayer(payer.id, 'amount', e.target.value)}
                         />
 
-                        {/* TRANSACTION ID INPUT */}
                         {showTxInput && (
                             <div style={{ 
                                 marginTop: '10px', 
@@ -401,25 +381,24 @@ function Checkout({ setCart }) {
                                 background: 'rgba(245, 158, 11, 0.15)', 
                                 borderRadius: '8px', 
                                 border: '1px solid rgba(245, 158, 11, 0.4)',
-                                animation: 'slideDown 0.3s ease'
                             }}>
                                 <p style={{ color: '#f59e0b', fontSize: '12px', margin: '0 0 8px 0', fontWeight: 'bold' }}>
                                     📩 Admin Requested Transaction ID
                                 </p>
                                 <input
                                     type="text"
-                                    placeholder="Enter Transaction ID..."
-                                    className="glass-input-main"
-                                    style={{ width: '100%', textAlign: 'center', marginTop: '5px' }}
+                                    placeholder="Paste Full Transaction ID..."
+                                    className="glass-input-main" 
+                                    style={{ width: '100%', textAlign: 'center' }}
                                     value={payer.transactionId || ""}
                                     onChange={(e) => updatePayer(payer.id, 'transactionId', e.target.value)}
                                 />
                             </div>
                         )}
 
-                        {isMine && payer.transactionId && (
+                        {isMine && payer.transactionId && !payer.txIdRequested && (
                              <div style={{ marginTop: '8px', fontSize: '12px', color: '#95b508', textAlign: 'left' }}>
-                                ✅ TX ID Sent: <strong>{payer.transactionId}</strong>
+                                ✅ TX ID Entered: <strong>{payer.transactionId}</strong>
                              </div>
                         )}
 
@@ -474,36 +453,8 @@ function Checkout({ setCart }) {
                 </div>
 
                 {renderMethodSelector(payer, isMine)}
-
                 {payer.method === 'cash' && renderCashExtras(payer, isMine)}
-
                 {payer.method === 'card' && renderTransferFlow(payer, isMine)}
-            </div>
-        );
-    };
-
-    const renderOtherPayerRow = (payer, i) => {
-        const usdTotal = getPayerUsdTotal(payer);
-        let detailParts = [];
-        if (payer.method === 'cash') {
-            if (Number(payer.amount) > 0) detailParts.push(`${Number(payer.amount).toLocaleString()} ${payer.currency}`);
-            if (payer.cashHasSplit && Number(payer.cashSecondAmount) > 0) {
-                const sc = payer.currency === 'USD' ? 'LBP' : 'USD';
-                detailParts.push(`${Number(payer.cashSecondAmount).toLocaleString()} ${sc}`);
-            }
-        }
-        const icon = payer.method === 'cash' ? '💵' : '💳';
-
-        return (
-            <div key={payer.id} className="payer-card payer-others">
-                <div className="others-row">
-                    <span className="others-name">{payer.name || `Person ${i + 1}`}</span>
-                    <span className="others-total">${usdTotal.toFixed(2)}</span>
-                    <span className="others-icon">{icon}</span>
-                </div>
-                {detailParts.length > 0 && (
-                    <p className="others-detail">{detailParts.join(' + ')}</p>
-                )}
             </div>
         );
     };
@@ -512,12 +463,11 @@ function Checkout({ setCart }) {
     // RENDER STEPS
     // ============================================================
     
-    // ✅ FIX: Check if Admin needs input while waiting
     if (step === "waiting" || step === "waitingForPayment") {
          const myPayers = payers.filter(p => p.ownerId === myUserId.current);
-         const needsAction = myPayers.find(p => p.txIdRequested && !p.transactionId);
+         // Show modal if Admin requested ID AND customer hasn't confirmed checkbox yet
+         const needsAction = myPayers.find(p => p.txIdRequested && !p.whishConfirmed);
 
-         // If admin needs ID, show a special screen with the input
          if (needsAction) {
              return (
                 <div className="checkout-page">
@@ -529,21 +479,18 @@ function Checkout({ setCart }) {
                                 Admin requested the Transaction ID for your transfer.
                             </p>
                             
-                            {/* Render the specific payer card that needs action */}
-                            {myPayers.filter(p => p.txIdRequested && !p.transactionId).map(payer => (
+                            {myPayers.filter(p => p.txIdRequested).map(payer => (
                                 <div key={payer.id} className="payer-card payer-mine">
                                     {renderTransferFlow(payer, true)}
                                 </div>
                             ))}
-
-                            <div className="loader-line" style={{ marginTop: '20px' }}></div>
+                            {/* Removed loader-line to avoid confusion */}
                         </div>
                     </div>
                 </div>
              );
          }
 
-         // Default waiting screen
          return (
             <div className="checkout-page">
                 <div className="overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
@@ -642,7 +589,8 @@ function Checkout({ setCart }) {
             </div>
         );
     }
-
+    
+    // Rest of steps (receipt, rejected) remain same...
     if (step === "receipt") {
         return (
             <div className="checkout-page">
@@ -661,7 +609,6 @@ function Checkout({ setCart }) {
                         </div>
                         <div className="receipt-divider"></div>
                         
-                       
                         <div className="receipt-items">
                             {orderedItems.map((item, index) => {
                                 const isCustom = item.isCustom || (item.name && item.name.toLowerCase().includes('custom'));
@@ -744,5 +691,22 @@ function Checkout({ setCart }) {
         );
     }
 }
+
+// Helper not defined in snippet, adding it
+const renderOtherPayerRow = (payer, i) => {
+    // Reuse logic from above
+    const usdTotal = payer.method === 'card' ? Number(payer.amount) : (payer.currency === 'USD' ? Number(payer.amount) : Number(payer.amount) / 89500);
+    const icon = payer.method === 'cash' ? '💵' : '💳';
+
+    return (
+        <div key={payer.id} className="payer-card payer-others">
+            <div className="others-row">
+                <span className="others-name">{payer.name || `Person ${i + 1}`}</span>
+                <span className="others-total">${usdTotal.toFixed(2)}</span>
+                <span className="others-icon">{icon}</span>
+            </div>
+        </div>
+    );
+};
 
 export default Checkout;
