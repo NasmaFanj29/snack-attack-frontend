@@ -24,8 +24,8 @@ function Checkout({ setCart }) {
         cartItems: stateCartItems = [],
         tableId: stateTableId = "1",
     } = location.state || {};
-    
-    const { isDark } = useTheme(); 
+
+    const { isDark } = useTheme();
     const activeOrderId = stateOrderId || urlOrderId;
     const isScanner = !!(urlOrderId && searchParams.get("mode") === "add");
 
@@ -35,10 +35,12 @@ function Checkout({ setCart }) {
     const [payers, setPayers] = useState([]);
     const [showQR, setShowQR] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [txIdSubmitted, setTxIdSubmitted] = useState(false);
 
     const myPayerIdRef = useRef(null);
     const ignoreUpdatesUntil = useRef(0);
     const syncTimerRef = useRef(null);
+    const cartClearedRef = useRef(false);
 
     const myUserId = useRef(localStorage.getItem("userId"));
     if (!myUserId.current) {
@@ -82,8 +84,8 @@ function Checkout({ setCart }) {
         cashSecondAmount: 0,
         whishCode: null,
         whishConfirmed: false,
-        transactionId: "",       
-        txIdRequested: false,    
+        transactionId: "",
+        txIdRequested: false,
         ownerId: myUserId.current,
     });
 
@@ -96,6 +98,21 @@ function Checkout({ setCart }) {
             });
         } catch (err) { console.error("Sync error:", err); }
     };
+
+    // ── FIX #3: Clear cart when receipt is shown ─────────────────────
+    useEffect(() => {
+        if (step === "receipt" && !cartClearedRef.current) {
+            cartClearedRef.current = true;
+            if (setCart) {
+                setCart([]);
+            }
+            // Also clear localStorage cart just in case
+            try {
+                localStorage.removeItem('cart');
+                localStorage.removeItem('cartItems');
+            } catch {}
+        }
+    }, [step, setCart]);
 
     // ── Fetch order on mount ──────────────────────────────────────────
     useEffect(() => {
@@ -118,10 +135,10 @@ function Checkout({ setCart }) {
 
                 if (status === "paid") { setStep("receipt"); return; }
                 if (status === "rejected") { setStep("rejected"); return; }
-                
+
                 if (status === "paymentpending") {
                     setStep("waitingForPayment");
-                } else if (["paid-accepted", "paid-preparing"].includes(status)) {
+                } else if (["paid-accepted", "paid-preparing", "paid-ready"].includes(status)) {
                     setStep("receipt");
                 } else if (["accepted", "preparing", "ready", "served"].includes(status)) {
                     setStep("payment");
@@ -153,7 +170,7 @@ function Checkout({ setCart }) {
             .catch(err => console.error(err));
     }, [activeOrderId]);
 
-    // ── Socket
+    // ── Socket ────────────────────────────────────────────────────────
     useEffect(() => {
         if (!activeOrderId) return;
         socket.emit("joinOrder", activeOrderId);
@@ -165,7 +182,7 @@ function Checkout({ setCart }) {
         return () => { socket.off("cartUpdated"); };
     }, [activeOrderId]);
 
-    // ── Polling
+    // ── FIX #1: Polling — always update txIdRequested from admin ──────
     useEffect(() => {
         if (!activeOrderId) return;
         const interval = setInterval(async () => {
@@ -182,18 +199,31 @@ function Checkout({ setCart }) {
                     setStep("receipt");
                 } else if (["accepted", "ready", "served"].includes(status)) {
                     setStep("payment");
-                }         
+                }
 
-                if (!isEditing()) {
-                    const raw = res.data.order?.payment_splits;
-                    if (raw) {
-                        try {
-                            const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-                            if (Array.isArray(parsed) && parsed.length > 0) {
+                const raw = res.data.order?.payment_splits;
+                if (raw) {
+                    try {
+                        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            if (!isEditing()) {
+                                // Not editing: full update
                                 setPayers(parsed);
+                            } else {
+                                // FIX: Even during editing, still pick up admin-set flags
+                                // (txIdRequested is set by admin, not customer)
+                                setPayers(prev => prev.map(myP => {
+                                    const serverP = parsed.find(sp => String(sp.id) === String(myP.id));
+                                    if (!serverP) return myP;
+                                    return {
+                                        ...myP,
+                                        txIdRequested: serverP.txIdRequested,
+                                        // Don't overwrite customer-entered transactionId or whishConfirmed
+                                    };
+                                }));
                             }
-                        } catch {}
-                    }
+                        }
+                    } catch {}
                 }
             } catch {}
         }, 2000);
@@ -263,6 +293,36 @@ function Checkout({ setCart }) {
         }
     };
 
+    // ── FIX #1: Explicit TX ID submit handler ─────────────────────────
+    const handleSubmitTxId = async () => {
+        const myTxPayers = payers.filter(p =>
+            p.ownerId === myUserId.current && p.txIdRequested
+        );
+
+        for (const p of myTxPayers) {
+            if (!p.transactionId || p.transactionId.trim() === '') {
+                alert("⚠️ Please enter your Transaction ID first!");
+                return;
+            }
+            if (!p.whishConfirmed) {
+                alert("⚠️ Please confirm you included the reference note in the transfer!");
+                return;
+            }
+        }
+
+        setLoading(true);
+        try {
+            // Immediate sync — no debounce
+            await syncPayersToBackend(payers);
+            setTxIdSubmitted(true);
+        } catch {
+            alert("Error submitting. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ── Render helpers ────────────────────────────────────────────────
     const renderMethodSelector = (payer, isMine) => (
         <div className="method-btn-group">
             {[{ id: 'cash', label: '💵 Cash' }, { id: 'card', label: '💳 Card' }].map(m => (
@@ -362,7 +422,7 @@ function Checkout({ setCart }) {
                 <p className="transfer-instruction">
                     Send the amount to the number above and include <strong>"{ref}"</strong> in the transfer notes.
                 </p>
-                
+
                 {isMine && (
                     <>
                         <input
@@ -375,20 +435,20 @@ function Checkout({ setCart }) {
                         />
 
                         {showTxInput && (
-                            <div style={{ 
-                                marginTop: '10px', 
-                                padding: '12px', 
-                                background: 'rgba(245, 158, 11, 0.15)', 
-                                borderRadius: '8px', 
+                            <div style={{
+                                marginTop: '10px',
+                                padding: '12px',
+                                background: 'rgba(245, 158, 11, 0.15)',
+                                borderRadius: '8px',
                                 border: '1px solid rgba(245, 158, 11, 0.4)',
                             }}>
                                 <p style={{ color: '#f59e0b', fontSize: '12px', margin: '0 0 8px 0', fontWeight: 'bold' }}>
-                                    📩 Admin Requested Transaction ID
+                                    📩 Admin requested your Transaction ID
                                 </p>
                                 <input
                                     type="text"
                                     placeholder="Paste Full Transaction ID..."
-                                    className="glass-input-main" 
+                                    className="glass-input-main"
                                     style={{ width: '100%', textAlign: 'center' }}
                                     value={payer.transactionId || ""}
                                     onChange={(e) => updatePayer(payer.id, 'transactionId', e.target.value)}
@@ -397,9 +457,9 @@ function Checkout({ setCart }) {
                         )}
 
                         {isMine && payer.transactionId && !payer.txIdRequested && (
-                             <div style={{ marginTop: '8px', fontSize: '12px', color: '#95b508', textAlign: 'left' }}>
+                            <div style={{ marginTop: '8px', fontSize: '12px', color: '#95b508', textAlign: 'left' }}>
                                 ✅ TX ID Entered: <strong>{payer.transactionId}</strong>
-                             </div>
+                            </div>
                         )}
 
                         <label className="transfer-confirm-label">
@@ -425,7 +485,7 @@ function Checkout({ setCart }) {
         return (
             <div key={payer.id} className={`payer-card ${isMine ? 'payer-mine' : 'payer-others'}`}>
                 <div className="payer-card-top" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '15px' }}>
-                   <input
+                    <input
                         type="text"
                         placeholder="Full Name"
                         value={payer.name || ''}
@@ -435,8 +495,8 @@ function Checkout({ setCart }) {
                         }}
                         className="glass-input-main"
                         style={{ width: '100%', textAlign: 'left' }}
-                        />
-                   <input
+                    />
+                    <input
                         type="tel"
                         placeholder="Phone Number"
                         value={payer.phone || ''}
@@ -446,7 +506,7 @@ function Checkout({ setCart }) {
                         }}
                         className="glass-input-main"
                         style={{ width: '100%', textAlign: 'left' }}
-                        />
+                    />
                     {isMine && myRowsCount > 1 && (
                         <button type="button" className="remove-payer-btn" onClick={() => removePayer(payer)}>✕</button>
                     )}
@@ -462,42 +522,81 @@ function Checkout({ setCart }) {
     // ============================================================
     // RENDER STEPS
     // ============================================================
-    
-    if (step === "waiting" || step === "waitingForPayment") {
-         const myPayers = payers.filter(p => p.ownerId === myUserId.current);
-         // Show modal if Admin requested ID AND customer hasn't confirmed checkbox yet
-         const needsAction = myPayers.find(p => p.txIdRequested && !p.whishConfirmed);
 
-         if (needsAction) {
-             return (
+    // ── FIX #1: Waiting / WaitingForPayment with proper TX ID submit ──
+    if (step === "waiting" || step === "waitingForPayment") {
+        const myPayers = payers.filter(p => p.ownerId === myUserId.current);
+        const needsAction = myPayers.find(p => p.txIdRequested && !txIdSubmitted);
+
+        if (needsAction) {
+            return (
                 <div className="checkout-page">
                     <div className="overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-                        <div className="info-form-card glass-effect" style={{ padding: '30px', maxWidth: '400px' }}>
+                        <div className="info-form-card glass-effect" style={{ padding: '30px', maxWidth: '420px', width: '90%' }}>
                             <img src={logo} alt="Logo" width="120" style={{ marginBottom: '20px' }} />
-                            <h2 style={{ color: '#f59e0b' }}>ACTION REQUIRED 📩</h2>
-                            <p style={{ color: '#fff', marginBottom: '20px' }}>
-                                Admin requested the Transaction ID for your transfer.
+                            <h2 style={{ color: '#f59e0b', marginBottom: '8px' }}>ACTION REQUIRED 📩</h2>
+                            <p style={{ color: '#ccc', marginBottom: '20px', fontSize: '14px' }}>
+                                Admin needs your Transaction ID to verify your transfer.
                             </p>
-                            
+
                             {myPayers.filter(p => p.txIdRequested).map(payer => (
-                                <div key={payer.id} className="payer-card payer-mine">
+                                <div key={payer.id} className="payer-card payer-mine" style={{ marginBottom: '16px' }}>
                                     {renderTransferFlow(payer, true)}
                                 </div>
                             ))}
-                            {/* Removed loader-line to avoid confusion */}
+
+                            {/* ── FIX: Explicit Submit Button ── */}
+                            <button
+                                onClick={handleSubmitTxId}
+                                disabled={loading}
+                                style={{
+                                    width: '100%',
+                                    padding: '14px',
+                                    background: loading ? '#555' : '#f59e0b',
+                                    color: '#000',
+                                    fontWeight: '900',
+                                    fontSize: '13px',
+                                    letterSpacing: '2px',
+                                    border: 'none',
+                                    borderRadius: '10px',
+                                    cursor: loading ? 'not-allowed' : 'pointer',
+                                    marginTop: '8px',
+                                    textTransform: 'uppercase',
+                                }}
+                            >
+                                {loading ? "SUBMITTING..." : "SUBMIT TX ID ✅"}
+                            </button>
                         </div>
                     </div>
                 </div>
-             );
-         }
+            );
+        }
 
-         return (
+        // TX ID submitted — waiting for admin confirmation
+        if (txIdSubmitted) {
+            return (
+                <div className="checkout-page">
+                    <div className="overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+                        <div className="info-form-card glass-effect" style={{ padding: '50px' }}>
+                            <img src={logo} alt="Logo" width="160" style={{ marginBottom: '20px' }} />
+                            <h2 style={{ color: '#95b508' }}>TX ID SUBMITTED ✅</h2>
+                            <p style={{ color: '#aaa', marginBottom: '20px' }}>
+                                Order #{activeOrderId} — Admin is verifying your transfer...
+                            </p>
+                            <div className="loader-line"></div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        return (
             <div className="checkout-page">
                 <div className="overlay" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
                     <div className="info-form-card glass-effect" style={{ padding: '50px' }}>
                         <img src={logo} alt="Logo" width="160" style={{ marginBottom: '20px' }} />
                         <h2>{step === "waiting" ? "KITCHEN IS COOKING... 👨‍🍳" : "WAITING FOR ADMIN... 💰"}</h2>
-                        <p>Order #{activeOrderId} — Stay on this page.</p>
+                        <p style={{ color: '#aaa' }}>Order #{activeOrderId} — Stay on this page.</p>
                         <div className="loader-line"></div>
                     </div>
                 </div>
@@ -589,8 +688,7 @@ function Checkout({ setCart }) {
             </div>
         );
     }
-    
-    // Rest of steps (receipt, rejected) remain same...
+
     if (step === "receipt") {
         return (
             <div className="checkout-page">
@@ -608,7 +706,7 @@ function Checkout({ setCart }) {
                             <p><strong>Date:</strong> {new Date().toLocaleDateString()}</p>
                         </div>
                         <div className="receipt-divider"></div>
-                        
+
                         <div className="receipt-items">
                             {orderedItems.map((item, index) => {
                                 const isCustom = item.isCustom || (item.name && item.name.toLowerCase().includes('custom'));
@@ -618,16 +716,15 @@ function Checkout({ setCart }) {
                                 let displayTitle = item.name || "Custom Burger";
                                 if (isCustom) {
                                     try {
-                                        const data = typeof item.customOrderData === 'string' 
-                                            ? JSON.parse(item.customOrderData) 
+                                        const data = typeof item.customOrderData === 'string'
+                                            ? JSON.parse(item.customOrderData)
                                             : item.customOrderData;
-                                        
                                         if (data && (data.bread || data.protein)) {
                                             displayTitle = `Custom Burger (${data.bread || 'bun'}, ${data.protein || 'beef'})`;
                                         } else if (!item.name || item.name.toLowerCase().includes('custom')) {
                                             displayTitle = "Custom Burger";
                                         }
-                                    } catch (e) { 
+                                    } catch (e) {
                                         displayTitle = item.name || "Custom Burger";
                                     }
                                 }
@@ -644,12 +741,11 @@ function Checkout({ setCart }) {
                                                 ${(unitPrice * item.quantity).toFixed(2)}
                                             </span>
                                         </div>
-                                        
                                         {extrasText && (
-                                            <div className="r-item-extras" style={{ 
-                                                fontSize: '11px', 
-                                                color: '#666', 
-                                                paddingLeft: '20px', 
+                                            <div className="r-item-extras" style={{
+                                                fontSize: '11px',
+                                                color: '#666',
+                                                paddingLeft: '20px',
                                                 marginTop: '2px',
                                                 fontStyle: 'italic'
                                             }}>
@@ -692,12 +788,9 @@ function Checkout({ setCart }) {
     }
 }
 
-// Helper not defined in snippet, adding it
 const renderOtherPayerRow = (payer, i) => {
-    // Reuse logic from above
     const usdTotal = payer.method === 'card' ? Number(payer.amount) : (payer.currency === 'USD' ? Number(payer.amount) : Number(payer.amount) / 89500);
     const icon = payer.method === 'cash' ? '💵' : '💳';
-
     return (
         <div key={payer.id} className="payer-card payer-others">
             <div className="others-row">
