@@ -5,7 +5,10 @@ import {
   subscribeToChats, addCustomOrder
 } from "./chatbotStore";
 
-// ── Auto-response rules (no API call needed) ─────────────────────
+/* ================================================================
+   AUTO-RESPONSE RULES
+   Quick keyword matches handled locally — no API call needed.
+   ================================================================ */
 const AUTO_RULES = [
   {
     match: /\b(sa3at|hours|mta|meta|awkat|wa2t|open|close|closes|w2t|wa2et|working hours|bta7do|bteft7o|btefta7o|btsakro)\b/i,
@@ -37,39 +40,50 @@ const AUTO_RULES = [
   },
 ];
 
+/* Welcome message shown on first visit */
 const welcome = {
   sender: "bot",
-  text: "Ahla w sahla bi Snack Attack! Ana hon la se3dak totlob, t2allef custom burger, aw jewbak 3a ayya sou2al. Shu 3abelak l yom?",
+  text: "Welcome to Snack Attack! I’m ready to help you build your perfect burger, browse the menu, or assist with any questions. How can I help you today?",
 };
 
+/* ================================================================
+   CHATBOT COMPONENT
+   ================================================================ */
 function Chatbot({ menuItems = [], addToCart }) {
   const tableId = String(localStorage.getItem("activeTable") || "1");
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [chatStatus, setChatStatus] = useState("bot");
-  const [hasNewAdminMsg, setHasNewAdminMsg] = useState(false);
-  const conversationHistory = useRef([]);
-  const prevMsgCount = useRef(0);
-  const messagesEndRef = useRef(null);
-  const chatStatusRef = useRef("bot");
 
+  const [isOpen,         setIsOpen]         = useState(false);
+  const [messages,       setMessages]       = useState([]);
+  const [input,          setInput]          = useState("");
+  const [isLoading,      setIsLoading]      = useState(false);
+  const [chatStatus,     setChatStatus]     = useState("bot");
+  const [hasNewAdminMsg, setHasNewAdminMsg] = useState(false);
+
+  const conversationHistory = useRef([]);
+  const prevMsgCount        = useRef(0);
+  const messagesEndRef      = useRef(null);
+  const chatStatusRef       = useRef("bot"); // ref mirrors state for use inside async callbacks
+
+  // Keep ref in sync with state
   useEffect(() => { chatStatusRef.current = chatStatus; }, [chatStatus]);
 
-  // ── Load saved conversation ────────────────────────────────────
+  /* ── Load saved conversation on mount ─────────────────────── */
   useEffect(() => {
     const conv = getTableConversation(tableId);
+
     if (conv.messages.length > 0) {
       setMessages(conv.messages);
       setChatStatus(conv.status || "bot");
       chatStatusRef.current = conv.status || "bot";
+
+      // Rebuild conversation history for the AI
       conv.messages.forEach((msg) => {
         if (msg.sender === "user")
-          conversationHistory.current.push({ role: "user", content: msg.text });
+          conversationHistory.current.push({ role: "user",      content: msg.text });
         else if (msg.sender === "bot")
           conversationHistory.current.push({ role: "assistant", content: msg.text });
       });
+
       prevMsgCount.current = conv.messages.length;
     } else {
       setMessages([welcome]);
@@ -77,44 +91,58 @@ function Chatbot({ menuItems = [], addToCart }) {
     }
   }, [tableId]);
 
-  // ── Listen for admin replies ───────────────────────────────────
+  /* ── Subscribe to real-time admin replies ─────────────────── */
   useEffect(() => {
     const unsub = subscribeToChats((conversations) => {
       const conv = conversations[tableId];
       if (!conv) return;
+
       setMessages([...conv.messages]);
+
       const newStatus = conv.status || "bot";
       setChatStatus(newStatus);
       chatStatusRef.current = newStatus;
+
+      // Show notification dot when chat is closed and a new admin message arrives
       if (!isOpen && conv.messages.length > prevMsgCount.current) {
         const latest = conv.messages[conv.messages.length - 1];
         if (latest?.sender === "admin") setHasNewAdminMsg(true);
       }
+
       prevMsgCount.current = conv.messages.length;
     });
+
     return unsub;
   }, [tableId, isOpen]);
 
+  // Clear notification dot when user opens the chat
   useEffect(() => { if (isOpen) setHasNewAdminMsg(false); }, [isOpen]);
 
+  // Scroll to bottom when chat opens
   useEffect(() => {
     if (isOpen) setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 80);
   }, [isOpen]);
 
+  // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
+  /* ── Escalate conversation to a staff member ──────────────── */
   const escalateToAdmin = (reason) => {
     setTableStatus(tableId, "admin");
     setChatStatus("admin");
     chatStatusRef.current = "admin";
-    const sysMsg = { sender: "system", text: `Staff has been notified and will be with you shortly — ${reason}` };
+
+    const sysMsg = {
+      sender: "system",
+      text: `Staff has been notified and will be with you shortly — ${reason}`,
+    };
     addMessage(tableId, sysMsg);
     setMessages((prev) => [...prev, sysMsg]);
   };
 
-  // ── Add item to cart by name ───────────────────────────────────
+  /* ── Add a regular menu item to cart by name ──────────────── */
   const addItemToCartByName = (itemName) => {
     if (menuItems && menuItems.length > 0) {
       const found = menuItems.find(
@@ -124,50 +152,52 @@ function Chatbot({ menuItems = [], addToCart }) {
       );
       if (found && addToCart) {
         addToCart({
-          id: found.id,
-          databaseId: found.id,
-          name: found.name,
-          price: Number(found.price),
-          image: found.image,
-          quantity: 1,
+          id:             found.id,
+          databaseId:     found.id,
+          name:           found.name,
+          price:          Number(found.price),
+          image:          found.image,
+          quantity:       1,
           selectedExtras: [],
         });
         return true;
       }
     }
+
+    // Fallback: broadcast a custom event for the cart to handle
     window.dispatchEvent(new CustomEvent("snackCartAddByName", { detail: { name: itemName } }));
     return true;
   };
 
-  // ── Add custom order to cart ───────────────────────────────────
+ /* ── Build a custom burger cart item and add it ───────────── */
   const addCustomOrderToCart = (orderData) => {
+    // Generate ID based on ingredients instead of time
+    const ingredientsKey = `${orderData.bread}-${orderData.protein}-${orderData.cheese}-${orderData.veggies}-${orderData.sauce}`.replace(/\s+/g, '');
+    const customId = `custom_${ingredientsKey}`;
+
     const customItem = {
-      id: `custom_${Date.now()}`,
+      id: customId, // Now it's unique to the ingredients
       databaseId: null,
       name: `Custom Burger (${orderData.bread} bun, ${orderData.protein})`,
       price: orderData.price || 12.99,
       image: null,
       quantity: 1,
       selectedExtras: [
-        orderData.cheese && `Cheese: ${orderData.cheese}`,
+        orderData.bread && `Bread: ${orderData.bread}`,
+        orderData.protein && `Protein: ${orderData.protein}`,
+        orderData.cheese  && `Cheese: ${orderData.cheese}`,
         orderData.veggies && `Veggies: ${orderData.veggies}`,
-        orderData.sauce && `Sauce: ${orderData.sauce}`,
-        orderData.notes && `Note: ${orderData.notes}`,
+        orderData.sauce   && `Sauce: ${orderData.sauce}`,
+        orderData.notes   && `Note: ${orderData.notes}`,
       ].filter(Boolean),
       isCustom: true,
       customOrderData: orderData,
     };
 
-    if (addToCart) {
-      addToCart(customItem);
-    }
-
-    window.dispatchEvent(new CustomEvent("snackCustomOrderAdded", {
-      detail: { order: orderData, cartItem: customItem, tableId },
-    }));
+    if (addToCart) addToCart(customItem);
+    // ... rest of event dispatch
   };
-
-  // ── Check auto-rules before calling API ───────────────────────
+  /* ── Check auto-rules before hitting the API ──────────────── */
   const checkAutoRules = (text) => {
     for (const rule of AUTO_RULES) {
       if (rule.match.test(text.trim())) return rule.reply;
@@ -175,9 +205,10 @@ function Chatbot({ menuItems = [], addToCart }) {
     return null;
   };
 
-  // ── Send message ───────────────────────────────────────────────
+  /* ── Main send handler ────────────────────────────────────── */
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
+
     const text = input.trim();
     setInput("");
 
@@ -185,14 +216,15 @@ function Chatbot({ menuItems = [], addToCart }) {
     setMessages((prev) => [...prev, userMsg]);
     addMessage(tableId, userMsg);
 
-    // If admin is active, just save the message and wait
+    // When a staff member is active, just save the message — no AI reply
     if (chatStatusRef.current === "admin") return;
 
-    // ── Auto-response check ───────────────────────────────────────
+    // Try local auto-rules first (instant, no API cost)
     const autoReply = checkAutoRules(text);
     if (autoReply) {
-      conversationHistory.current.push({ role: "user", content: text });
+      conversationHistory.current.push({ role: "user",      content: text });
       conversationHistory.current.push({ role: "assistant", content: autoReply });
+
       const botMsg = { sender: "bot", text: autoReply };
       setMessages((prev) => [...prev, botMsg]);
       addMessage(tableId, botMsg);
@@ -204,10 +236,10 @@ function Chatbot({ menuItems = [], addToCart }) {
 
     try {
       const res = await fetch("https://snack-attack-backend.onrender.com/api/chat", {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: conversationHistory.current,
+          messages:  conversationHistory.current,
           menuItems,
         }),
       });
@@ -220,65 +252,70 @@ function Chatbot({ menuItems = [], addToCart }) {
 
       conversationHistory.current.push({ role: "assistant", content: raw });
 
-      // ── Handle CUSTOM_ORDER ─────────────────────────────────────
+      /* ── Handle CUSTOM_ORDER action ─────────────────────────── */
       if (raw.includes("CUSTOM_ORDER:")) {
         const match = raw.match(/CUSTOM_ORDER:(\{[\s\S]*?\})/);
         if (match) {
           try {
             const orderData = JSON.parse(match[1]);
 
-            // Save to store + add to cart
+            // Persist to store and add to cart
             addCustomOrder(tableId, orderData);
             addCustomOrderToCart(orderData);
 
-            const cleanText = raw.replace(/CUSTOM_ORDER:[\s\S]*/, "").trim();
-
-            // Show confirmation message (NO image generation)
-            const confirmMsg = {
-              sender: "bot",
-              text: cleanText || "Your custom burger has been added to your cart!",
-            };
-            setMessages((prev) => [...prev, confirmMsg]);
-            addMessage(tableId, confirmMsg);
+            // Display the AI's confirmation text (summary box is part of it)
+            const confirmText = raw.replace(/CUSTOM_ORDER:[\s\S]*/, "").trim();
+            if (confirmText) {
+              const confirmMsg = { sender: "bot", text: confirmText };
+              setMessages((prev) => [...prev, confirmMsg]);
+              addMessage(tableId, confirmMsg);
+            }
 
             setIsLoading(false);
             return;
           } catch (e) {
-            console.error("Custom order parse error", e);
+            console.error("Failed to parse CUSTOM_ORDER JSON:", e);
           }
         }
+        // Strip malformed action tag and fall through
         raw = raw.replace(/CUSTOM_ORDER:[\s\S]*/, "").trim();
       }
 
-      // ── Handle CART_ADD ─────────────────────────────────────────
+      /* ── Handle CART_ADD action ─────────────────────────────── */
       if (raw.includes("CART_ADD:")) {
         const itemName = raw.match(/CART_ADD:([^\n]+)/)?.[1]?.trim();
         if (itemName) addItemToCartByName(itemName);
         raw = raw.replace(/CART_ADD:[^\n]+/, "").trim();
       }
 
+      // If admin took over while we were waiting, discard the AI reply
       if (chatStatusRef.current === "admin") { setIsLoading(false); return; }
 
-      // ── Handle NEED_ADMIN ───────────────────────────────────────
+      /* ── Handle NEED_ADMIN action ───────────────────────────── */
       if (raw.includes("NEED_ADMIN:")) {
         const reason = raw.match(/NEED_ADMIN:(\w+)/)?.[1] || "assistance";
         raw = raw.replace(/NEED_ADMIN:\w+/, "").trim();
-        const map = {
-          confused: "Customer needs clarification",
+
+        const reasonMap = {
+          confused:  "Customer needs clarification",
           offensive: "Inappropriate language detected",
           complaint: "Food or service complaint",
-          request: "Customer requested staff assistance",
+          request:   "Customer requested staff assistance",
         };
+
+        // Show the AI's message first, then escalate
         if (raw) {
           const botMsg = { sender: "bot", text: raw };
           setMessages((prev) => [...prev, botMsg]);
           addMessage(tableId, botMsg);
         }
-        escalateToAdmin(map[reason] || reason);
+
+        escalateToAdmin(reasonMap[reason] || reason);
         setIsLoading(false);
         return;
       }
 
+      // Normal reply
       if (raw) {
         const botMsg = { sender: "bot", text: raw };
         setMessages((prev) => [...prev, botMsg]);
@@ -299,9 +336,14 @@ function Chatbot({ menuItems = [], addToCart }) {
   };
 
   const isAdminActive = chatStatus === "admin";
+  // Note: .bot-message uses white-space: pre-wrap in CSS so the ┌─┐ summary box renders correctly
 
+  /* ================================================================
+     RENDER
+     ================================================================ */
   return (
     <>
+      {/* Floating chat button */}
       <button className="chat-bubble-btn" onClick={() => setIsOpen((o) => !o)}>
         {isOpen ? "✖" : "💬"}
         {(hasNewAdminMsg || (isAdminActive && !isOpen)) && (
@@ -311,6 +353,8 @@ function Chatbot({ menuItems = [], addToCart }) {
 
       {isOpen && (
         <div className="chat-window glass-effect-chat">
+
+          {/* Header */}
           <div className={`chat-header ${isAdminActive ? "chat-header--admin" : ""}`}>
             <div className="chat-header-inner">
               <h3>{isAdminActive ? "Staff Connected" : "Snack Assistant"}</h3>
@@ -318,14 +362,18 @@ function Chatbot({ menuItems = [], addToCart }) {
             </div>
           </div>
 
+          {/* Message list */}
           <div className="chat-body">
             {messages.map((msg, i) => {
-              if (msg.sender === "system")
+              // System notification (e.g. staff escalation)
+              if (msg.sender === "system") {
                 return (
                   <div key={i} className="system-message-row">
                     <span className="system-message">{msg.text}</span>
                   </div>
                 );
+              }
+
               return (
                 <div
                   key={i}
@@ -351,6 +399,7 @@ function Chatbot({ menuItems = [], addToCart }) {
               );
             })}
 
+            {/* Typing indicator */}
             {isLoading && (
               <div className="chat-message-wrapper bot-wrapper">
                 <div className="chat-message bot-message">
@@ -360,15 +409,19 @@ function Chatbot({ menuItems = [], addToCart }) {
                 </div>
               </div>
             )}
+
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Input area */}
           <div className="chat-footer">
             <input
               className="chat-input"
               type="text"
               placeholder={
-                isAdminActive ? "A staff member will reply shortly..." : "Ask me anything..."
+                isAdminActive
+                  ? "A staff member will reply shortly..."
+                  : "Ask me anything..."
               }
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -382,6 +435,7 @@ function Chatbot({ menuItems = [], addToCart }) {
               ➤
             </button>
           </div>
+
         </div>
       )}
     </>

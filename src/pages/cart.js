@@ -18,7 +18,7 @@ function EditItemModal({ item, onClose, onSave }) {
   const [pendingRemoved,  setPendingRemoved]   = useState(Array.isArray(item.removedExtras) ? item.removedExtras : []);
   const [itemExtras,      setItemExtras]       = useState([]);
   const [removableExtras, setRemovableExtras]  = useState([]);
-  const [subView,         setSubView]          = useState("main"); // main | note | remove
+  const [subView,         setSubView]          = useState("main");
 
   useEffect(() => {
     const id = item.databaseId || item.item_id || item.id;
@@ -43,7 +43,6 @@ function EditItemModal({ item, onClose, onSave }) {
 
   const handleSave = () => onSave({ ...item, selectedExtras, removedExtras: pendingRemoved, specialNote: pendingNote || null });
 
-  // ── Note sub-view ──
   if (subView === "note") return (
     <div className="modal-overlay" onClick={() => setSubView("main")}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -67,7 +66,6 @@ function EditItemModal({ item, onClose, onSave }) {
     </div>
   );
 
-  // ── Remove sub-view ──
   if (subView === "remove") return (
     <div className="modal-overlay" onClick={() => setSubView("main")}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -110,7 +108,6 @@ function EditItemModal({ item, onClose, onSave }) {
     </div>
   );
 
-  // ── Main view ──
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -120,8 +117,6 @@ function EditItemModal({ item, onClose, onSave }) {
           <h2>{item.name}</h2>
           {item.description && <p>{item.description}</p>}
         </div>
-
-        {/* Action buttons */}
         <div className="modal-actions">
           <button className="menu-action-btn notes-btn" onClick={() => setSubView("note")}>
             📝 {pendingNote ? "Edit Note" : "Add Note"}
@@ -132,8 +127,6 @@ function EditItemModal({ item, onClose, onSave }) {
             </button>
           )}
         </div>
-
-        {/* Pending preview */}
         {(pendingRemoved.length > 0 || pendingNote) && (
           <div style={{ padding:"0 20px 12px" }}>
             {pendingRemoved.length > 0 && (
@@ -152,8 +145,6 @@ function EditItemModal({ item, onClose, onSave }) {
             )}
           </div>
         )}
-
-        {/* Add-on extras */}
         <div className="modal-scroll-area">
           {itemExtras.length > 0 && (
             <div className="extras-section">
@@ -175,7 +166,6 @@ function EditItemModal({ item, onClose, onSave }) {
             </div>
           )}
         </div>
-
         <div className="modal-footer">
           <button className="add-btn-final" onClick={handleSave}>
             Save Changes — ${modalPrice.toFixed(2)}
@@ -187,7 +177,7 @@ function EditItemModal({ item, onClose, onSave }) {
 }
 
 // ── Cart ──────────────────────────────────────────────────────────
-function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
+function Cart({ cart, addToCart, removeFromCart, setCart, isJoinMode = false }) {
   const navigate = useNavigate();
   const { orderId: urlOrderId } = useParams();
   const [searchParams] = useSearchParams();
@@ -200,15 +190,10 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
   const [placingOrder, setPlacingOrder] = useState(false);
   const [displayCart,  setDisplayCart]  = useState([]);
 
-  // ── Block poll from overwriting local edits for 5s after save ──
   const ignorePollUntil = useRef(0);
-
-  // ── Edit modal state ──
   const [editingItem,  setEditingItem]  = useState(null);
   const [editingIndex, setEditingIndex] = useState(null);
-
-  // ── Menu map for images/category/description ──
-  const [menuMap, setMenuMap] = useState({}); // { itemId: { image, category, description } }
+  const [menuMap,      setMenuMap]      = useState({});
 
   useEffect(() => {
     axios.get(`${BACKEND}/menu`)
@@ -221,7 +206,7 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
   }, []);
 
   const enrichItem = (item) => {
-    const id = item.databaseId || item.item_id || item.id;
+    const id   = item.databaseId || item.item_id || item.id;
     const meta = menuMap[id] || {};
     return {
       ...item,
@@ -236,26 +221,32 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
     localStorage.getItem("activeTable") ||
     "1";
 
-  // Detect join mode: either prop OR has a urlOrderId (came from checkout ✏️)
   const isEditMode = isJoinMode || !!urlOrderId;
 
   useEffect(() => {
-    if (!isEditMode && Array.isArray(cart)) {
-      setDisplayCart(cart);
-    }
+    if (!isEditMode && Array.isArray(cart)) setDisplayCart(cart);
   }, [cart, isEditMode]);
 
+  // ── Split items into chatbot group vs regular group ──
+  const chatbotItems  = displayCart.filter(item => item?.isCustom);
+  const regularItems  = displayCart.filter(item => item && !item.isCustom);
+  const hasChatbot    = chatbotItems.length > 0;
+  const hasRegular    = regularItems.length > 0;
+
   // ── Financials ──
-  const subtotal = (displayCart || []).reduce((acc, item) => {
+  const getLinePrice = (item) => {
     const base   = Number(item.price || item.price_at_time) || 0;
     const extras = Array.isArray(item.selectedExtras)
       ? item.selectedExtras.reduce((s, e) => s + (Number(e.price) || 0), 0) : 0;
-    return acc + (base + extras) * (Number(item.quantity) || 0);
-  }, 0);
-  const vat        = subtotal * 0.11;
-  const totalPrice = subtotal + vat;
+    return base + extras;
+  };
 
-  // ── Fetch order ONCE on mount only — never re-fetches after edits ──
+  const subtotal    = displayCart.reduce((acc, item) =>
+    acc + getLinePrice(item) * (Number(item.quantity) || 0), 0);
+  const vat         = subtotal * 0.11;
+  const totalPrice  = subtotal + vat;
+
+  // ── Fetch order once on mount ──
   const initialFetchDone = useRef(false);
   useEffect(() => {
     if (!urlOrderId || initialFetchDone.current) return;
@@ -271,21 +262,18 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
       .catch(err => console.error("Fetch Error:", err));
   }, []);
 
-  // ── Polling — only runs when waiting for status (not in edit mode) ──
+  // ── Polling ──
   useEffect(() => {
     let interval;
     const activeId = orderId || urlOrderId;
-    // If we came from checkout ✏️ (urlOrderId set), we're editing — no polling needed
-    // Only poll when isJoinMode (shared cart waiting for acceptance)
     if (activeId && isWaiting && isJoinMode) {
       interval = setInterval(async () => {
         try {
           const res           = await axios.get(`${BACKEND}/orders/${activeId}`);
           const currentStatus = res.data.order?.status || "";
           setOrderStatus(currentStatus);
-          if (Array.isArray(res.data.items) && Date.now() > ignorePollUntil.current) {
+          if (Array.isArray(res.data.items) && Date.now() > ignorePollUntil.current)
             setDisplayCart(res.data.items);
-          }
           const s = String(currentStatus).toLowerCase();
           if (s === "paid") {
             setIsWaiting(false); setIsOrdered(true);
@@ -303,7 +291,30 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
     return () => clearInterval(interval);
   }, [isWaiting, orderId, urlOrderId, isJoinMode, navigate]);
 
-  // ── Place Order (normal mode only) ──
+  // ── Clear ALL chatbot items ──
+  const handleClearChatbotOrder = () => {
+    const newCart = displayCart.filter(item => !item?.isCustom);
+    setDisplayCart(newCart);
+    if (setCart) setCart(newCart);
+    try { localStorage.setItem("cart", JSON.stringify(newCart)); } catch {}
+  };
+
+  // ── Clear ALL regular items ──
+  const handleClearRegularItems = () => {
+    const newCart = displayCart.filter(item => item?.isCustom);
+    setDisplayCart(newCart);
+    if (setCart) setCart(newCart);
+    try { localStorage.setItem("cart", JSON.stringify(newCart)); } catch {}
+  };
+
+  // ── Clear EVERYTHING ──
+  const handleClearAll = () => {
+    setDisplayCart([]);
+    if (setCart) setCart([]);
+    try { localStorage.removeItem("cart"); } catch {}
+  };
+
+  // ── Place Order ──
   const handleProceedToPayment = async () => {
     if (!displayCart || displayCart.length === 0) { alert("Your cart is empty!"); return; }
     setPlacingOrder(true);
@@ -340,7 +351,7 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
     } finally { setPlacingOrder(false); }
   };
 
-  // ── Join/Edit Mode: qty update ──
+  // ── Join/Edit mode qty update ──
   const handleJoinModeUpdate = async (item, action) => {
     const activeId = orderId || urlOrderId;
     if (!activeId) return;
@@ -349,31 +360,76 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
     } catch (err) { console.error("Error updating shared cart", err); }
   };
 
-  // ── Edit mode: save edited item ──
+  // ── Save edited item ──
   const handleSaveEditedItem = async (updatedItem) => {
     const activeId = orderId || urlOrderId;
-    // Merge the updated item into display cart
     const newItems = displayCart.map((it, idx) => idx === editingIndex ? { ...it, ...updatedItem } : it);
-    // Update UI immediately and close modal
     setDisplayCart(newItems);
     setEditingItem(null);
     setEditingIndex(null);
-    // Persist to backend (fire and forget — no re-fetch, no polling to undo it)
     if (activeId) {
       axios.put(`${BACKEND}/admin/orders/${activeId}/status`, { items: newItems })
         .catch(err => console.error("Error saving item edits:", err));
     }
   };
 
-  // ── Helpers ──
-  const getLinePrice = (item) => {
-    const base   = Number(item.price || item.price_at_time) || 0;
-    const extras = Array.isArray(item.selectedExtras)
-      ? item.selectedExtras.reduce((s, e) => s + (Number(e.price) || 0), 0) : 0;
-    return base + extras;
+  // ── Render a single item row ──
+  const renderItemRow = (item, i, globalIndex) => {
+    if (!item || typeof item !== "object") return null;
+    const lineUnitPrice = getLinePrice(item);
+    const lineTotal     = lineUnitPrice * Number(item.quantity || 1);
+
+    return (
+      <div key={String(item.id || globalIndex)} className="cart-item">
+        <div className="cart-item-left">
+          <span className="cart-item-name">{item.name || "Item"}</span>
+          {Array.isArray(item.selectedExtras) && item.selectedExtras.length > 0 && (
+            <span className="cart-item-extras">
+              + {item.selectedExtras.map(e => (typeof e === "string" ? e : e.name) || e).join(", ")}
+            </span>
+          )}
+          {Array.isArray(item.removedExtras) && item.removedExtras.length > 0 && (
+            <span className="cart-item-removed">
+              ✕ No {item.removedExtras.map(e => e.name || e).join(", ")}
+            </span>
+          )}
+          {(item.specialNote || item.special_note) && (
+            <span className="cart-item-note">📝 {item.specialNote || item.special_note}</span>
+          )}
+          <span className="cart-item-each">${lineUnitPrice.toFixed(2)} each</span>
+        </div>
+
+        <div className="cart-item-right">
+          {/* Only show qty controls for non-custom items */}
+          {!item.isCustom && (
+            <div className="cart-item-controls">
+              <div className="cart-qty">
+                <button className="cart-qty-btn"
+                  onClick={() => isEditMode
+                    ? handleJoinModeUpdate(item, "remove")
+                    : removeFromCart(item)
+                  }>−</button>
+                <span className="cart-qty-num">{item.quantity}</span>
+                <button className="cart-qty-btn"
+                  onClick={() => isEditMode
+                    ? handleJoinModeUpdate(item, "add")
+                    : addToCart(item)
+                  }>+</button>
+              </div>
+              <button
+                className="cart-edit-btn"
+                onClick={() => { setEditingItem(enrichItem(item)); setEditingIndex(globalIndex); }}
+                title="Edit item"
+              >✏️</button>
+            </div>
+          )}
+          <span className="cart-item-total">${lineTotal.toFixed(2)}</span>
+        </div>
+      </div>
+    );
   };
 
-  // ── Status Screens ──
+  // ── Status screens ──
   if (isRejected) return (
     <div className="cart-page">
       <div className="cart-container">
@@ -400,10 +456,9 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
     </div>
   );
 
-  // ── Main Render ──
+  // ── Main render ──
   return (
     <div className="cart-page">
-      {/* Edit modal */}
       {editingItem && (
         <EditItemModal
           item={editingItem}
@@ -414,72 +469,109 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
 
       <div className="cart-container">
         <div className="cart-card">
-          <h2 className="cart-title">🛒 YOUR ORDER</h2>
+
+          {/* Header */}
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"4px" }}>
+            <h2 className="cart-title" style={{ margin:0 }}>🛒 YOUR ORDER</h2>
+            {displayCart.length > 0 && (
+              <button
+                onClick={handleClearAll}
+                style={{
+                  background:"rgba(255,77,77,0.12)", border:"1px solid rgba(255,77,77,0.35)",
+                  color:"#ff6b6b", borderRadius:"8px", padding:"6px 14px",
+                  fontSize:"12px", fontWeight:"700", cursor:"pointer", letterSpacing:"0.5px",
+                }}
+              >
+                🗑 Clear All
+              </button>
+            )}
+          </div>
           <p className="cart-table-tag">Table #{activeTable}</p>
 
           {displayCart.length === 0 ? (
             <div className="cart-empty"><p>Your cart is empty</p></div>
           ) : (
             <div className="cart-items">
-              {displayCart.map((item, i) => {
-                if (!item || typeof item !== "object") return null;
-                const lineUnitPrice = getLinePrice(item);
-                const lineTotal     = lineUnitPrice * Number(item.quantity || 1);
 
-                return (
-                  <div key={String(item.id || i)} className="cart-item">
-                    {/* ── Left: info ── */}
-                    <div className="cart-item-left">
-                      <span className="cart-item-name">{item.name || "Item"}</span>
-
-                      {Array.isArray(item.selectedExtras) && item.selectedExtras.length > 0 && (
-                        <span className="cart-item-extras">
-                          + {item.selectedExtras.map(e => e.name || e).join(", ")}
-                        </span>
-                      )}
-                      {Array.isArray(item.removedExtras) && item.removedExtras.length > 0 && (
-                        <span className="cart-item-removed">
-                          ✕ No {item.removedExtras.map(e => e.name || e).join(", ")}
-                        </span>
-                      )}
-                      {(item.specialNote || item.special_note) && (
-                        <span className="cart-item-note">
-                          📝 {item.specialNote || item.special_note}
-                        </span>
-                      )}
-                      <span className="cart-item-each">${lineUnitPrice.toFixed(2)} each</span>
-                    </div>
-
-                    {/* ── Right: controls column ── */}
-                    <div className="cart-item-right">
-                      <div className="cart-item-controls">
-                        <div className="cart-qty">
-                          <button className="cart-qty-btn"
-                            onClick={() => isEditMode
-                              ? handleJoinModeUpdate(item, "remove")
-                              : removeFromCart(item)
-                            }>−</button>
-                          <span className="cart-qty-num">{item.quantity}</span>
-                          <button className="cart-qty-btn"
-                            onClick={() => isEditMode
-                              ? handleJoinModeUpdate(item, "add")
-                              : addToCart(item)
-                            }>+</button>
-                        </div>
-
-                        {/* ✏️ Edit button */}
-                        <button
-                          className="cart-edit-btn"
-                          onClick={() => { setEditingItem(enrichItem(item)); setEditingIndex(i); }}
-                          title="Edit item"
-                        >✏️</button>
-                      </div>
-
-                      <span className="cart-item-total">${lineTotal.toFixed(2)}</span>
-                    </div>
+              {/* ── Chatbot order section ── */}
+              {hasChatbot && (
+                <div className="cart-group" style={{
+                  marginBottom:"16px",
+                  border:"1px solid rgba(255,194,14,0.3)",
+                  borderRadius:"14px", overflow:"hidden",
+                }}>
+                  {/* Section header */}
+                  <div style={{
+                    display:"flex", justifyContent:"space-between", alignItems:"center",
+                    padding:"10px 14px",
+                    background:"rgba(255,194,14,0.08)",
+                    borderBottom:"1px solid rgba(255,194,14,0.2)",
+                  }}>
+                    <span style={{ fontSize:"12px", fontWeight:"700", color:"var(--gold)", letterSpacing:"1px" }}>
+                      🤖 FROM ASSISTANT
+                    </span>
+                    <button
+                      onClick={handleClearChatbotOrder}
+                      style={{
+                        background:"rgba(255,77,77,0.12)", border:"1px solid rgba(255,77,77,0.3)",
+                        color:"#ff6b6b", borderRadius:"6px", padding:"4px 10px",
+                        fontSize:"11px", fontWeight:"700", cursor:"pointer",
+                      }}
+                    >
+                      ✕ Remove
+                    </button>
                   </div>
-                );
-              })}
+
+                  {/* Chatbot items */}
+                  <div style={{ padding:"6px 0" }}>
+                    {chatbotItems.map((item, i) => {
+                      const globalIndex = displayCart.indexOf(item);
+                      return renderItemRow(item, i, globalIndex);
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Regular items section ── */}
+              {hasRegular && (
+                <div className="cart-group" style={{
+                  border: hasChatbot ? "1px solid rgba(255,255,255,0.1)" : "none",
+                  borderRadius: hasChatbot ? "14px" : "0",
+                  overflow:"hidden",
+                }}>
+                  {/* Only show section header if there's also a chatbot section */}
+                  {hasChatbot && (
+                    <div style={{
+                      display:"flex", justifyContent:"space-between", alignItems:"center",
+                      padding:"10px 14px",
+                      background:"rgba(255,255,255,0.04)",
+                      borderBottom:"1px solid rgba(255,255,255,0.1)",
+                    }}>
+                      <span style={{ fontSize:"12px", fontWeight:"700", color:"rgba(255,255,255,0.55)", letterSpacing:"1px" }}>
+                        ➕ ADDED ITEMS
+                      </span>
+                      <button
+                        onClick={handleClearRegularItems}
+                        style={{
+                          background:"rgba(255,77,77,0.12)", border:"1px solid rgba(255,77,77,0.3)",
+                          color:"#ff6b6b", borderRadius:"6px", padding:"4px 10px",
+                          fontSize:"11px", fontWeight:"700", cursor:"pointer",
+                        }}
+                      >
+                        ✕ Remove
+                      </button>
+                    </div>
+                  )}
+
+                  <div style={{ padding: hasChatbot ? "6px 0" : "0" }}>
+                    {regularItems.map((item, i) => {
+                      const globalIndex = displayCart.indexOf(item);
+                      return renderItemRow(item, i, globalIndex);
+                    })}
+                  </div>
+                </div>
+              )}
+
             </div>
           )}
 
@@ -512,6 +604,7 @@ function Cart({ cart, addToCart, removeFromCart, isJoinMode = false }) {
               </button>
             )}
           </div>
+
         </div>
       </div>
     </div>

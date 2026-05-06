@@ -24,7 +24,7 @@ function EditItemModal({ item, onClose, onSave }) {
   );
   const [itemExtras, setItemExtras]             = useState([]);
   const [removableExtras, setRemovableExtras]   = useState([]);
-  const [subView, setSubView]                   = useState("main"); // main | note | remove
+  const [subView, setSubView]                   = useState("main");
 
   const REMOVE_IDS = {
     "Burgers":     [1,2,3,4,5,8,9,11,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,29,31,32,35,36,37],
@@ -163,7 +163,6 @@ function EditItemModal({ item, onClose, onSave }) {
           {item.description && <p>{item.description}</p>}
         </div>
 
-        {/* Action buttons */}
         <div className="modal-actions">
           <button
             className="menu-action-btn notes-btn"
@@ -181,7 +180,6 @@ function EditItemModal({ item, onClose, onSave }) {
           )}
         </div>
 
-        {/* Pending preview */}
         {(pendingRemoved.length > 0 || pendingNote) && (
           <div style={{ padding:"0 20px 12px" }}>
             {pendingRemoved.length > 0 && (
@@ -201,7 +199,6 @@ function EditItemModal({ item, onClose, onSave }) {
           </div>
         )}
 
-        {/* Extras */}
         <div className="modal-scroll-area">
           {itemExtras.length > 0 && (
             <div className="extras-section">
@@ -254,10 +251,11 @@ function Checkout({ setCart }) {
   const [showQR,       setShowQR]       = useState(false);
   const [loading,      setLoading]      = useState(false);
   const [txIdSubmitted,setTxIdSubmitted]= useState(false);
+  const [liveCount,    setLiveCount]    = useState(1);
 
   // ── Edit modal state ──
-  const [editingItem,  setEditingItem]  = useState(null);  // item object | null
-  const [editingIndex, setEditingIndex] = useState(null);  // index in orderedItems
+  const [editingItem,  setEditingItem]  = useState(null);
+  const [editingIndex, setEditingIndex] = useState(null);
 
   const myPayerIdRef       = useRef(null);
   const ignoreUpdatesUntil = useRef(0);
@@ -271,12 +269,12 @@ function Checkout({ setCart }) {
 
   const isEditing = () => Date.now() < ignoreUpdatesUntil.current;
 
-  const subtotal    = (orderedItems || []).reduce((acc, item) => acc + (Number(item.price || item.price_at_time || 0) * (item.quantity || 1)), 0);
-  const totalVAT    = subtotal * 0.11;
-  const finalTotal  = subtotal + totalVAT;
-  const totalPaidSoFar   = payers.reduce((acc, p) => acc + getPayerUsdTotal(p), 0);
-  const remainingBalance = finalTotal - totalPaidSoFar;
-  const qrValue          = `${window.location.origin}/checkout?orderId=${activeOrderId}&mode=add`;
+  const subtotal           = (orderedItems || []).reduce((acc, item) => acc + (Number(item.price || item.price_at_time || 0) * (item.quantity || 1)), 0);
+  const totalVAT           = subtotal * 0.11;
+  const finalTotal         = subtotal + totalVAT;
+  const totalPaidSoFar     = payers.reduce((acc, p) => acc + getPayerUsdTotal(p), 0);
+  const remainingBalance   = finalTotal - totalPaidSoFar;
+  const qrValue            = `${window.location.origin}/checkout?orderId=${activeOrderId}&mode=add`;
 
   function getPayerUsdTotal(payer) {
     if (payer.method === 'card') return Number(payer.amount) || 0;
@@ -313,7 +311,6 @@ function Checkout({ setCart }) {
     setOrderedItems(newItems);
     setEditingItem(null);
     setEditingIndex(null);
-    // Sync to backend
     try {
       await axios.put(`${BACKEND}/admin/orders/${activeOrderId}/status`, {
         items: newItems
@@ -370,12 +367,23 @@ function Checkout({ setCart }) {
   useEffect(() => {
     if (!activeOrderId) return;
     socket.emit("joinOrder", activeOrderId);
+
     socket.on("cartUpdated", () => {
       axios.get(`${BACKEND}/orders/${activeOrderId}`)
         .then(res => setOrderedItems(res.data.items || []))
         .catch(() => {});
     });
-    return () => { socket.off("cartUpdated"); };
+
+    socket.on("presenceUpdate", ({ count }) => {
+      setLiveCount(count);
+      localStorage.setItem('tablePresence', count);
+      window.dispatchEvent(new Event('presenceChanged'));
+    });
+
+    return () => {
+      socket.off("cartUpdated");
+      socket.off("presenceUpdate");
+    };
   }, [activeOrderId]);
 
   useEffect(() => {
@@ -578,7 +586,7 @@ function Checkout({ setCart }) {
 
   // ── Steps ─────────────────────────────────────────────────────────
   if (step === "waiting" || step === "waitingForPayment") {
-    const myPayers   = payers.filter(p => p.ownerId === myUserId.current);
+    const myPayers    = payers.filter(p => p.ownerId === myUserId.current);
     const needsAction = myPayers.find(p => p.txIdRequested && !txIdSubmitted);
 
     if (needsAction) return (
@@ -631,7 +639,6 @@ function Checkout({ setCart }) {
 
   if (step === "payment") return (
     <div className="checkout-page">
-
       <div className="overlay">
         {showQR && (
           <div className="qr-popup-overlay">
@@ -664,7 +671,6 @@ function Checkout({ setCart }) {
                     {payers.map(payer => renderPayerCard(payer))}
                     <div className="payer-actions-row">
                       <button type="button" className="add-payer-btn-glass qr-split-btn" onClick={() => setShowQR(true)}>Scan to split 📲</button>
-                      
                     </div>
                   </>
                 )}
@@ -672,10 +678,29 @@ function Checkout({ setCart }) {
 
               <form onSubmit={handleConfirmPayment}>
                 <div className="checkout-summary-mini-glass">
-                  <div className="summary-row"><span>Total Bill:</span><span>${finalTotal.toFixed(2)}</span></div>
-                  <div className="summary-row" style={{ color: remainingBalance > 0.01 ? '#ff6b6b' : '#95b508' }}>
-                    <span>Remaining:</span><span>${remainingBalance.toFixed(2)}</span>
+
+                  {/* ── Total Bill ── */}
+                  <div className="summary-row">
+                    <span>Total Bill:</span>
+                    <span style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'2px' }}>
+                      <span>${finalTotal.toFixed(2)}</span>
+                      <span style={{ fontSize:'11px', color:'#fff' }}>
+                        {(finalTotal * EXCHANGE_RATE).toLocaleString()} LBP
+                      </span>
+                    </span>
                   </div>
+
+                  {/* ── Remaining ── */}
+                  <div className="summary-row" style={{ color: remainingBalance > 0.01 ? '#ff6b6b' : '#95b508' }}>
+                    <span>Remaining:</span>
+                    <span style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'2px' }}>
+                      <span>${remainingBalance.toFixed(2)}</span>
+                      <span style={{ fontSize:'11px', opacity:'0.8', color:'#fff' }}>
+                        {(remainingBalance * EXCHANGE_RATE).toLocaleString()} LBP
+                      </span>
+                    </span>
+                  </div>
+
                 </div>
                 <button type="submit" className="place-order-btn-final" disabled={loading}>
                   {loading ? "CONFIRMING..." : "CONFIRM PAYMENT 💳"}
@@ -706,7 +731,7 @@ function Checkout({ setCart }) {
           <div className="receipt-divider"></div>
           <div className="receipt-items">
             {orderedItems.map((item, index) => {
-              const extras    = item.selected_extras || item.selectedExtras || [];
+              const extras     = item.selected_extras || item.selectedExtras || [];
               const extrasText = extras.map(e => typeof e === 'object' ? e.name : e).join(', ');
               const unitPrice  = item.price || item.price_at_time || 0;
               return (
@@ -724,7 +749,15 @@ function Checkout({ setCart }) {
           <div className="receipt-summary">
             <div className="r-summary-line"><span>Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
             <div className="r-summary-line"><span>VAT (11%):</span><span>${totalVAT.toFixed(2)}</span></div>
-            <div className="receipt-total-row"><span>TOTAL:</span><span>${finalTotal.toFixed(2)}</span></div>
+            <div className="receipt-total-row">
+              <span>TOTAL:</span>
+              <span style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'3px' }}>
+                <span>${finalTotal.toFixed(2)}</span>
+                <span style={{ fontSize:'12px', fontWeight:'normal', color:'#888' }}>
+                  {(finalTotal * EXCHANGE_RATE).toLocaleString()} LBP
+                </span>
+              </span>
+            </div>
           </div>
         </div>
         <div style={{ textAlign:'center', width:'100%', maxWidth:'420px' }}>

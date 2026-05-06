@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "../hooks/useTheme";
 import "../style/navbar.css";
 
+
 export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, addToCart }) {
   const [open, setOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -13,52 +14,72 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
   const navigate = useNavigate();
   const isHome = location.pathname === "/";
 
+  // ── Live presence ──
+  const [presenceCount, setPresenceCount] = useState(() =>
+    parseInt(localStorage.getItem("tablePresence") || "0", 10)
+  );
+
+  useEffect(() => {
+    const handler = () => {
+      setPresenceCount(parseInt(localStorage.getItem("tablePresence") || "0", 10));
+    };
+    window.addEventListener("presenceChanged", handler);
+    return () => window.removeEventListener("presenceChanged", handler);
+  }, []);
+
+  // ── Close cart popup on outside click ──
   useEffect(() => {
     const handler = (e) => {
       const clickedDesktop = desktopCartRef.current && desktopCartRef.current.contains(e.target);
-      const clickedMobile = mobileCartRef.current && mobileCartRef.current.contains(e.target);
+      const clickedMobile  = mobileCartRef.current  && mobileCartRef.current.contains(e.target);
       if (!clickedDesktop && !clickedMobile) setCartOpen(false);
     };
     if (cartOpen) document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [cartOpen]);
 
-  // ✅ Fix NaN — كل قيمة بتتحقق
+  // ── Total price ──
   const totalPrice = cartItems.reduce((acc, item) => {
     const basePrice = Number(item.price) || 0;
-    const extras = Array.isArray(item.selectedExtras)
+    const extras    = Array.isArray(item.selectedExtras)
       ? item.selectedExtras.reduce((s, e) => s + (Number(e.price) || 0), 0)
       : 0;
     const qty = Number(item.quantity) || 1;
     return acc + (basePrice + extras) * qty;
   }, 0);
 
+  // ── Cart popup content (shared between desktop & mobile) ──
   const popupContent = (
     <>
       <div className="nav-cart-popup-header">
         <span>My Order</span>
         <span className="nav-cart-popup-total">${totalPrice.toFixed(2)}</span>
       </div>
+
       <div className="nav-cart-popup-body">
         {cartItems.length === 0 ? (
           <p className="nav-cart-popup-empty">Cart is empty</p>
         ) : (
           cartItems.map((item, idx) => {
             const basePrice = Number(item.price) || 0;
-            const extras = Array.isArray(item.selectedExtras)
+            const extras    = Array.isArray(item.selectedExtras)
               ? item.selectedExtras.reduce((s, e) => s + (Number(e.price) || 0), 0)
               : 0;
-            const qty = Number(item.quantity) || 1;
+            const qty       = Number(item.quantity) || 1;
             const lineTotal = (basePrice + extras) * qty;
             return (
               <div key={idx} className="nav-cpi">
                 <div className="nav-cpi-left">
                   <span className="nav-cpi-name">{item.name}</span>
                   {Array.isArray(item.selectedExtras) && item.selectedExtras.length > 0 && (
-                    <span className="nav-cpi-extras">+ {item.selectedExtras.map(e => e.name).join(", ")}</span>
+                    <span className="nav-cpi-extras">
+                      + {item.selectedExtras.map(e => e.name).join(", ")}
+                    </span>
                   )}
                   {Array.isArray(item.removedExtras) && item.removedExtras.length > 0 && (
-                    <span className="nav-cpi-removed">✕ No {item.removedExtras.map(e => e.name).join(", ")}</span>
+                    <span className="nav-cpi-removed">
+                      ✕ No {item.removedExtras.map(e => e.name).join(", ")}
+                    </span>
                   )}
                   {item.specialNote && (
                     <span className="nav-cpi-note">📝 {item.specialNote}</span>
@@ -73,6 +94,7 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
           })
         )}
       </div>
+
       <div className="nav-cart-popup-footer">
         <div className="nav-cart-popup-subtotal">
           <span>Total</span>
@@ -88,6 +110,7 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
     </>
   );
 
+  // ── Theme toggle button ──
   const ThemeBtn = () => (
     <button className="theme-toggle-btn" onClick={toggle} title={isDark ? "Light Mode" : "Dark Mode"}>
       <span className="theme-toggle-track">
@@ -101,15 +124,30 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
       <nav className={`navbar ${isHome ? "nav-home" : ""}`}>
         <div className="navbar-inner">
 
+          {/* Logo */}
+          <Link to="/" className="nav-logo-wrap">
+            <img src="/logo.png" alt="Snack Attack" className="nav-logo" />
+          </Link>
+
           {/* Desktop Links */}
           <div className="nav-links">
-            <Link to="/" className="nav-link">Home</Link>
+            <Link to="/" className={`nav-link ${location.pathname === "/" ? "active" : ""}`}>Home</Link>
             <Link to="/menu" className={`nav-link ${location.pathname === "/menu" ? "active" : ""}`}>Menu</Link>
           </div>
 
           {/* Desktop Actions */}
           <div className="nav-actions">
+
+            {/* Live presence badge — desktop */}
+            {presenceCount >= 2 && (
+              <div className="presence-badge">
+                👥 {presenceCount} at table
+              </div>
+            )}
+
             <a href="tel:+96103231506" className="nav-phone">📞 03 231 506</a>
+
+            {/* Desktop cart */}
             <div className="nav-cart-popup-wrap" ref={desktopCartRef}>
               <button
                 className="nav-cart"
@@ -122,12 +160,23 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
                 {popupContent}
               </div>
             </div>
+
             <div className="nav-theme-toggle"><ThemeBtn /></div>
           </div>
 
           {/* Mobile Buttons */}
           <div className="nav-mobile-btns">
+
+            {/* Live presence badge — mobile (compact) */}
+            {presenceCount >= 2 && (
+              <div className="presence-badge presence-badge-mobile">
+                👥 {presenceCount}
+              </div>
+            )}
+
             <ThemeBtn />
+
+            {/* Mobile cart */}
             <div className="nav-cart-popup-wrap" ref={mobileCartRef}>
               <button
                 className="nav-cart-m"
@@ -140,32 +189,44 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
                 {popupContent}
               </div>
             </div>
+
             <button className="nav-burger" onClick={() => setOpen(true)}>☰</button>
           </div>
 
         </div>
       </nav>
 
-      {/* Dim */}
+      {/* Dim overlay */}
       <div className={`nav-dim ${open ? "on" : ""}`} onClick={() => setOpen(false)} />
 
-      {/* Drawer */}
+      {/* Mobile Drawer */}
       <div className={`nav-drawer ${open ? "on" : ""}`}>
         <button className="nav-x" onClick={() => setOpen(false)}>✕</button>
+
         <div className="nav-drawer-body">
           <div className="nav-d-theme">
             <span>{isDark ? "Dark Mode" : "Light Mode"}</span>
             <ThemeBtn />
           </div>
-          <Link to="/" className="nav-d-link" onClick={() => setOpen(false)}>Home</Link>
+
+          <Link to="/"    className="nav-d-link" onClick={() => setOpen(false)}>Home</Link>
           <div className="nav-d-sep" />
           <Link to="/menu" className="nav-d-link" onClick={() => setOpen(false)}>Menu</Link>
           <div className="nav-d-sep" />
+
           <a href="tel:+96103231506" className="nav-d-phone">📞 03 231 506</a>
+
           <Link to="/cart" className="nav-d-cart" onClick={() => setOpen(false)}>
             🛒 Cart
             {cartCount > 0 && <span className="nav-d-badge">{cartCount}</span>}
           </Link>
+
+          {/* Live presence — drawer */}
+          {presenceCount >= 2 && (
+            <div className="nav-d-presence">
+              👥 {presenceCount} people at this table
+            </div>
+          )}
         </div>
       </div>
     </>

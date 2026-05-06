@@ -363,3 +363,47 @@ html, body { margin:0; padding:0; width:100%; overflow-x:hidden; }
     max-height: calc(100vh - 60px) !important;
   }
 }
+/* ── Presence Badge ── */
+.presence-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 194, 14, 0.12);
+  border: 1px solid rgba(255, 194, 14, 0.35);
+  color: var(--gold);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  animation: presencePulse 2.5s ease-in-out infinite;
+}
+
+.presence-badge-mobile {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+@keyframes presencePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 194, 14, 0.2); }
+  50% { box-shadow: 0 0 0 5px rgba(255, 194, 14, 0); }
+}
+
+/* Presence بالـ Drawer */
+.nav-d-presence {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 18px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 194, 14, 0.2);
+  background: rgba(255, 194, 14, 0.06);
+  color: var(--gold);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-top: 6px;
+}
