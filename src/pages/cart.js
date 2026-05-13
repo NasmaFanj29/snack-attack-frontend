@@ -234,15 +234,16 @@ function Cart({ cart, addToCart, removeFromCart, setCart, isJoinMode = false }) 
   const hasRegular    = regularItems.length > 0;
 
   // ── Financials ──
-  const getLinePrice = (item) => {
-  const base   = Number(item.price || item.price_at_time) || 0;
- const getLinePrice = (item) => {
-  const base   = Number(item.price || item.price_at_time) || 0;
+const getLinePrice = (item) => {
+  const base = Number(item.price || item.price_at_time) || 0;
+
   const extras = Array.isArray(item.selectedExtras)
-    ? item.selectedExtras.reduce((s, e) => s + (Number(e.price) || 0), 0)
+    ? item.selectedExtras.reduce(
+        (sum, extra) => sum + (Number(extra.price) || 0),
+        0
+      )
     : 0;
-  return base + extras;
-};
+
   return base + extras;
 };
 
