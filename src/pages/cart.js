@@ -235,11 +235,10 @@ function Cart({ cart, addToCart, removeFromCart, setCart, isJoinMode = false }) 
 
   // ── Financials ──
   const getLinePrice = (item) => {
-    const base   = Number(item.price || item.price_at_time) || 0;
-    const extras = Array.isArray(item.selectedExtras)
-      ? item.selectedExtras.reduce((s, e) => s + (Number(e.price) || 0), 0) : 0;
-    return base + extras;
-  };
+  const base   = Number(item.price || item.price_at_time) || 0;
+  const extras = item.selectedExtras.reduce((s, e) => s + e.price, 0); // ← extras included
+  return base + extras;
+};
 
   const subtotal    = displayCart.reduce((acc, item) =>
     acc + getLinePrice(item) * (Number(item.quantity) || 0), 0);

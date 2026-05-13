@@ -432,8 +432,8 @@ function Checkout({ setCart }) {
   );
 
   const totalVAT = subtotal * 0.11;
-
-  const finalTotal = subtotal + totalVAT;
+const [serverTotal, setServerTotal] = useState(0);
+  const finalTotal = serverTotal > 0 ? serverTotal : subtotal + totalVAT;
 
   const qrValue = `${window.location.origin}/checkout?orderId=${activeOrderId}&mode=add`;
 
@@ -570,7 +570,7 @@ function Checkout({ setCart }) {
         setTableId(
           res.data.order?.table_id || "1"
         );
-
+setServerTotal(Number(res.data.order?.total_price || 0));
         let existingSplits = [];
 
         try {
@@ -662,14 +662,6 @@ function Checkout({ setCart }) {
           ...p,
           [field]: value,
         };
-
-        if (
-          field === "method" &&
-          value === "card" &&
-          !p.whishCode
-        ) {
-          next.whishCode = generateWhishCode();
-        }
 
         return next;
       });
