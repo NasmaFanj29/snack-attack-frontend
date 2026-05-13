@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import "../style/cart.css";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import "../style/cart.css";
 
 const BACKEND = "https://snack-attack-backend.onrender.com";
 

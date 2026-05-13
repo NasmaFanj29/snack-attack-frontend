@@ -7,7 +7,7 @@ import React, { useRef } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import '../style/qr-generator.css';
 
-const RESTAURANT_URL = "https://snack-attack-frontend-eta.vercel.app/"; // ← change to your URL
+const RESTAURANT_URL = process.env.REACT_APP_FRONTEND_URL || window.location.origin;
 const TABLE_COUNT = 10;
 const LOGO_URL = "/assets/logoburger.png"; // optional logo in QR center
 

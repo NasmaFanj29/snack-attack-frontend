@@ -195,7 +195,7 @@ function Chatbot({ menuItems = [], addToCart }) {
     };
 
     if (addToCart) addToCart(customItem);
-    // ... rest of event dispatch
+    window.dispatchEvent(new CustomEvent("snackCartAddByName", { detail: customItem }));
   };
   /* ── Check auto-rules before hitting the API ──────────────── */
   const checkAutoRules = (text) => {

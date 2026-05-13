@@ -1,52 +1,313 @@
 import React, { useState, useEffect, useRef } from "react";
-import "../style/menu.css";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import "../style/menu.css";
+
+const BACKEND = "https://snack-attack-backend.onrender.com";
 
 const REMOVE_EXTRAS_BY_CATEGORY = {
-  "Burgers": [1, 2, 3, 4, 5, 8, 9, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 29, 31, 32, 35, 36, 37],
-  "Salad": [1, 7, 10, 11, 12, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 37],
-  "Sandwiches": [1, 2, 3, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 35, 36, 37]
+  "Burgers": [1,2,3,4,5,8,9,11,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,29,31,32,35,36,37],
+  "Salad": [1,7,10,11,12,25,26,27,28,29,30,31,32,33,34,35,37],
+  "Sandwiches": [1,2,3,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,31,32,35,36,37],
 };
 
+/* ── Category icons ── */
+const CATEGORY_ICONS = {
+  "Burgers":     "🍔",
+  "Sandwiches":  "🥖",
+  "Salad":       "🥗",
+  "Beverages":   "🥤",
+  "Appetizers":  "🍟",
+  "Dips":        "🫙",
+  "Desserts":    "🍦",
+};
+
+/* ── Skeleton card ── */
+function SkeletonCard() {
+  return (
+    <div className="menu-card menu-card--skeleton">
+      <div className="mc-img-wrap mc-img-skeleton" />
+      <div className="mc-body">
+        <div className="mc-skeleton-line mc-skeleton-line--long" />
+        <div className="mc-skeleton-line mc-skeleton-line--short" />
+        <div className="mc-skeleton-footer">
+          <div className="mc-skeleton-price" />
+          <div className="mc-skeleton-btn" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   ITEM MODAL
+   ================================================================ */
+function ItemModal({ item, onClose, onAddToCart }) {
+  const [selectedExtras, setSelectedExtras] = useState([]);
+  const [pendingNote, setPendingNote]       = useState("");
+  const [pendingRemoved, setPendingRemoved] = useState([]);
+  const [itemExtras, setItemExtras]         = useState([]);
+  const [removableExtras, setRemovableExtras] = useState([]);
+  const [subView, setSubView]               = useState("main"); // main | note | remove
+  const [imgLoaded, setImgLoaded]           = useState(false);
+
+  useEffect(() => {
+    if (!item) return;
+    axios.get(`${BACKEND}/item-extras/${item.id}`)
+      .then(res => {
+        const all = res.data || [];
+        setItemExtras(all);
+        const ids = REMOVE_EXTRAS_BY_CATEGORY[item.category] || [];
+        setRemovableExtras(all.filter(e => ids.includes(e.id)));
+      })
+      .catch(() => { setItemExtras([]); setRemovableExtras([]); });
+  }, [item]);
+
+  if (!item) return null;
+
+  const modalPrice = Number(item.price || 0) +
+    selectedExtras.reduce((s, e) => s + Number(e.price || 0), 0);
+
+  const toggleExtra  = (extra) => setSelectedExtras(prev =>
+    prev.find(e => e.id === extra.id) ? prev.filter(e => e.id !== extra.id) : [...prev, extra]);
+  const toggleRemove = (extra) => setPendingRemoved(prev =>
+    prev.find(e => e.id === extra.id) ? prev.filter(e => e.id !== extra.id) : [...prev, extra]);
+
+  const handleAdd = () => {
+    onAddToCart({
+      id: item.id, databaseId: item.id,
+      name: item.name, price: item.price, image: item.image,
+      quantity: 1,
+      selectedExtras,
+      removedExtras: pendingRemoved,
+      specialNote: pendingNote || null,
+    });
+    onClose();
+  };
+
+  /* ── Note sub-view ── */
+  if (subView === "note") return (
+    <div className="modal-overlay" onClick={() => setSubView("main")}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={() => setSubView("main")}>×</button>
+        <div className="modal-subheader">
+          <p className="modal-subtitle">Special instructions</p>
+          <h2 className="modal-subitem">{item.name}</h2>
+        </div>
+        <div className="modal-scroll">
+          <textarea
+            className="modal-textarea"
+            placeholder="e.g. No onions, extra sauce, cut in half…"
+            value={pendingNote}
+            onChange={e => setPendingNote(e.target.value)}
+            rows={5}
+            autoFocus
+          />
+        </div>
+        <div className="modal-footer modal-footer--row">
+          <button className="modal-btn modal-btn--ghost" onClick={() => setSubView("main")}>← Back</button>
+          <button
+            className="modal-btn modal-btn--primary"
+            onClick={() => setSubView("main")}
+            disabled={!pendingNote.trim()}
+          >
+            Save Note ✓
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  /* ── Remove sub-view ── */
+  if (subView === "remove") return (
+    <div className="modal-overlay" onClick={() => setSubView("main")}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={() => setSubView("main")}>×</button>
+        <div className="modal-subheader">
+          <p className="modal-subtitle">Remove ingredients</p>
+          <h2 className="modal-subitem">{item.name}</h2>
+        </div>
+        <div className="modal-scroll">
+          {removableExtras.length > 0 ? (
+            <div className="extras-list">
+              {removableExtras.map(extra => (
+                <label key={extra.id} className="extra-row extra-row--remove">
+                  <div className="extra-row-left">
+                    <div className={`extra-checkbox extra-checkbox--remove ${pendingRemoved.some(e => e.id === extra.id) ? "checked" : ""}`}>
+                      {pendingRemoved.some(e => e.id === extra.id) && <span>✕</span>}
+                    </div>
+                    <span className="extra-name">{extra.name}</span>
+                  </div>
+                  <input
+                    type="checkbox" hidden
+                    checked={pendingRemoved.some(e => e.id === extra.id)}
+                    onChange={() => toggleRemove(extra)}
+                  />
+                </label>
+              ))}
+            </div>
+          ) : (
+            <p className="modal-empty">No removable ingredients for this item.</p>
+          )}
+        </div>
+        <div className="modal-footer modal-footer--row">
+          <button className="modal-btn modal-btn--ghost" onClick={() => setSubView("main")}>← Back</button>
+          <button
+            className="modal-btn modal-btn--danger"
+            onClick={() => setSubView("main")}
+            disabled={pendingRemoved.length === 0}
+          >
+            Confirm ✕
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  /* ── Main view ── */
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>×</button>
+
+        {/* Hero image */}
+        <div className="modal-img-wrap">
+          {!imgLoaded && <div className="modal-img-skeleton" />}
+          <img
+            src={`${BACKEND}/images/${item.image}`}
+            alt={item.name}
+            className={`modal-img ${imgLoaded ? "modal-img--loaded" : ""}`}
+            onLoad={() => setImgLoaded(true)}
+          />
+          <div className="modal-img-overlay" />
+          <div className="modal-img-title">
+            <h2>{item.name}</h2>
+            <span className="modal-img-price">${Number(item.price).toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Description */}
+        {item.description && (
+          <p className="modal-desc">{item.description}</p>
+        )}
+
+        {/* Action chips */}
+        <div className="modal-chips">
+          <button
+            className={`modal-chip ${pendingNote ? "modal-chip--active" : ""}`}
+            onClick={() => setSubView("note")}
+          >
+            <span className="chip-icon">📝</span>
+            {pendingNote ? "Edit note" : "Add note"}
+          </button>
+
+          {!["Beverages", "Appetizers", "Dips"].includes(item.category) && (
+            <button
+              className={`modal-chip modal-chip--red ${pendingRemoved.length > 0 ? "modal-chip--active-red" : ""}`}
+              onClick={() => setSubView("remove")}
+            >
+              <span className="chip-icon">✕</span>
+              {pendingRemoved.length > 0 ? `Remove (${pendingRemoved.length})` : "Remove ingredients"}
+            </button>
+          )}
+        </div>
+
+        {/* Active selections preview */}
+        {(pendingRemoved.length > 0 || pendingNote) && (
+          <div className="modal-selections">
+            {pendingRemoved.length > 0 && (
+              <div className="selection-tag selection-tag--red">
+                ✕ No {pendingRemoved.map(e => e.name).join(", ")}
+              </div>
+            )}
+            {pendingNote && (
+              <div className="selection-tag selection-tag--gold">
+                📝 {pendingNote}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Add-on extras */}
+        <div className="modal-scroll">
+          {itemExtras.length > 0 && (
+            <div className="extras-section">
+              <p className="extras-label">Add extras</p>
+              <div className="extras-list">
+                {itemExtras.map(extra => (
+                  <label key={extra.id} className="extra-row">
+                    <div className="extra-row-left">
+                      <div className={`extra-checkbox ${selectedExtras.some(e => e.id === extra.id) ? "checked" : ""}`}>
+                        {selectedExtras.some(e => e.id === extra.id) && <span>✓</span>}
+                      </div>
+                      <span className="extra-name">{extra.name}</span>
+                    </div>
+                    <span className="extra-price">+${Number(extra.price).toFixed(2)}</span>
+                    <input
+                      type="checkbox" hidden
+                      checked={selectedExtras.some(e => e.id === extra.id)}
+                      onChange={() => toggleExtra(extra)}
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* CTA */}
+        <div className="modal-footer">
+          <button className="modal-cta" onClick={handleAdd}>
+            <span>Add to order</span>
+            <span className="modal-cta-price">${modalPrice.toFixed(2)}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
+   MENU COMPONENT
+   ================================================================ */
 function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
   const navigate = useNavigate();
 
-  // ── Menu data ──
-  const [activeCategory, setActiveCategory] = useState("");
-  const [search, setSearch] = useState("");
-  const [burgerType, setBurgerType] = useState("All");
-  const [menuData, setMenuData] = useState([]);
-  const [counter, setCounter] = useState({});
+  const [menuData, setMenuData]               = useState([]);
+  const [loading, setLoading]                 = useState(true);
+  const [activeCategory, setActiveCategory]   = useState("");
+  const [search, setSearch]                   = useState("");
+  const [burgerType, setBurgerType]           = useState("All");
+  const [counter, setCounter]                 = useState({});
+  const [modalItem, setModalItem]             = useState(null);
+  const [cartPopupOpen, setCartPopupOpen]     = useState(false);
+  const cartPopupRef                          = useRef(null);
 
-  // ── Main customize modal ──
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [itemExtras, setItemExtras] = useState([]);
-  const [selectedExtras, setSelectedExtras] = useState([]);
-
-  // ── Pending state (saved into the item on final Add to Cart) ──
-  const [pendingNote, setPendingNote] = useState("");
-  const [pendingRemovedExtras, setPendingRemovedExtras] = useState([]);
-
-  // ── Notes sub-modal ──
-  const [notesModalOpen, setNotesModalOpen] = useState(false);
-  const [notesText, setNotesText] = useState("");
-  const [notesItem, setNotesItem] = useState(null);
-
-  // ── Remove extras sub-modal ──
-  const [removeExtrasModalOpen, setRemoveExtrasModalOpen] = useState(false);
-  const [removeExtrasItem, setRemoveExtrasItem] = useState(null);
-  const [removableExtras, setRemovableExtras] = useState([]);
-  const [selectedRemoveExtras, setSelectedRemoveExtras] = useState([]);
-
-  // ── Cart popup ──
-  const [cartPopupOpen, setCartPopupOpen] = useState(false);
-  const cartPopupRef = useRef(null);
-
-  // ── Close cart popup on outside click ──
+  /* Fetch menu */
   useEffect(() => {
-    const handler = (e) => {
+    axios.get(`${BACKEND}/menu`)
+      .then(res => {
+        const data = res.data.map(item => ({ ...item, price: Number(item.price) }));
+        setMenuData(data);
+        setMenuItems(data);
+        if (data.length > 0) setActiveCategory(data[0].category);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [setMenuItems]);
+
+  /* Sync counter with cart */
+  useEffect(() => {
+    const c = {};
+    if (Array.isArray(cartItems)) {
+      cartItems.forEach(item => { c[item.name] = (c[item.name] || 0) + item.quantity; });
+    }
+    setCounter(c);
+  }, [cartItems]);
+
+  /* Close cart popup on outside tap */
+  useEffect(() => {
+    const handler = e => {
       if (cartPopupRef.current && !cartPopupRef.current.contains(e.target))
         setCartPopupOpen(false);
     };
@@ -54,210 +315,78 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [cartPopupOpen]);
 
-  // ── Fetch menu ──
-  useEffect(() => {
-    axios.get("https://snack-attack-backend.onrender.com/menu")
-      .then((res) => {
-        const data = res.data.map((item) => ({ ...item, price: Number(item.price) }));
-        setMenuData(data);
-        setMenuItems(data);
-        if (data.length > 0) setActiveCategory(data[0].category);
-      })
-      .catch(console.error);
-  }, [setMenuItems]);
-
-  // ── Sync counter with cart ──
-  useEffect(() => {
-    const newCounter = {};
-    if (Array.isArray(cartItems)) {
-      cartItems.forEach(item => {
-        newCounter[item.name] = (newCounter[item.name] || 0) + item.quantity;
-      });
-    }
-    setCounter(newCounter);
-  }, [cartItems]);
-
-  const categories = [...new Set(menuData.map((item) => item.category))];
+  const categories = [...new Set(menuData.map(i => i.category))];
 
   const filteredItems = menuData
-    .filter((item) => item.category === activeCategory)
-    .filter((item) =>
+    .filter(i => i.category === activeCategory)
+    .filter(i =>
       activeCategory === "Burgers" && burgerType !== "All"
-        ? item.type?.toLowerCase() === burgerType.toLowerCase()
+        ? i.type?.toLowerCase() === burgerType.toLowerCase()
         : true
     )
-    .filter((item) => item.name.toLowerCase().includes(search.toLowerCase()));
+    .filter(i => i.name.toLowerCase().includes(search.toLowerCase()));
 
-  // ── Open main customize modal ──
-  const handleOpenModal = async (item) => {
-    setSelectedItem(item);
-    setSelectedExtras([]);
-    setPendingNote("");
-    setPendingRemovedExtras([]);
-    try {
-      const res = await axios.get(
-        `https://snack-attack-backend.onrender.com/item-extras/${item.id}`
-      );
-      setItemExtras(res.data);
-    } catch {
-      setItemExtras([]);
-    }
-    setIsModalOpen(true);
-  };
-
-  // ── Final Add to Cart from main modal ──
-  // Combines selectedExtras + pendingRemovedExtras + pendingNote into ONE item
-  const handleAddToCartFromModal = () => {
-    addToCart({
-      id:             selectedItem.id,
-      databaseId:     selectedItem.id,
-      name:           selectedItem.name,
-      price:          selectedItem.price,
-      image:          selectedItem.image,
-      quantity:       1,
-      selectedExtras: selectedExtras,
-      removedExtras:  pendingRemovedExtras,
-      specialNote:    pendingNote || null,
-    });
-    setIsModalOpen(false);
-    setPendingNote("");
-    setPendingRemovedExtras([]);
-  };
-
-  // ── Open notes sub-modal ──
-  const handleOpenNotesModal = (item) => {
-    setNotesItem(item);
-    setNotesText(pendingNote); // pre-fill if already set
-    setNotesModalOpen(true);
-  };
-
-  // ── Save note → back to main modal (does NOT add to cart yet) ──
-  const handleSaveNote = () => {
-    if (notesText.trim()) {
-      setPendingNote(notesText.trim());
-      setNotesModalOpen(false);
-      setIsModalOpen(true);
-    }
-  };
-
-  // ── Open remove extras sub-modal ──
-  const handleOpenRemoveExtrasModal = async (item) => {
-    setRemoveExtrasItem(item);
-    setSelectedRemoveExtras(pendingRemovedExtras); // pre-fill if already set
-    const removableIds = REMOVE_EXTRAS_BY_CATEGORY[item.category] || [];
-    try {
-      const res = await axios.get(
-        `https://snack-attack-backend.onrender.com/item-extras/${item.id}`
-      );
-      const allExtras = res.data || [];
-      setRemovableExtras(allExtras.filter(e => removableIds.includes(e.id)));
-    } catch {
-      setRemovableExtras([]);
-    }
-    setRemoveExtrasModalOpen(true);
-  };
-
-  // ── Save removed extras → back to main modal (does NOT add to cart yet) ──
-  const handleSaveRemoveExtras = () => {
-    if (selectedRemoveExtras.length > 0) {
-      setPendingRemovedExtras(selectedRemoveExtras);
-      setRemoveExtrasModalOpen(false);
-      setIsModalOpen(true);
-    } else {
-      alert("Select at least one ingredient to remove");
-    }
-  };
-
-  const toggleExtra = (extra) => {
-    setSelectedExtras(prev =>
-      prev.find(e => e.id === extra.id)
-        ? prev.filter(e => e.id !== extra.id)
-        : [...prev, extra]
-    );
-  };
-
-  const toggleRemoveExtra = (extra) => {
-    setSelectedRemoveExtras(prev =>
-      prev.find(e => e.id === extra.id)
-        ? prev.filter(e => e.id !== extra.id)
-        : [...prev, extra]
-    );
-  };
-
-  const handleUpdateCounter = (item, change) => {
-    if (change < 0) removeFromCart(item.name);
-  };
-
-  // ── Cart popup price helpers ──
-  const getItemBasePrice = (item) => {
-    const extrasTotal = Array.isArray(item.selectedExtras)
-      ? item.selectedExtras.reduce((s, e) => s + Number(e.price || 0), 0)
+  /* Cart price helpers */
+  const getLinePrice = item => {
+    const extras = Array.isArray(item.selectedExtras)
+      ? item.selectedExtras.reduce((s, e) => s + (Number(e.price) || 0), 0)
       : 0;
-    return Number(item.price) + extrasTotal;
+    return (Number(item.price) || 0) + extras;
   };
   const totalCartQty   = cartItems.reduce((a, i) => a + i.quantity, 0);
-  const totalCartPrice = cartItems.reduce((acc, item) => acc + getItemBasePrice(item) * item.quantity, 0);
-
-  // ── Modal price display ──
-  const modalPrice = selectedItem
-    ? selectedItem.price + selectedExtras.reduce((s, e) => s + Number(e.price || 0), 0)
-    : 0;
+  const totalCartPrice = cartItems.reduce((acc, i) => acc + getLinePrice(i) * i.quantity, 0);
 
   return (
     <div className="menu-page">
-      <div className="overlay" />
-      <h1 className="menu-title">OUR MENU</h1>
+      <div className="menu-bg-overlay" />
 
-      {/* ── Floating cart button ── */}
-      {cartItems.length > 0 && (
-        <div className="navbar-cart-wrap" ref={cartPopupRef}>
+      {/* ── Floating cart FAB ── */}
+      {totalCartQty > 0 && (
+        <div className="menu-cart-fab-wrap" ref={cartPopupRef}>
           <button
-            className={`navbar-cart-btn ${cartPopupOpen ? "active" : ""}`}
+            className={`menu-cart-fab ${cartPopupOpen ? "menu-cart-fab--open" : ""}`}
             onClick={() => setCartPopupOpen(o => !o)}
           >
-            <span className="nbc-icon">🛒</span>
-            <span className="nbc-label">View Cart</span>
-            <span className="nbc-badge">{totalCartQty}</span>
+            <span className="fab-icon">🛒</span>
+            <span className="fab-label">View order</span>
+            <span className="fab-badge">{totalCartQty}</span>
+            <span className="fab-price">${totalCartPrice.toFixed(2)}</span>
           </button>
 
           {cartPopupOpen && (
-            <div className="cart-popup">
-              <div className="cart-popup-header">
-                <span>My Order</span>
-                <span className="cart-popup-total">${totalCartPrice.toFixed(2)}</span>
+            <div className="menu-cart-popup">
+              <div className="mcp-header">
+                <span>Your order</span>
+                <span className="mcp-total">${totalCartPrice.toFixed(2)}</span>
               </div>
-              <div className="cart-popup-body">
+              <div className="mcp-body">
                 {cartItems.map((item, idx) => (
-                  <div key={idx} className="cart-popup-item">
-                    <div className="cpi-left">
-                      <span className="cpi-name">{item.name}</span>
+                  <div key={idx} className="mcp-item">
+                    <div className="mcp-item-left">
+                      <span className="mcp-item-name">{item.name}</span>
                       {item.selectedExtras?.length > 0 && (
-                        <span className="cpi-extras">+ {item.selectedExtras.map(e => e.name).join(", ")}</span>
+                        <span className="mcp-item-extras">+ {item.selectedExtras.map(e => e.name).join(", ")}</span>
                       )}
                       {item.removedExtras?.length > 0 && (
-                        <span className="cpi-removed">✕ No {item.removedExtras.map(e => e.name).join(", ")}</span>
+                        <span className="mcp-item-removed">✕ No {item.removedExtras.map(e => e.name).join(", ")}</span>
                       )}
                       {item.specialNote && (
-                        <span className="cpi-note">📝 {item.specialNote}</span>
+                        <span className="mcp-item-note">📝 {item.specialNote}</span>
                       )}
                     </div>
-                    <div className="cpi-right">
-                      <span className="cpi-qty">×{item.quantity}</span>
-                      <span className="cpi-price">${(getItemBasePrice(item) * item.quantity).toFixed(2)}</span>
+                    <div className="mcp-item-right">
+                      <span className="mcp-item-qty">×{item.quantity}</span>
+                      <span className="mcp-item-price">${(getLinePrice(item) * item.quantity).toFixed(2)}</span>
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="cart-popup-footer">
-                <div className="cart-popup-subtotal">
-                  <span>Total</span>
-                  <span>${totalCartPrice.toFixed(2)}</span>
-                </div>
+              <div className="mcp-footer">
                 <button
-                  className="cart-popup-checkout"
+                  className="mcp-checkout"
                   onClick={() => { setCartPopupOpen(false); navigate("/cart"); }}
                 >
-                  Proceed to Checkout →
+                  Proceed to checkout →
                 </button>
               </div>
             </div>
@@ -265,312 +394,180 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
         </div>
       )}
 
-      {/* ── Search ── */}
-      <input
-        type="text"
-        className="menu-search"
-        placeholder="Search for your favorite meal..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      {/* ── Header ── */}
+      <div className="menu-header">
+        <h1 className="menu-title">Our Menu</h1>
+        <div className="menu-search-wrap">
+          <span className="menu-search-icon">🔍</span>
+          <input
+            type="text"
+            className="menu-search"
+            placeholder="Search dishes…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          {search && (
+            <button className="menu-search-clear" onClick={() => setSearch("")}>×</button>
+          )}
+        </div>
+      </div>
 
       {/* ── Layout ── */}
-      <div className="menu-content">
-        <div className="menu-sidebar">
-          <div className="menu-categories-vertical">
-            {categories.map((c) => (
+      <div className="menu-layout">
+
+        {/* Desktop sidebar */}
+        <aside className="menu-sidebar">
+          <div className="menu-sidebar-inner">
+            <p className="sidebar-label">Categories</p>
+            <nav className="menu-categories">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  className={`cat-btn ${activeCategory === cat ? "cat-btn--active" : ""}`}
+                  onClick={() => { setActiveCategory(cat); setBurgerType("All"); }}
+                >
+                  <span className="cat-icon">{CATEGORY_ICONS[cat] || "🍽️"}</span>
+                  <span className="cat-name">{cat}</span>
+                  {activeCategory === cat && <span className="cat-active-dot" />}
+                </button>
+              ))}
+            </nav>
+
+            {activeCategory === "Burgers" && (
+              <>
+                <p className="sidebar-label" style={{ marginTop: 20 }}>Type</p>
+                <div className="burger-types">
+                  {["All", "Beef", "Chicken"].map(type => (
+                    <button
+                      key={type}
+                      className={`type-btn ${burgerType === type ? "type-btn--active" : ""}`}
+                      onClick={() => setBurgerType(type)}
+                    >
+                      {type === "All" ? "🍔 All" : type === "Beef" ? "🥩 Beef" : "🐔 Chicken"}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </aside>
+
+        {/* Grid */}
+        <main className="menu-grid-wrap">
+
+          {/* Mobile: category pills */}
+          <div className="menu-cat-scroll">
+            {categories.map(cat => (
               <button
-                key={c}
-                className={activeCategory === c ? "active" : ""}
-                onClick={() => { setActiveCategory(c); setBurgerType("All"); }}
+                key={cat}
+                className={`mobile-cat-pill ${activeCategory === cat ? "mobile-cat-pill--active" : ""}`}
+                onClick={() => { setActiveCategory(cat); setBurgerType("All"); }}
               >
-                {c}
+                {CATEGORY_ICONS[cat] || "🍽️"} {cat}
               </button>
             ))}
           </div>
+
+          {/* Mobile: burger type pills */}
           {activeCategory === "Burgers" && (
-            <div className="burger-type-buttons-vertical">
-              {["All", "Beef", "Chicken"].map((type) => (
+            <div className="menu-cat-scroll menu-cat-scroll--sub">
+              {["All", "Beef", "Chicken"].map(type => (
                 <button
                   key={type}
-                  className={burgerType === type ? "active" : ""}
+                  className={`mobile-cat-pill mobile-cat-pill--sm ${burgerType === type ? "mobile-cat-pill--active" : ""}`}
                   onClick={() => setBurgerType(type)}
                 >
-                  {type}
+                  {type === "All" ? "🍔 All" : type === "Beef" ? "🥩 Beef" : "🐔 Chicken"}
                 </button>
               ))}
             </div>
           )}
-        </div>
 
-        <div className="menu-list-wrapper">
-          <div className="menu-list">
-            {filteredItems.map((item, i) => (
-              <div className="menu-card" key={i}>
-                <div className="menu-img">
-                  <img
-                    src={`https://snack-attack-backend.onrender.com/images/${item.image}`}
-                    alt={item.name}
-                    onClick={() => handleOpenModal(item)}
-                    style={{ cursor: "pointer" }}
-                  />
+          {/* Cards */}
+          <div className="menu-grid">
+            {loading
+              ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
+              : filteredItems.length === 0
+              ? (
+                <div className="menu-empty">
+                  <span className="menu-empty-icon">🔍</span>
+                  <p>No items found</p>
+                  {search && <button onClick={() => setSearch("")}>Clear search</button>}
                 </div>
-                <div className="menu-info">
-                  <div className="title-row">
-                    <h3>{item.name}</h3>
-                    <div className="counter-controls" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        className={`qty-btn minus ${counter[item.name] > 0 ? "show" : "hidden"}`}
-                        onClick={() => handleUpdateCounter(item, -1)}
-                      >−</button>
-                      <button
-                        className={`dynamic-add-btn ${counter[item.name] > 0 ? "has-items" : ""}`}
-                        onClick={() => handleOpenModal(item)}
+              )
+              : filteredItems.map((item, i) => {
+                  const qty = counter[item.name] || 0;
+                  return (
+                    <div
+                      key={item.id || i}
+                      className="menu-card"
+                      style={{ animationDelay: `${i * 0.04}s` }}
+                    >
+                      {/* Image — tap to open modal */}
+                      <div
+                        className="mc-img-wrap"
+                        onClick={() => setModalItem(item)}
                       >
-                        {counter[item.name] > 0 ? counter[item.name] : "+"}
-                      </button>
+                        <img
+                          src={`${BACKEND}/images/${item.image}`}
+                          alt={item.name}
+                          className="mc-img"
+                          loading="lazy"
+                        />
+                        <div className="mc-img-scrim" />
+                      </div>
+
+                      {/* Body */}
+                      <div className="mc-body">
+                        <div className="mc-name-row">
+                          <h3
+                            className="mc-name"
+                            onClick={() => setModalItem(item)}
+                          >
+                            {item.name}
+                          </h3>
+                        </div>
+
+                        {item.description && (
+                          <p className="mc-desc">{item.description}</p>
+                        )}
+
+                        <div className="mc-footer">
+                          <span className="mc-price">${item.price.toFixed(2)}</span>
+
+                          <div className="mc-controls" onClick={e => e.stopPropagation()}>
+                            {qty > 0 && (
+                              <button
+                                className="mc-minus"
+                                onClick={() => removeFromCart(item.name)}
+                              >
+                                −
+                              </button>
+                            )}
+                            <button
+                              className={`mc-add ${qty > 0 ? "mc-add--has" : ""}`}
+                              onClick={() => setModalItem(item)}
+                            >
+                              {qty > 0 ? qty : "+"}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <p className="price">${item.price.toFixed(2)}</p>
-                </div>
-              </div>
-            ))}
+                  );
+                })
+            }
           </div>
-        </div>
+        </main>
       </div>
 
-      {/* ══════════════════════════════════════════
-          MAIN CUSTOMIZE MODAL
-      ══════════════════════════════════════════ */}
-      {isModalOpen && selectedItem && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="close-modal" onClick={() => setIsModalOpen(false)}>×</button>
-
-            {/* Image + name + description */}
-            <div className="modal-header">
-              <img
-                src={`https://snack-attack-backend.onrender.com/images/${selectedItem.image}`}
-                alt={selectedItem.name}
-              />
-              <h2>{selectedItem.name}</h2>
-              <p>{selectedItem.description}</p>
-            </div>
-
-            {/* Note / Remove buttons */}
-            <div className="modal-actions">
-              <button
-                className="menu-action-btn notes-btn"
-                style={
-                  ["Beverages", "Appetizers", "Dips"].includes(selectedItem.category)
-                    ? { flex: "0 0 auto", width: "auto", padding: "14px 18px" }
-                    : {}
-                }
-                onClick={() => {
-                  setIsModalOpen(false);
-                  handleOpenNotesModal(selectedItem);
-                }}
-              >
-                📝 {pendingNote ? "Edit Note" : "Add Note"}
-              </button>
-
-              {!["Beverages", "Appetizers", "Dips"].includes(selectedItem.category) && (
-                <button
-                  className="menu-action-btn remove-btn"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    handleOpenRemoveExtrasModal(selectedItem);
-                  }}
-                >
-                  ✕ {pendingRemovedExtras.length > 0 ? "Edit Remove" : "Remove Ingredients"}
-                </button>
-              )}
-            </div>
-
-            {/* ── Pending selections preview ── */}
-            {(pendingRemovedExtras.length > 0 || pendingNote) && (
-              <div style={{ padding: "0 20px 12px" }}>
-                {pendingRemovedExtras.length > 0 && (
-                  <div style={{
-                    padding: "8px 12px", borderRadius: "8px", marginBottom: "6px",
-                    background: "rgba(255,80,80,0.08)", border: "1px solid rgba(255,80,80,0.2)",
-                    fontSize: "12px", color: "rgba(255,90,90,0.9)"
-                  }}>
-                    ✕ No {pendingRemovedExtras.map(e => e.name).join(", ")}
-                  </div>
-                )}
-                {pendingNote && (
-                  <div style={{
-                    padding: "8px 12px", borderRadius: "8px",
-                    background: "rgba(255,194,14,0.08)", border: "1px solid rgba(255,194,14,0.2)",
-                    fontSize: "12px", color: "rgba(255,194,14,0.95)"
-                  }}>
-                    📝 {pendingNote}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Add-on extras */}
-            <div className="modal-scroll-area">
-              {itemExtras.length > 0 && (
-                <div className="extras-section">
-                  <h3>Customize Your Order</h3>
-                  <div className="extra-group">
-                    <div className="extra-group-title">Add Extras</div>
-                    {itemExtras.map((extra) => (
-                      <label key={extra.id} className="extra-label">
-                        <div className="extra-info">
-                          <input
-                            type="checkbox"
-                            checked={selectedExtras.some(e => e.id === extra.id)}
-                            onChange={() => toggleExtra(extra)}
-                          />
-                          <span>{extra.name}</span>
-                        </div>
-                        <span className="extra-price">+${Number(extra.price).toFixed(2)}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* ── Final Add to Cart button ── */}
-            <div className="modal-footer">
-              <button className="add-btn-final" onClick={handleAddToCartFromModal}>
-                Add to Cart — ${modalPrice.toFixed(2)}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════
-          NOTES SUB-MODAL
-      ══════════════════════════════════════════ */}
-      {notesModalOpen && notesItem && (
-        <div className="modal-overlay" onClick={() => { setNotesModalOpen(false); setIsModalOpen(true); }}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            {/* X → back to customize modal without saving */}
-            <button
-              className="close-modal"
-              onClick={() => { setNotesModalOpen(false); setIsModalOpen(true); }}
-            >×</button>
-
-            <div className="modal-header">
-              <h2>Special Instructions</h2>
-              <p style={{ color: "#666", fontSize: "14px" }}>
-                Add any special requests for {notesItem.name}
-              </p>
-            </div>
-
-            <div className="modal-scroll-area">
-              <textarea
-                className="notes-textarea"
-                placeholder="e.g., Cut in half, No onions, Extra sauce, Allergies..."
-                value={notesText}
-                onChange={(e) => setNotesText(e.target.value)}
-                rows="6"
-              />
-            </div>
-
-            <div className="modal-footer" style={{ display: "flex", gap: "8px" }}>
-              {/* Back without saving */}
-              <button
-                className="add-btn-final"
-                style={{
-                  background: "var(--surface-3)", color: "var(--text-muted)",
-                  flex: "0 0 auto", width: "auto", padding: "16px 20px"
-                }}
-                onClick={() => { setNotesModalOpen(false); setIsModalOpen(true); }}
-              >
-                ← Back
-              </button>
-              {/* Save note → back to modal, NOT added to cart yet */}
-              <button
-                className="add-btn-final"
-                onClick={handleSaveNote}
-                disabled={!notesText.trim()}
-              >
-                Save Note ✓
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════════════════
-          REMOVE EXTRAS SUB-MODAL
-      ══════════════════════════════════════════ */}
-      {removeExtrasModalOpen && removeExtrasItem && (
-        <div className="modal-overlay" onClick={() => { setRemoveExtrasModalOpen(false); setIsModalOpen(true); }}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            {/* X → back to customize modal without saving */}
-            <button
-              className="close-modal"
-              onClick={() => { setRemoveExtrasModalOpen(false); setIsModalOpen(true); }}
-            >×</button>
-
-            <div className="modal-header">
-              <h2>Remove Ingredients</h2>
-              <p className="remove-modal-subtitle">
-                Select ingredients to remove from {removeExtrasItem.name}
-              </p>
-            </div>
-
-            <div className="modal-scroll-area">
-              {removableExtras.length > 0 ? (
-                <div className="extras-section">
-                  <div className="extra-group">
-                    {removableExtras.map((extra) => (
-                      <label key={extra.id} className="extra-label">
-                        <div className="extra-info">
-                          <input
-                            type="checkbox"
-                            checked={selectedRemoveExtras.some(e => e.id === extra.id)}
-                            onChange={() => toggleRemoveExtra(extra)}
-                          />
-                          <span>{extra.name}</span>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p style={{ textAlign: "center", color: "#999", padding: "20px" }}>
-                  No removable ingredients available
-                </p>
-              )}
-            </div>
-
-            <div className="modal-footer" style={{ display: "flex", gap: "8px" }}>
-              {/* Back without saving */}
-              <button
-                className="add-btn-final"
-                style={{
-                  background: "var(--surface-3)", color: "var(--text-muted)",
-                  flex: "0 0 auto", width: "auto", padding: "16px 20px"
-                }}
-                onClick={() => { setRemoveExtrasModalOpen(false); setIsModalOpen(true); }}
-              >
-                ← Back
-              </button>
-              {/* Save removed → back to modal, NOT added to cart yet */}
-              <button
-                className="add-btn-final"
-                onClick={handleSaveRemoveExtras}
-                disabled={selectedRemoveExtras.length === 0}
-                style={{
-                  backgroundColor: selectedRemoveExtras.length > 0 ? "#d90d0d" : "var(--surface-3)",
-                  color: selectedRemoveExtras.length > 0 ? "#fff" : "var(--text-muted)"
-                }}
-              >
-                Confirm Remove ✕
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* ── Item modal ── */}
+      {modalItem && (
+        <ItemModal
+          item={modalItem}
+          onClose={() => setModalItem(null)}
+          onAddToCart={addToCart}
+        />
       )}
     </div>
   );

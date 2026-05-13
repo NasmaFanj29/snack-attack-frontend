@@ -141,29 +141,3 @@ export const subscribeToOrders = (callback) => {
   return () => { if (orderChannel) orderChannel.onmessage = null; };
 };
 
-// ─── Cart helpers ─────────────────────────────────────────────────
-
-export const addCustomOrderToCart = (order) => {
-  try {
-    const cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
-    const item = {
-      id: Date.now() + Math.random(),
-      databaseId: null,
-      name: `Custom: ${order.protein} on ${order.bread}`,
-      price: 13.99,
-      image: null,
-      quantity: 1,
-      isCustom: true,
-      selectedExtras: [
-        order.cheese && order.cheese !== 'none' ? { name: `🧀 ${order.cheese}`, price: 0 } : null,
-        order.veggies                           ? { name: `🥗 ${order.veggies}`, price: 0 } : null,
-        order.sauce  && order.sauce  !== 'none' ? { name: `🫙 ${order.sauce}`,   price: 0 } : null,
-        order.notes                             ? { name: `📝 ${order.notes}`,   price: 0 } : null,
-      ].filter(Boolean),
-    };
-    cart.push(item);
-    localStorage.setItem(CART_KEY, JSON.stringify(cart));
-    window.dispatchEvent(new CustomEvent('snackCartExternalUpdate'));
-    return item;
-  } catch { return null; }
-};

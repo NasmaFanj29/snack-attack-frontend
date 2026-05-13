@@ -55,7 +55,7 @@
   /* Inputs */
   --input-bg:       rgba(255,255,255,0.12);
   --input-border:   rgba(255,255,255,0.28);
-  --input-text:     #ffffff;        /* on glass backgrounds */
+  --input-text:     #ffffff;
   --input-placeholder: rgba(255,255,255,0.45);
 
   /* Mini cart sidebar */
@@ -82,76 +82,76 @@
   --scrollbar-thumb: rgba(0,0,0,0.15);
 }
 
-/* ── DARK MODE ─────────────────────────────────────────────────── */
+/* ── DARK MODE — Softer slate, not pitch black ─────────────────── */
 [data-theme="dark"] {
-  /* Backgrounds */
-  --bg:             #080808;
-  --surface:        #0d0d0d;
-  --surface-2:      #111111;
-  --surface-3:      #171717;
-  --surface-4:      #1e1e1e;
+  /* Backgrounds — lifted from #080808 to warmer slate */
+  --bg:             #1a1814;
+  --surface:        #242220;
+  --surface-2:      #2a2826;
+  --surface-3:      #302e2b;
+  --surface-4:      #3a3835;
 
   /* Text */
-  --text:           #ffffff;
-  --text-muted:     rgba(255,255,255,0.48);
-  --text-faint:     rgba(255,255,255,0.22);
+  --text:           rgba(255,255,255,0.92);
+  --text-muted:     rgba(255,255,255,0.50);
+  --text-faint:     rgba(255,255,255,0.28);
 
   /* Borders */
-  --border:         rgba(255,255,255,0.07);
-  --border-2:       rgba(255,255,255,0.12);
-  --border-gold:    rgba(255,194,14,0.15);
+  --border:         rgba(255,255,255,0.09);
+  --border-2:       rgba(255,255,255,0.15);
+  --border-gold:    rgba(255,194,14,0.20);
 
   /* Navbar */
-  --nav-bg:         rgba(8,8,8,0.85);
-  --nav-border:     rgba(255,255,255,0.07);
-  --nav-link:       rgba(255,255,255,0.45);
+  --nav-bg:         rgba(26,24,20,0.90);
+  --nav-border:     rgba(255,255,255,0.08);
+  --nav-link:       rgba(255,255,255,0.48);
   --nav-link-hover: #ffffff;
-  --nav-shadow:     0 2px 16px rgba(0,0,0,0.4);
+  --nav-shadow:     0 2px 16px rgba(0,0,0,0.35);
 
   /* Drawer */
-  --drawer-bg:      rgba(10,10,10,0.97);
-  --drawer-border:  rgba(255,194,14,0.1);
-  --drawer-link:    rgba(255,255,255,0.65);
+  --drawer-bg:      rgba(28,26,22,0.97);
+  --drawer-border:  rgba(255,194,14,0.12);
+  --drawer-link:    rgba(255,255,255,0.70);
 
   /* Glass cards */
-  --glass-bg:       rgba(255,255,255,0.06);
-  --glass-border:   rgba(255,255,255,0.1);
+  --glass-bg:       rgba(255,255,255,0.07);
+  --glass-border:   rgba(255,255,255,0.12);
   --glass-blur:     blur(28px) saturate(180%);
-  --page-overlay:   rgba(20,12,5,0.58);
+  --page-overlay:   rgba(30,22,12,0.52);
 
-  /* Menu cards */
-  --card-bg:        #111111;
-  --card-border:    rgba(255,255,255,0.07);
-  --card-shadow:    0 4px 20px rgba(0,0,0,0.4);
+  /* Menu cards — warm dark, not pure black */
+  --card-bg:        #252320;
+  --card-border:    rgba(255,255,255,0.08);
+  --card-shadow:    0 4px 20px rgba(0,0,0,0.35);
   --card-title:     rgba(255,255,255,0.92);
 
   /* Inputs */
-  --input-bg:       rgba(255,255,255,0.06);
-  --input-border:   rgba(255,255,255,0.15);
+  --input-bg:       rgba(255,255,255,0.07);
+  --input-border:   rgba(255,255,255,0.16);
   --input-text:     rgba(255,255,255,0.88);
   --input-placeholder: rgba(255,255,255,0.35);
 
   /* Mini cart sidebar */
-  --mini-cart-bg:   rgba(17,17,17,0.95);
-  --mini-cart-border: rgba(255,194,14,0.1);
-  --mini-cart-item-border: rgba(255,255,255,0.06);
+  --mini-cart-bg:   rgba(30,28,24,0.96);
+  --mini-cart-border: rgba(255,194,14,0.12);
+  --mini-cart-item-border: rgba(255,255,255,0.07);
   --mini-cart-name: rgba(255,255,255,0.88);
-  --mini-cart-total-bg: rgba(255,255,255,0.03);
+  --mini-cart-total-bg: rgba(255,255,255,0.04);
 
   /* Modal */
-  --modal-bg:       #141414;
+  --modal-bg:       #252320;
   --modal-text:     rgba(255,255,255,0.88);
-  --modal-overlay:  rgba(0,0,0,0.85);
-  --modal-blur:     blur(12px);
+  --modal-overlay:  rgba(0,0,0,0.70);
+  --modal-blur:     blur(10px);
   --extra-name:     rgba(255,255,255,0.82);
   --extra-name-hover: #ffffff;
 
   /* General */
-  --shadow:         0 4px 20px rgba(0,0,0,0.5);
-  --shadow-lg:      0 30px 80px rgba(0,0,0,0.7);
+  --shadow:         0 4px 20px rgba(0,0,0,0.40);
+  --shadow-lg:      0 30px 80px rgba(0,0,0,0.60);
 
   /* Scrollbar */
-  --scrollbar-thumb: rgba(255,255,255,0.1);
+  --scrollbar-thumb: rgba(255,255,255,0.12);
 }
 
 /* ── SMOOTH TRANSITIONS ────────────────────────────────────────── */
@@ -174,4 +174,15 @@ button, a, img, svg, .sticker-logo-img, .dynamic-add-btn {
     box-shadow 0.3s ease,
     transform 0.25s ease,
     opacity 0.25s ease;
+}
+.App {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }

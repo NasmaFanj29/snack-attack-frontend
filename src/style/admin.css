@@ -747,3 +747,72 @@ html, body {
   .side-drawer { width: 100vw !important; }
   .admin-main.drawer-pushed, .admin-main.drawer-pushed-large { margin-right: 0; }
 }
+
+/* ── أضف هيدا بآخر admin.css ── */
+
+.admin-items-collapse {
+  margin: 0;
+  border-top: 1px solid #f3f4f6;
+}
+
+.admin-items-collapse summary {
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #9ca3af;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f9fafb;
+  transition: background 0.15s;
+}
+.admin-items-collapse summary::-webkit-details-marker { display: none; }
+.admin-items-collapse summary::before {
+  content: '▶';
+  font-size: 8px;
+  transition: transform 0.2s;
+  color: #d1d5db;
+}
+.admin-items-collapse[open] summary::before { transform: rotate(90deg); }
+.admin-items-collapse summary:hover { background: #f3f4f6; color: #6b7280; }
+
+.admin-items-list {
+  padding: 8px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #fafafa;
+  border-top: 1px solid #f3f4f6;
+}
+
+.admin-item-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.admin-item-qty {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 0.95rem;
+  color: #FFC20E;
+  min-width: 24px;
+  line-height: 1;
+}
+
+.admin-item-name {
+  font-weight: 600;
+  color: #374151;
+  flex: 1;
+}
+
+.admin-item-note {
+  font-size: 10px;
+  color: #9ca3af;
+  font-style: italic;
+}

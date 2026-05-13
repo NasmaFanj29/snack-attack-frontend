@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/navbar';
 import Footer from './components/footer';
@@ -27,10 +28,10 @@ const STAFF_PATHS = ['/admin', '/kitchen', '/waiter', '/login'];
 
 function AppContent({ cart, setCart, addToCart, removeFromCart, setMenuItems, menuItems }) {
   const location = useLocation();
-  const isStaff = STAFF_PATHS.some(p => location.pathname.startsWith(p));
+  const isStaff  = STAFF_PATHS.some(p => location.pathname.startsWith(p));
   const isHomePage = location.pathname === '/';
-  const queryParams = new URLSearchParams(location.search);
-  const tableFromQR = queryParams.get('table') || localStorage.getItem('activeTable') || 1;
+  const queryParams  = new URLSearchParams(location.search);
+  const tableFromQR  = queryParams.get('table') || localStorage.getItem('activeTable') || 1;
 
   useEffect(() => {
     const tableId = queryParams.get('table');
@@ -49,17 +50,17 @@ function AppContent({ cart, setCart, addToCart, removeFromCart, setMenuItems, me
       )}
       <main>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/menu" element={<MenuPage addToCart={addToCart} removeFromCart={removeFromCart} setMenuItems={setMenuItems} cartItems={cart} />} />
+          <Route path="/"          element={<Home />} />
+          <Route path="/menu"      element={<MenuPage addToCart={addToCart} removeFromCart={removeFromCart} setMenuItems={setMenuItems} cartItems={cart} />} />
           <Route path="/customize" element={<CustomBurger addToCart={addToCart} />} />
-          <Route path="/cart" element={<Cart cart={cart} setCart={setCart} addToCart={addToCart} removeFromCart={removeFromCart} />} />
-          <Route path="/checkout" element={<Checkout cart={cart} setCart={setCart} tableId={tableFromQR} />} />
+          <Route path="/cart"      element={<Cart cart={cart} setCart={setCart} addToCart={addToCart} removeFromCart={removeFromCart} />} />
+          <Route path="/checkout"  element={<Checkout cart={cart} setCart={setCart} tableId={tableFromQR} />} />
           <Route path="/cart/:orderId" element={<Cart isJoinMode={true} addToCart={addToCart} removeFromCart={removeFromCart} setCart={setCart} />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><Admin /></ProtectedRoute>} />
-          <Route path="/kitchen" element={<ProtectedRoute allowedRoles={['kitchen']}><Kitchen /></ProtectedRoute>} />
-          <Route path="/waiter" element={<ProtectedRoute allowedRoles={['waiter']}><Waiter /></ProtectedRoute>} />
-          <Route path="/qr-generator" element={<QRGenerator />} />
+          <Route path="/login"     element={<Login />} />
+          <Route path="/admin"     element={<ProtectedRoute allowedRoles={['admin']}><Admin /></ProtectedRoute>} />
+          <Route path="/kitchen"   element={<ProtectedRoute allowedRoles={['kitchen']}><Kitchen /></ProtectedRoute>} />
+          <Route path="/waiter"    element={<ProtectedRoute allowedRoles={['waiter']}><Waiter /></ProtectedRoute>} />
+          <Route path="/qr-generator" element={<ProtectedRoute allowedRoles={['admin']}><QRGenerator /></ProtectedRoute>} />
         </Routes>
         <Chatbot menuItems={menuItems} addToCart={addToCart} />
       </main>
@@ -83,60 +84,60 @@ function App() {
     localStorage.setItem('snackAttackCart', JSON.stringify(cart));
   }, [cart]);
 
- const addToCart = (item) => {
-  setCart(prev => {
-    const cur = Array.isArray(prev) ? prev : [];
+  const addToCart = (item) => {
+    setCart(prev => {
+      const cur = Array.isArray(prev) ? prev : [];
 
-    // ✅ Custom burger — دايماً unique
-    if (item.isCustom) return [...cur, item];
+      // Custom burger — always unique
+      if (item.isCustom) return [...cur, item];
 
-    // ✅ إذا عنده note أو removed — unique item جديد
-    const hasNote    = item.specialNote && item.specialNote.trim();
-    const hasRemoved = Array.isArray(item.removedExtras) && item.removedExtras.length > 0;
+      // If has note or removed — unique item
+      const hasNote    = item.specialNote && item.specialNote.trim();
+      const hasRemoved = Array.isArray(item.removedExtras) && item.removedExtras.length > 0;
 
-    if (hasNote || hasRemoved) {
+      if (hasNote || hasRemoved) {
+        return [...cur, {
+          id:             item.id || Date.now(),
+          databaseId:     item.databaseId || item.id,
+          name:           item.name,
+          price:          item.price,
+          image:          item.image,
+          quantity:       1,
+          selectedExtras: item.selectedExtras || [],
+          removedExtras:  item.removedExtras  || [],
+          specialNote:    item.specialNote    || null,
+        }];
+      }
+
+      // Normal item — merge if same extras
+      const itemExtras = item.selectedExtras || [];
+      const existing = cur.find(i =>
+        i.name === item.name &&
+        !i.specialNote &&
+        !(i.removedExtras && i.removedExtras.length > 0) &&
+        JSON.stringify(i.selectedExtras || []) === JSON.stringify(itemExtras)
+      );
+
+      if (existing) {
+        return cur.map(i => i === existing ? { ...i, quantity: i.quantity + 1 } : i);
+      }
+
       return [...cur, {
         id:             item.id || Date.now(),
         databaseId:     item.databaseId || item.id,
         name:           item.name,
         price:          item.price,
         image:          item.image,
-        quantity:       1,
-        selectedExtras: item.selectedExtras || [],
-        removedExtras:  item.removedExtras  || [],
-        specialNote:    item.specialNote    || null,
+        quantity:       item.quantity || 1,
+        selectedExtras: itemExtras,
+        removedExtras:  [],
+        specialNote:    null,
       }];
-    }
-
-    // ✅ Normal item — merge لو نفس الـ extras
-    const itemExtras = item.selectedExtras || [];
-    const existing = cur.find(i =>
-      i.name === item.name &&
-      !i.specialNote &&
-      !(i.removedExtras && i.removedExtras.length > 0) &&
-      JSON.stringify(i.selectedExtras || []) === JSON.stringify(itemExtras)
-    );
-
-    if (existing) {
-      return cur.map(i => i === existing ? { ...i, quantity: i.quantity + 1 } : i);
-    }
-
-    return [...cur, {
-      id:             item.id || Date.now(),
-      databaseId:     item.databaseId || item.id,
-      name:           item.name,
-      price:          item.price,
-      image:          item.image,
-      quantity:       item.quantity || 1,
-      selectedExtras: itemExtras,
-      removedExtras:  [],
-      specialNote:    null,
-    }];
-  });
-};
+    });
+  };
 
   const removeFromCart = (nameOrItem) => {
-    const name = typeof nameOrItem === 'object' ? nameOrItem.name : nameOrItem;
+    const name   = typeof nameOrItem === 'object' ? nameOrItem.name : nameOrItem;
     const extras = typeof nameOrItem === 'object' ? (nameOrItem.selectedExtras || []) : [];
     setCart(prev => {
       const existing = prev.find(i =>
@@ -152,10 +153,35 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        {/* Toast notifications */}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: '#1a1a1a',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '12px',
+              fontFamily: 'DM Sans, sans-serif',
+              fontSize: '13px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            },
+            success: {
+              iconTheme: { primary: '#95b508', secondary: '#fff' },
+            },
+            error: {
+              iconTheme: { primary: '#ef4444', secondary: '#fff' },
+            },
+          }}
+        />
         <AppContent
-          cart={cart} setCart={setCart}
-          addToCart={addToCart} removeFromCart={removeFromCart}
-          setMenuItems={setMenuItems} menuItems={menuItems}
+          cart={cart}
+          setCart={setCart}
+          addToCart={addToCart}
+          removeFromCart={removeFromCart}
+          setMenuItems={setMenuItems}
+          menuItems={menuItems}
         />
       </AuthProvider>
     </BrowserRouter>

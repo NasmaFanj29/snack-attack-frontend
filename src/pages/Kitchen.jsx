@@ -102,7 +102,7 @@ export default function Kitchen() {
            {allOrders.filter(o => o.status === 'Paid-Accepted').length} New
           </div>
           <div className="kitchen-stat prep">
-            {allOrders.filter(o => o.status === 'Preparing').length} Cooking
+            {allOrders.filter(o => o.status === 'Paid-Preparing').length} Cooking
           </div>
           <button className="kitchen-logout" onClick={()=>{logout();navigate('/login');}}>Logout</button>
         </div>
