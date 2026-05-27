@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import ordersService from '../services/ordersService';
 import '../style/admin.css';
 import AdminChatPanel from '../components/AdminChatPanel';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getAllConversations, subscribeToChats } from '../components/chatbotStore';
+import { io } from 'socket.io-client';
 
-const BACKEND = "https://snack-attack-backend.onrender.com";
 const toDateStr = (d) => d.toISOString().slice(0, 10);
 const today = () => toDateStr(new Date());
 const fmtDisplay = (str) => {
@@ -16,6 +16,231 @@ const fmtDisplay = (str) => {
   const opts = { weekday: 'short', month: 'short', day: 'numeric' };
   return (isToday ? 'Today ' : '') + d.toLocaleDateString('en-US', opts);
 };
+
+// ── PAYMENT PANEL ────────────────────────────────────────────────
+function PaymentPanel({ orders, adminId, onPaymentConfirm, onPaymentReject }) {
+  const paymentOrders = orders.filter(o => o.status === 'PaymentPending');
+  
+  const getParsed = (raw) => {
+    try {
+      return typeof raw === 'string' ? JSON.parse(raw) : (raw || []);
+    } catch {
+      return [];
+    }
+  };
+
+  const handleConfirmPayment = async (orderId, paymentId) => {
+  try {
+    const response = await fetch(
+      `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/orders/${orderId}/payment/confirm`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId, adminId }),
+      }
+    );
+
+    const data = await response.json();
+    
+    if (!response.ok) throw new Error(data.error || 'Failed');
+    
+    toast.success('✅ Payment confirmed!');
+    onPaymentConfirm?.(orderId); // بيعمل fetchOrders
+  } catch (error) {
+    toast.error('❌ ' + error.message);
+    console.error(error);
+  }
+};
+
+  const handleRejectPayment = async (orderId, paymentId) => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/orders/${orderId}/payment/reject`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentId,
+          adminId,
+          reason: 'Rejected by admin',
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to reject');
+      
+      toast.success('❌ Payment rejected');
+      onPaymentReject?.(orderId);
+    } catch (error) {
+      toast.error('Error rejecting payment');
+      console.error(error);
+    }
+  };
+
+  if (paymentOrders.length === 0) {
+    return (
+      <div className="drawer-inner">
+        <p className="drawer-empty">✅ No pending payments</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="drawer-inner">
+      <div className="drawer-scroll">
+        {paymentOrders.map(order => {
+          const payments = getParsed(order.payment_splits);
+          
+          return (
+            <div key={order.id} style={{
+              background: 'rgba(255,194,14,0.08)',
+              border: '2px solid rgba(255,194,14,0.3)',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '16px',
+            }}>
+              {/* Order Header */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '16px',
+                paddingBottom: '12px',
+                borderBottom: '1px solid rgba(255,194,14,0.2)',
+              }}>
+                <div>
+                  <span style={{ fontSize: '18px', fontWeight: '900', color: '#FFC20E' }}>
+                    Order #{order.id}
+                  </span>
+                  <span style={{ color: '#888', marginLeft: '12px', fontSize: '12px' }}>
+                    Table #{order.table_id}
+                  </span>
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: '900', color: '#FFC20E' }}>
+                  ${Number(order.total_price).toFixed(2)}
+                </div>
+              </div>
+
+              {/* Payments List */}
+              {payments.map((payment, idx) => (
+                <div key={idx} style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '10px',
+                  padding: '12px',
+                  marginBottom: '12px',
+                }}>
+                  {/* Payer Info */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ color: '#fff', fontWeight: '800', fontSize: '14px' }}>
+                      {payment.payer_name || 'Guest'}
+                    </div>
+                    <div style={{ color: '#888', fontSize: '12px' }}>
+                      {payment.payer_phone}
+                    </div>
+                  </div>
+
+                  {/* Payment Method Badge */}
+                  <div style={{ marginBottom: '12px' }}>
+                    {payment.method === 'card' ? (
+                      <div style={{
+                        background: 'rgba(100,200,255,0.2)',
+                        border: '1px solid rgba(100,200,255,0.4)',
+                        borderRadius: '6px',
+                        padding: '8px 12px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        color: '#64c8ff',
+                        marginBottom: '8px',
+                      }}>
+                        💳 CARD PAYMENT
+                      </div>
+                    ) : (
+                      <div style={{
+                        background: 'rgba(100,200,100,0.2)',
+                        border: '1px solid rgba(100,200,100,0.4)',
+                        borderRadius: '6px',
+                        padding: '8px 12px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        color: '#64c864',
+                        marginBottom: '8px',
+                      }}>
+                        💵 CASH PAYMENT
+                      </div>
+                    )}
+
+                    {/* Card Details (if card) */}
+                    {payment.method === 'card' && payment.stripe_card_brand && (
+                      <div style={{
+                        fontSize: '12px',
+                        color: '#FFC20E',
+                        fontWeight: '700',
+                        marginBottom: '8px',
+                      }}>
+                        {payment.stripe_card_brand.toUpperCase()} ••••{payment.stripe_card_last4}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Amount */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '12px',
+                    paddingTop: '8px',
+                    borderTop: '1px solid rgba(255,255,255,0.08)',
+                  }}>
+                    <span style={{ color: '#888', fontSize: '12px' }}>Amount</span>
+                    <span style={{ color: '#FFC20E', fontSize: '16px', fontWeight: '900' }}>
+                      ${Number(payment.amount_usd || 0).toFixed(2)}
+                    </span>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => handleConfirmPayment(order.id, payment.payment_id)}
+                      style={{
+                        flex: 1,
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                        color: '#fff',
+                        fontWeight: '900',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      ✅ CONFIRM
+                    </button>
+                    <button
+                      onClick={() => handleRejectPayment(order.id, payment.payment_id)}
+                      style={{
+                        flex: 1,
+                        padding: '10px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                        color: '#fff',
+                        fontWeight: '900',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      ❌ REJECT
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ── Waiter Panel ─────────────────────────────────────────────────
 function WaiterPanel({ orders, onStatusUpdate }) {
@@ -67,7 +292,7 @@ function WaiterPanel({ orders, onStatusUpdate }) {
                   <div className="moc-top"><span className="moc-id">#{o.id}</span><span className="moc-table">TABLE {o.table_id}</span></div>
                   <div className="moc-amount">💵 ${total.toFixed(2)}</div>
                   {splits.map((s, i) => (
-                    <span key={i} className="moc-payer">{s.name || 'Guest'}: {Number(s.amount).toFixed(2)} {s.currency}</span>
+                    <span key={i} className="moc-payer">{s.payer_name || 'Guest'}: {Number(s.amount_usd).toFixed(2)} {s.currency}</span>
                   ))}
                 </div>
               );
@@ -92,7 +317,10 @@ function WaiterPanel({ orders, onStatusUpdate }) {
 
 // ── Kitchen Panel ────────────────────────────────────────────────
 function KitchenPanel({ orders, onStatusUpdate }) {
-  const live = orders.filter(o => ['Paid-Accepted', 'Paid-Preparing', 'Paid-Ready'].includes(o.status));
+  const live = orders.filter(o =>
+    ['paid-accepted', 'paid-preparing', 'paid-ready']
+      .includes((o.status || '').toLowerCase())
+  );
   const [filter, setFilter] = useState('all');
 
   const parseItems = (order) => {
@@ -104,8 +332,8 @@ function KitchenPanel({ orders, onStatusUpdate }) {
   };
 
   const visible = live.filter(o =>
-    filter === 'new'     ? o.status === 'Paid-Accepted'  :
-    filter === 'cooking' ? o.status === 'Paid-Preparing' : true
+    filter === 'new'     ? (o.status || '').toLowerCase() === 'paid-accepted'  :
+    filter === 'cooking' ? (o.status || '').toLowerCase() === 'paid-preparing' : true
   );
 
   return (
@@ -161,30 +389,64 @@ function Admin() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [allOrders,     setAllOrders]     = useState([]);
-  const [chatOpen,      setChatOpen]      = useState(false);
-  const [selectedDate,  setSelectedDate]  = useState(today());
-  const [drawer,        setDrawer]        = useState(null);
-  const [drawerSize,    setDrawerSize]    = useState('normal');
+  const [allOrders,       setAllOrders]       = useState([]);
+  const [chatOpen,        setChatOpen]        = useState(false);
+  const [selectedDate,    setSelectedDate]    = useState(today());
+  const [drawer,          setDrawer]          = useState(null);
+  const [drawerSize,      setDrawerSize]      = useState('normal');
   const [needsAdminCount, setNeedsAdminCount] = useState(0);
+  const [socket, setSocket]                   = useState(null);
 
-  // Redirect if not logged in
   useEffect(() => { if (!user) navigate('/login'); }, [user]);
 
-  // Fetch orders every 4 seconds
+  // Initialize Socket.io
+  useEffect(() => {
+    const socketUrl = process.env.REACT_APP_SOCKET_URL || process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    const newSocket = io(socketUrl, { reconnection: true });
+    
+    newSocket.on('connect', () => {
+      console.log('✅ Admin connected to socket');
+    });
+
+    newSocket.on('payment:status-updated', (data) => {
+      console.log('💳 Payment updated:', data);
+      fetchOrders();
+    });
+
+    setSocket(newSocket);
+
+    return () => newSocket.disconnect();
+  }, []);
+
   const fetchOrders = async () => {
     try {
-      const res = await axios.get(`${BACKEND}/admin/orders`);
-      setAllOrders(res.data);
-    } catch (err) { console.error(err); }
+      const token = localStorage.getItem('snackToken');
+      if (!token) return;
+
+      const API = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000'
+  : 'https://snack-attack-backend.onrender.com';
+      const res = await fetch(`${API}/api/admin/orders`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) return;
+     const data = await res.json();
+if (data.success && Array.isArray(data.orders)) {
+  setAllOrders(data.orders);
+}
+    } catch (err) { console.error('API ERROR:', err); }
   };
+
   useEffect(() => {
     fetchOrders();
     const t = setInterval(fetchOrders, 4000);
     return () => clearInterval(t);
   }, []);
 
-  // Chat badge — count tables waiting for staff
   useEffect(() => {
     const updateCount = (conversations) => {
       const count = Object.values(conversations).filter(c => c?.status === 'admin').length;
@@ -195,12 +457,14 @@ function Admin() {
     return unsub;
   }, []);
 
-  const orders       = allOrders.filter(o => o.created_at?.slice(0, 10) === selectedDate);
+  const orders = allOrders;
   const totalOrders  = orders.length;
-  const totalRevenue = orders.filter(o => o.status === 'Paid').reduce((s, o) => s + Number(o.total_price || 0), 0);
+  const totalRevenue = orders
+    .filter(o => (o.status || '').toLowerCase() === 'paid')
+    .reduce((s, o) => s + Number(o.total_price || 0), 0);
   const activeCount  = orders.filter(o => !['Paid', 'Rejected'].includes(o.status)).length;
   const readyCount   = allOrders.filter(o => o.status === 'Paid-Ready').length;
-  const pendingCount = allOrders.filter(o => o.status === 'PaymentPending').length;
+  const pendingCount = allOrders.filter(o => (o.status || '').toLowerCase() === 'paymentpending').length;
 
   const changeDate = (delta) => {
     const d = new Date(selectedDate + 'T00:00:00');
@@ -221,14 +485,31 @@ function Admin() {
       if (!reason) return;
     }
     try {
+      const token = localStorage.getItem('snackToken');
       const payload = { status: newStatus };
       if (reason) payload.reason = reason;
-      const res = await axios.put(`${BACKEND}/admin/orders/${orderId}/status`, payload);
-      if (res.data.success) {
-        setAllOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-        toast.success(`Order #${orderId} updated to ${newStatus}`);
+      
+      const API = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000'
+  : 'https://snack-attack-backend.onrender.com';
+      const res = await fetch(`${API}/api/admin/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || `Error ${res.status}`);
       }
-    } catch {
+
+      setAllOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      toast.success(`Order #${orderId} updated to ${newStatus}`);
+    } catch (err) {
+      console.error('API ERROR:', err);
       toast.error('Failed to update order status');
     }
   };
@@ -236,12 +517,23 @@ function Admin() {
   const handleDeleteOrder = async (orderId) => {
     if (!window.confirm('Remove this order?')) return;
     try {
-      const res = await axios.delete(`${BACKEND}/admin/orders/${orderId}`);
-      if (res.data?.success) {
-        setAllOrders(prev => prev.filter(o => o.id !== orderId));
-        toast.success('Order removed');
-      }
-    } catch {
+      const token = localStorage.getItem('snackToken');
+      const API = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000'
+  : 'https://snack-attack-backend.onrender.com';
+      const res = await fetch(`${API}/api/admin/orders/${orderId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error('Failed');
+      setAllOrders(prev => prev.filter(o => o.id !== orderId));
+      toast.success('Order removed');
+    } catch (err) {
+      console.error('API ERROR:', err);
       toast.error('Error deleting order');
     }
   };
@@ -252,10 +544,24 @@ function Admin() {
     const splits  = parseSplits(order.payment_splits);
     const updated = splits.map(s => s.id === splitId ? { ...s, whishVerified: true } : s);
     try {
-      await axios.put(`${BACKEND}/admin/orders/${orderId}/status`, { payment_splits: updated, replace_splits: true });
+      const token = localStorage.getItem('snackToken');
+      const API = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000'
+  : 'https://snack-attack-backend.onrender.com';
+      const res = await fetch(`${API}/api/admin/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ payment_splits: updated, replace_splits: true }),
+      });
+
+      if (!res.ok) throw new Error('Failed');
       setAllOrders(prev => prev.map(o => o.id === orderId ? { ...o, payment_splits: JSON.stringify(updated) } : o));
       toast.success('Transaction verified ✅');
-    } catch {
+    } catch (err) {
+      console.error('API ERROR:', err);
       toast.error('Error confirming TX ID');
     }
   };
@@ -266,10 +572,24 @@ function Admin() {
     const splits  = parseSplits(order.payment_splits);
     const updated = splits.map(s => s.id === splitId ? { ...s, txIdRequested: true } : s);
     try {
-      await axios.put(`${BACKEND}/admin/orders/${orderId}/status`, { payment_splits: updated, replace_splits: true });
+      const token = localStorage.getItem('snackToken');
+      const API = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000'
+  : 'https://snack-attack-backend.onrender.com';
+      const res = await fetch(`${API}/api/admin/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ payment_splits: updated, replace_splits: true }),
+      });
+
+      if (!res.ok) throw new Error('Failed');
       setAllOrders(prev => prev.map(o => o.id === orderId ? { ...o, payment_splits: JSON.stringify(updated) } : o));
       toast.success('TX ID request sent to customer');
-    } catch {
+    } catch (err) {
+      console.error('API ERROR:', err);
       toast.error('Error sending request');
     }
   };
@@ -280,9 +600,9 @@ function Admin() {
     const whishRef = `ORD-${orderId}-${s.whishCode || '???'}`;
 
     if (method === 'cash') {
-      const firstAmt  = Number(s.amount || 0);
-      const secondAmt = Number(s.cashSecondAmount || 0);
-      const firstCurr = s.currency || 'USD';
+      const firstAmt   = Number(s.amount_usd || 0);
+      const secondAmt  = Number(s.cashSecondAmount || 0);
+      const firstCurr  = s.currency || 'USD';
       const secondCurr = firstCurr === 'USD' ? 'LBP' : 'USD';
       return (
         <div key={i} className="admin-split-pill cash-pill">
@@ -300,27 +620,47 @@ function Admin() {
               </span>
             </div>
           )}
-          {s.name  && <div className="split-user-name">👤 {s.name}</div>}
-          {s.phone && <div className="split-phone">📞 {s.phone}</div>}
+          {s.payer_name  && <div className="split-user-name">👤 {s.payer_name}</div>}
+          {s.payer_phone && <div className="split-phone">📞 {s.payer_phone}</div>}
         </div>
       );
     }
 
     if (method === 'card') {
-      const cardType = s.cardType || '';
+      const cardType = s.stripe_card_brand || '';
       let cardLabel  = '💳 Card';
-      if (isWhish)              cardLabel = '📱 Whish';
+      if (isWhish)                         cardLabel = '📱 Whish';
       else if (cardType === 'visa')        cardLabel = '💳 Visa';
       else if (cardType === 'mastercard')  cardLabel = '💳 Mastercard';
       else if (cardType === 'omt')         cardLabel = '💸 OMT';
+      
       return (
-        <div key={i} className={`admin-split-pill card-pill ${isWhish ? 'whish-pill' : cardType} ${s.whishVerified ? 'verified' : ''}`}>
+        <div key={i} className={`admin-split-pill card-pill ${isWhish ? 'whish-pill' : cardType} ${s.paid ? 'verified' : ''}`}>
           <div className="split-top">
             <span className="split-method-tag">{cardLabel}</span>
-            <span className="split-amt">${Number(s.amount || 0).toFixed(2)}</span>
+            <span className="split-amt">${Number(s.amount_usd || 0).toFixed(2)}</span>
           </div>
-          {s.name  && <div className="split-user-name">👤 {s.name}</div>}
-          {s.phone && <div className="split-phone">📞 {s.phone}</div>}
+          {s.payer_name  && <div className="split-user-name">👤 {s.payer_name}</div>}
+          {s.payer_phone && <div className="split-phone">📞 {s.payer_phone}</div>}
+          
+          {/* Show Stripe confirmation status */}
+          {s.payment_status === 'paid' && !isWhish && (
+            <div style={{
+              marginTop: 10,
+              padding: '8px 12px',
+              background: 'rgba(34,197,94,0.15)',
+              border: '1px solid rgba(34,197,94,0.35)',
+              borderRadius: '8px',
+              textAlign: 'center',
+              color: '#22c55e',
+              fontWeight: '800',
+              fontSize: '12px',
+              letterSpacing: '0.5px'
+            }}>
+              ✅ STRIPE CONFIRMED
+            </div>
+          )}
+          
           {isWhish && (
             <div className="whish-ref-admin" style={{ marginTop: 5, fontSize: 11 }}>
               <span className="ref-label">Note: </span>
@@ -357,9 +697,9 @@ function Admin() {
       <div key={i} className="admin-split-pill">
         <div className="split-top">
           <span className="split-method-tag">💳</span>
-          <span className="split-amt">${Number(s.amount || 0).toFixed(2)}</span>
+          <span className="split-amt">${Number(s.amount_usd || 0).toFixed(2)}</span>
         </div>
-        {s.name && <div className="split-user-name">👤 {s.name}</div>}
+        {s.payer_name && <div className="split-user-name">👤 {s.payer_name}</div>}
       </div>
     );
   };
@@ -391,6 +731,16 @@ function Admin() {
           </button>
 
           <button
+            className={`nav-item ${drawer === 'payment' ? 'nav-open' : ''}`}
+            onClick={() => openDrawer('payment')}
+          >
+            <span className="nav-icon">💳</span>
+            <span>Payments</span>
+            {pendingCount > 0 && <span className="nav-badge orange">{pendingCount}</span>}
+            <span className="nav-arrow">{drawer === 'payment' ? '◀' : '▶'}</span>
+          </button>
+
+          <button
             className={`nav-item ${drawer === 'waiter' ? 'nav-open' : ''}`}
             onClick={() => openDrawer('waiter')}
           >
@@ -414,7 +764,6 @@ function Admin() {
 
           <div className="nav-section-label" style={{ marginTop: 16 }}>TOOLS</div>
 
-          {/* ✅ Chat button with badge */}
           <button className={`nav-item ${chatOpen ? 'nav-open' : ''}`} onClick={() => setChatOpen(o => !o)}>
             <span className="nav-icon">💬</span>
             <span>Chat</span>
@@ -461,18 +810,19 @@ function Admin() {
         )}
 
         {/* Orders grid */}
-        <div className="orders-masonry">
+        {!chatOpen && (
+          <div className="orders-masonry">
           {orders.map(order => {
             const splits           = parseSplits(order.payment_splits);
             const hasWhishPending  = splits.some(sp => sp.method === 'card' && sp.whishCode && !sp.whishVerified);
-            const firstPayer       = splits.find(sp => sp.name?.trim());
-            const displayName      = firstPayer?.name  || order.full_name    || 'Guest';
-            const displayPhone     = firstPayer?.phone || order.phone_number || '—';
+            const firstPayer       = splits.find(sp => sp.payer_name?.trim());
+            const displayName      = firstPayer?.payer_name  || order.full_name    || 'Guest';
+            const displayPhone     = firstPayer?.payer_phone || order.phone_number || '—';
             const s                = order.status || '';
             const isPaid           = s.includes('Paid');
-            const isRequested      = s === 'Requested';
+            const tip              = Number(order.tip_amount || 0);
+            const isWaitingPayment = s === 'accepted';
             const isPaymentPending = s === 'PaymentPending';
-            const isWaitingPayment = s === 'Accepted';
             const isAcceptedStage  = s === 'Paid-Accepted';
             const isPreparingStage = s === 'Paid-Preparing';
             const isReadyStage     = s === 'Paid-Ready';
@@ -520,28 +870,93 @@ function Admin() {
                   </div>
 
                   <div className="order-financials">
-                    <p className="total-amount">TOTAL <span>${Number(order.total_price).toFixed(2)}</span></p>
-                    <p className="order-time">{new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    <p className="total-amount">
+                      TOTAL <span>${Number(order.total_price).toFixed(2)}</span>
+                    </p>
+                    <p className="order-time">
+                      {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                    {tip > 0 && (
+                      <p className="tip-amount" style={{
+                        background: 'rgba(34,197,94,0.15)',
+                        border: '1px solid rgba(34,197,94,0.35)',
+                        borderRadius: '8px',
+                        padding: '4px 10px',
+                        color: '#22c55e',
+                        fontWeight: '800',
+                        fontSize: '12px',
+                        letterSpacing: '0.5px',
+                      }}>
+                        🙏 TIP <span>+${tip.toFixed(2)}</span>
+                      </p>
+                    )}
                   </div>
 
                   {s === 'Rejected' && (
                     <p className="reject-reason">❌ {order.rejection_reason || 'Not specified'}</p>
                   )}
 
-                  {/* ✅ Items collapse */}
                   {orderItems.length > 0 && (
                     <details className="admin-items-collapse">
                       <summary>{orderItems.length} item{orderItems.length !== 1 ? 's' : ''}</summary>
                       <div className="admin-items-list">
-                        {orderItems.map((item, i) => (
-                          <div key={i} className="admin-item-row">
-                            <span className="admin-item-qty">{item.quantity}×</span>
-                            <span className="admin-item-name">{item.name}</span>
-                            {(item.specialNote || item.special_note) && (
-                              <span className="admin-item-note">📝 {item.specialNote || item.special_note}</span>
-                            )}
-                          </div>
-                        ))}
+                        {orderItems.map((item, i) => {
+                          const parseIfNeeded = (v) => {
+                            if (!v) return [];
+                            if (Array.isArray(v)) return v;
+                            if (typeof v === 'object') return [v];
+                            try {
+                              const parsed = JSON.parse(v);
+                              return Array.isArray(parsed) ? parsed : [];
+                            } catch {
+                              return [];
+                            }
+                          };
+                          
+                          const extrasList = parseIfNeeded(
+                            item.selected_extras ??
+                            item.selectedExtras ??
+                            []
+                          );
+
+                          const removedList = parseIfNeeded(
+                            item.removed_extras ??
+                            item.removedExtras ??
+                            []
+                          );
+
+                          const note =
+                            item.special_note ??
+                            item.specialNote ??
+                            '';
+                          
+                          return (
+                            <div key={i} className="admin-item-row">
+                              <span className="admin-item-qty">{item.quantity}×</span>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span className="admin-item-name">{item.name}</span>
+
+                                {extrasList.length > 0 && (
+                                  <span className="admin-item-note">
+                                    ➕ {extrasList.map(e => e.name || e).join(', ')}
+                                  </span>
+                                )}
+
+                                {removedList.length > 0 && (
+                                  <span className="admin-item-note" style={{ color: '#f87171' }}>
+                                    ✕ {removedList.map(e => e.name || e).join(', ')}
+                                  </span>
+                                )}
+
+                                {note && (
+                                  <span className="admin-item-note" style={{ fontStyle: 'italic' }}>
+                                    📝 {note}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </details>
                   )}
@@ -549,36 +964,113 @@ function Admin() {
 
                 {/* Actions */}
                 <div className="admin-card-actions">
-                  {isRequested && (
+
+                  {/* Requested orders */}
+                  {s === 'Requested' && (
                     <div className="action-row">
-                      <button className="btn-action start" onClick={() => handleStatusUpdate(order.id, 'Accepted')}>ACCEPT ORDER ✅</button>
-                      <button className="btn-action reject" onClick={() => handleStatusUpdate(order.id, 'Rejected')}>REJECT</button>
+                      <button
+                        className="btn-action start"
+                        onClick={() => handleStatusUpdate(order.id, 'accepted')}
+                      >
+                        ACCEPT ORDER ✓
+                      </button>
+                      <button
+                        className="btn-action reject"
+                        onClick={() => handleStatusUpdate(order.id, 'Rejected')}
+                      >
+                        REJECT ✕
+                      </button>
                     </div>
                   )}
-                  {isWaitingPayment  && <p className="waiting-label">⏳ Waiting for customer payment...</p>}
-                  {isPaymentPending  && (
-                    <div className="action-row">
-                      <button className="btn-action start" onClick={() => handleStatusUpdate(order.id, 'Paid-Accepted')}>CONFIRM PAYMENT 💰</button>
-                      <button className="btn-action reject" onClick={() => handleStatusUpdate(order.id, 'Rejected')}>REJECT</button>
+
+                  {/* Waiting payment */}
+                  {isWaitingPayment && (
+                    <div className="action-row" style={{ flexDirection: 'column', gap: '8px' }}>
+                      <p className="waiting-label">⏳ Waiting for customer payment...</p>
+                      <button className="btn-action reject" onClick={() => handleStatusUpdate(order.id, 'Rejected')}>REJECT ✕</button>
                     </div>
                   )}
-                  {isAcceptedStage  && <button className="btn-action cook"  onClick={() => handleStatusUpdate(order.id, 'Paid-Preparing')}>START COOKING 👨‍🍳</button>}
-                  {isPreparingStage && <button className="btn-action ready" onClick={() => handleStatusUpdate(order.id, 'Paid-Ready')}>MARK READY 🔔</button>}
-                  {isReadyStage     && <p className="waiting-label">🔔 Ready — waiter delivering...</p>}
-                  {isCompleted && s !== 'Rejected' && <span className="order-completed-label">✅ ARCHIVED</span>}
+
+                  {/* Card payment — Show CONFIRM & REJECT & REFUND */}
+                  {isPaymentPending && splits.some(s => s.payment_status === 'paid') && (
+                    <div className="action-row">
+                      <button 
+                        className="btn-action start" 
+                        onClick={() => handleStatusUpdate(order.id, 'Paid-Accepted')}
+                        style={{ flex: 1 }}
+                      >
+                        CONFIRM PAYMENT 💳
+                      </button>
+                      <button 
+                        className="btn-action reject" 
+                        onClick={() => {
+                          alert('⚠️ REFUND REQUIRED: You must process the refund manually in your Stripe Dashboard!\n\nOrder will be marked as rejected.');
+                          handleStatusUpdate(order.id, 'Rejected');
+                        }}
+                        style={{ flex: 1 }}
+                      >
+                        REJECT & REFUND
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Cash payment — Show CONFIRM & REJECT */}
+                  {isPaymentPending && !splits.some(s => s.payment_status === 'paid') && (
+                    <div className="action-row">
+                      <button 
+                        className="btn-action start" 
+                        onClick={() => handleStatusUpdate(order.id, 'Paid-Accepted')}
+                      >
+                        CONFIRM PAYMENT 💰
+                      </button>
+                      <button 
+                        className="btn-action reject" 
+                        onClick={() => handleStatusUpdate(order.id, 'Rejected')}
+                      >
+                        REJECT
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Accepted stage */}
+                  {isAcceptedStage && (
+                    <button className="btn-action cook" onClick={() => handleStatusUpdate(order.id, 'Paid-Preparing')}>
+                      START COOKING 👨‍🍳
+                    </button>
+                  )}
+
+                  {/* Preparing stage */}
+                  {isPreparingStage && (
+                    <button className="btn-action ready" onClick={() => handleStatusUpdate(order.id, 'Paid-Ready')}>
+                      MARK READY 🔔
+                    </button>
+                  )}
+
+                  {/* Ready stage */}
+                  {isReadyStage && (
+                    <p className="waiting-label">🔔 Ready — waiter delivering...</p>
+                  )}
+
+                  {/* Completed */}
+                  {isCompleted && s !== 'Rejected' && (
+                    <span className="order-completed-label">✅ ARCHIVED</span>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
+        )}
       </main>
+        
+
 
       {/* ── SIDE DRAWER ── */}
       {drawer && (
         <div className={`side-drawer ${drawerSize === 'large' ? 'drawer-large' : ''}`}>
           <div className="drawer-header">
             <span className="drawer-title">
-              {drawer === 'waiter' ? '🍽️ Waiter Panel' : '👨‍🍳 Kitchen Panel'}
+              {drawer === 'payment' ? '💳 Payments' : drawer === 'waiter' ? '🍽️ Waiter Panel' : '👨‍🍳 Kitchen Panel'}
             </span>
             <div className="drawer-header-actions">
               <button
@@ -591,7 +1083,9 @@ function Admin() {
               <button className="drawer-close-btn" onClick={() => setDrawer(null)}>✕</button>
             </div>
           </div>
-          {drawer === 'waiter'
+          {drawer === 'payment'
+            ? <PaymentPanel orders={allOrders} adminId={user?.id} onPaymentConfirm={() => fetchOrders()} onPaymentReject={() => fetchOrders()} />
+            : drawer === 'waiter'
             ? <WaiterPanel  orders={allOrders} onStatusUpdate={handleStatusUpdate} />
             : <KitchenPanel orders={allOrders} onStatusUpdate={handleStatusUpdate} />
           }

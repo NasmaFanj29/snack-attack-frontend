@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import ordersService from '../services/ordersService';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import '../style/kitchen.css';
+import toast from 'react-hot-toast';
 
-const API = 'https://snack-attack-backend.onrender.com';
+ 
 const toDateStr = (d) => d.toISOString().slice(0,10);
 const today = () => toDateStr(new Date());
 const fmtDisplay = (str) => {
@@ -40,8 +41,9 @@ export default function Kitchen() {
 
   const fetchOrders = async () => {
     try {
-      const res = await axios.get(`${API}/admin/orders`);
-      setAllOrders(res.data);
+      const res = await ordersService.getAdminOrders();
+      if (res?.success) setAllOrders(res.data);
+      else { setAllOrders([]); toast.error(res?.error || 'Failed to fetch orders'); }
     } catch {}
   };
 
@@ -49,8 +51,8 @@ export default function Kitchen() {
 
   const update = async (id, status) => {
     try {
-      await axios.put(`${API}/admin/orders/${id}/status`, { status });
-      setAllOrders(prev => prev.map(o => o.id===id ? {...o, status} : o));
+      const res = await ordersService.updateOrderStatus(id, { status });
+      if (res?.success) setAllOrders(prev => prev.map(o => o.id===id ? {...o, status} : o));
     } catch { alert('Error updating order'); }
   };
 

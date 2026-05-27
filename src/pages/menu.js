@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import menuService from "../services/menuService";
+import getImageUrl from '../utils/imageUrl';
 import { useNavigate } from "react-router-dom";
 import "../style/menu.css";
-
-const BACKEND = "https://snack-attack-backend.onrender.com";
+import toast from 'react-hot-toast';
 
 const REMOVE_EXTRAS_BY_CATEGORY = {
   "Burgers": [1,2,3,4,5,8,9,11,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,29,31,32,35,36,37],
@@ -48,19 +48,32 @@ function ItemModal({ item, onClose, onAddToCart }) {
   const [pendingRemoved, setPendingRemoved] = useState([]);
   const [itemExtras, setItemExtras]         = useState([]);
   const [removableExtras, setRemovableExtras] = useState([]);
-  const [subView, setSubView]               = useState("main"); // main | note | remove
+  const [subView, setSubView]               = useState("main");
   const [imgLoaded, setImgLoaded]           = useState(false);
 
   useEffect(() => {
     if (!item) return;
-    axios.get(`${BACKEND}/item-extras/${item.id}`)
-      .then(res => {
-        const all = res.data || [];
-        setItemExtras(all);
+    menuService.getExtras()
+      .then(wrapped => {
+        if (!wrapped.success) {
+          console.error('Extras load error:', wrapped.error);
+          setItemExtras([]);
+          setRemovableExtras([]);
+          return;
+        }
+        
+        const backendData = wrapped.data;
+        const list = backendData?.extras || [];
+        
+        setItemExtras(list);
         const ids = REMOVE_EXTRAS_BY_CATEGORY[item.category] || [];
-        setRemovableExtras(all.filter(e => ids.includes(e.id)));
+        setRemovableExtras(list.filter(e => ids.includes(e.id)));
       })
-      .catch(() => { setItemExtras([]); setRemovableExtras([]); });
+      .catch(err => { 
+        console.error('Extras fetch failed:', err);
+        setItemExtras([]); 
+        setRemovableExtras([]); 
+      });
   }, [item]);
 
   if (!item) return null;
@@ -174,7 +187,7 @@ function ItemModal({ item, onClose, onAddToCart }) {
         <div className="modal-img-wrap">
           {!imgLoaded && <div className="modal-img-skeleton" />}
           <img
-            src={`${BACKEND}/images/${item.image}`}
+            src={getImageUrl(item.image)}
             alt={item.name}
             className={`modal-img ${imgLoaded ? "modal-img--loaded" : ""}`}
             onLoad={() => setImgLoaded(true)}
@@ -283,17 +296,54 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
   const [cartPopupOpen, setCartPopupOpen]     = useState(false);
   const cartPopupRef                          = useRef(null);
 
-  /* Fetch menu */
   useEffect(() => {
-    axios.get(`${BACKEND}/menu`)
-      .then(res => {
-        const data = res.data.map(item => ({ ...item, price: Number(item.price) }));
-        setMenuData(data);
-        setMenuItems(data);
-        if (data.length > 0) setActiveCategory(data[0].category);
+    menuService.getMenu()
+      .then(wrapped => {
+        if (!wrapped.success) {
+          console.error('Menu load error:', wrapped.error);
+          toast.error(wrapped.error || 'Failed to load menu');
+          setMenuData([]);
+          setMenuItems([]);
+          setLoading(false);
+          return;
+        }
+        
+        const backendData = wrapped.data;
+        const items = backendData?.menu || [];
+        
+        if (!Array.isArray(items)) {
+          console.error('Menu data is not an array:', items);
+          toast.error('Invalid menu data format');
+          setMenuData([]);
+          setMenuItems([]);
+          setLoading(false);
+          return;
+        }
+        
+        const mapped = items.map(item => ({ 
+          ...item, 
+          price: Number(item.price) || 0 
+        }));
+        
+        setMenuData(mapped);
+        setMenuItems(mapped);
+        
+        // ✅ FIX: Set first category from ordered list (Burgers first!)
+        const categoryOrder = ["Burgers", "Sandwiches", "Salad", "Appetizers", "Dips", "Beverages", "Desserts"];
+        const allCategories = [...new Set(mapped.map(i => i.category))];
+        const orderedCategories = categoryOrder.filter(cat => allCategories.includes(cat));
+        
+        if (orderedCategories.length > 0) {
+          setActiveCategory(orderedCategories[0]);
+        }
+        
+        setLoading(false);
       })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+      .catch(err => { 
+        console.error('Menu fetch failed:', err); 
+        toast.error('Failed to load menu'); 
+        setLoading(false);
+      });
   }, [setMenuItems]);
 
   /* Sync counter with cart */
@@ -315,7 +365,9 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [cartPopupOpen]);
 
-  const categories = [...new Set(menuData.map(i => i.category))];
+  const categoryOrder = ["Burgers", "Sandwiches", "Salad", "Appetizers", "Dips", "Beverages", "Desserts"];
+  const allCategories = [...new Set(menuData.map(i => i.category))];
+  const categories = categoryOrder.filter(cat => allCategories.includes(cat));
 
   const filteredItems = menuData
     .filter(i => i.category === activeCategory)
@@ -509,7 +561,7 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
                         onClick={() => setModalItem(item)}
                       >
                         <img
-                          src={`${BACKEND}/images/${item.image}`}
+                          src={getImageUrl(item.image)}
                           alt={item.name}
                           className="mc-img"
                           loading="lazy"

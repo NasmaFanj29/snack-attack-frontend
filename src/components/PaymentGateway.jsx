@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { CardElement, useStripe, useElements, Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import axios from "axios";
+import paymentService from "../services/paymentService";
 
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
-const BACKEND = "https://snack-attack-backend.onrender.com";
+// Guard: loadStripe(undefined) returns null and silently breaks every payment.
+// If the key isn't set the Elements wrapper receives null and shows a clear
+// "Stripe not configured" message instead of failing silently.
+const stripePromise = process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY)
+  : null;
 
 function CheckoutForm({ amount, orderId, onSuccess, onCancel }) {
   const stripe = useStripe();
@@ -13,40 +17,49 @@ function CheckoutForm({ amount, orderId, onSuccess, onCancel }) {
   const [clientSecret, setClientSecret] = useState("");
   const [loading, setLoading] = useState(false);
   const [intentError, setIntentError] = useState("");
+  // FIX (Issue 11): replaces both alert() calls — card errors and "not ready"
+  // guard both now render inline so they're styled, non-blocking, and work on
+  // mobile WebViews where alert() can be suppressed entirely.
+  const [cardError, setCardError] = useState("");
 
-  // ✅ Fix 1: only fetch if amount is valid, and re-fetch if amount changes
   useEffect(() => {
-    if (!amount || Number(amount) <= 0) return;
+    if (!orderId || !amount || Number(amount) <= 0) return;
+    const payload = { orderId };
 
     setClientSecret("");
     setIntentError("");
+    setCardError("");
 
-    axios
-      .post(`${BACKEND}/create-payment-intent`, { amount: Number(amount), orderId })
+    paymentService
+      .createPaymentIntent(payload)
       .then((res) => {
-        if (res.data.clientSecret) {
-          setClientSecret(res.data.clientSecret);
-        } else {
-          setIntentError("Could not initialize payment. Try again.");
-        }
+        if (res?.data?.success && res?.data?.clientSecret) setClientSecret(res.data.clientSecret);
+        else setIntentError(res?.data?.error || "Could not initialize payment. Try again.");
       })
       .catch((err) => {
-        console.error(err);
-        setIntentError("Payment setup failed. Check your connection.");
+        console.error("API ERROR:", err);
+        // Hide backend error details from customers
+        let msg = err?.response?.data?.error || err.message || 'Payment setup failed';
+        if (msg.includes('test')) {
+          msg = 'Payment service temporarily unavailable. Please try again.';
+        }
+        setIntentError(msg);
       });
-  }, [amount, orderId]); // ✅ re-runs if amount/orderId changes
+        }, [amount, orderId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ✅ Fix 2: guard against missing clientSecret
     if (!stripe || !elements) return;
+
+    // FIX (Issue 11): was alert("Payment is not ready yet...")
     if (!clientSecret) {
-      alert("Payment is not ready yet. Please wait a moment.");
+      setCardError("Payment is not ready yet. Please wait a moment.");
       return;
     }
 
     setLoading(true);
+    setCardError("");
 
     const cardElement = elements.getElement(CardElement);
 
@@ -54,11 +67,26 @@ function CheckoutForm({ amount, orderId, onSuccess, onCancel }) {
       payment_method: { card: cardElement },
     });
 
+    // FIX (Issue 11): was alert(result.error.message)
     if (result.error) {
-      alert(result.error.message);
-      setLoading(false);
-      return;
-    }
+  // FIX (Issue 11b): Hide Stripe test mode messages from customers
+  let errorMsg = result.error.message || 'Payment failed';
+  
+  // Replace technical/test mode messages with customer-friendly ones
+  if (errorMsg.includes('test mode')) {
+    errorMsg = 'Card declined. Please try another card.';
+  } else if (errorMsg.includes('non test card')) {
+    errorMsg = 'Card type not accepted. Please try another card.';
+  } else if (errorMsg.includes('declined')) {
+    errorMsg = 'Card was declined. Please check your details.';
+  } else if (errorMsg.includes('invalid') || errorMsg.includes('incomplete')) {
+    errorMsg = 'Invalid card information. Please check and try again.';
+  }
+  
+  setCardError(errorMsg);
+  setLoading(false);
+  return;
+}
 
     if (result.paymentIntent.status === "succeeded") {
       onSuccess(result.paymentIntent.id);
@@ -67,29 +95,26 @@ function CheckoutForm({ amount, orderId, onSuccess, onCancel }) {
     setLoading(false);
   };
 
+  // Shared error banner style used for both intentError and cardError
+  const errorBannerStyle = {
+    background: "rgba(220,38,38,0.15)",
+    border: "1px solid rgba(220,38,38,0.3)",
+    borderRadius: "10px",
+    padding: "12px",
+    color: "#f87171",
+    fontSize: "13px",
+    marginBottom: "14px",
+    textAlign: "center",
+  };
+
   return (
     <form onSubmit={handleSubmit}>
       <h2 style={{ color: "#fff", marginBottom: "20px" }}>
         Pay ${Number(amount).toFixed(2)}
       </h2>
 
-      {/* ✅ Show error if intent creation failed */}
-      {intentError && (
-        <div style={{
-          background: "rgba(220,38,38,0.15)",
-          border: "1px solid rgba(220,38,38,0.3)",
-          borderRadius: "10px",
-          padding: "12px",
-          color: "#f87171",
-          fontSize: "13px",
-          marginBottom: "14px",
-          textAlign: "center",
-        }}>
-          {intentError}
-        </div>
-      )}
+      {intentError && <div style={errorBannerStyle}>{intentError}</div>}
 
-      {/* ✅ Show loading spinner while clientSecret is being fetched */}
       {!clientSecret && !intentError && (
         <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "13px", textAlign: "center", marginBottom: "14px" }}>
           Initializing payment...
@@ -99,6 +124,9 @@ function CheckoutForm({ amount, orderId, onSuccess, onCancel }) {
       <div style={{ background: "#fff", padding: "14px", borderRadius: "12px", marginBottom: "20px" }}>
         <CardElement />
       </div>
+
+      {/* FIX (Issue 11): card / submit errors render here instead of alert() */}
+      {cardError && <div style={errorBannerStyle}>{cardError}</div>}
 
       <button
         type="submit"
@@ -129,6 +157,13 @@ function CheckoutForm({ amount, orderId, onSuccess, onCancel }) {
 }
 
 export default function PaymentGateway(props) {
+  if (!stripePromise) {
+    return (
+      <div style={{ background: "rgba(220,38,38,0.15)", border: "1px solid rgba(220,38,38,0.3)", borderRadius: "10px", padding: "16px", color: "#f87171", textAlign: "center" }}>
+        ⚠️ Stripe is not configured. Add REACT_APP_STRIPE_PUBLISHABLE_KEY to your environment variables.
+      </div>
+    );
+  }
   return (
     <Elements stripe={stripePromise}>
       <CheckoutForm {...props} />

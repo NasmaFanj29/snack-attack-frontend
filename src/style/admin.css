@@ -227,6 +227,7 @@ html, body {
   font-size: 13px; font-weight: 700; color: var(--text);
   min-width: 120px;
 }
+
 .ts-today {
   padding: 4px 12px; border-radius: 20px;
   border: 1px solid rgba(255,194,14,0.35);
@@ -457,7 +458,17 @@ html, body {
   width: fit-content; border: 1px solid #fde68a;
 }
 .split-phone { font-size: 10px; color: #9ca3af; }
-
+.tip-amount {
+  font-size: 12px;
+  font-weight: 600;
+  color: #a78bfa;          /* purple to distinguish from total */
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+.tip-amount span {
+  color: #7c3aed;
+}
 .currency-tag {
   font-size: 8px; font-weight: 800;
   padding: 1px 5px; border-radius: 3px; letter-spacing: 1px;

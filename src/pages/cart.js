@@ -3,7 +3,9 @@ import axios from "axios";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import "../style/cart.css";
 
-const BACKEND = "https://snack-attack-backend.onrender.com";
+// FIX: was hardcoded production URL — now reads from env like every other service.
+// Set REACT_APP_API_URL in .env (dev) and Vercel environment variables (prod).
+const BACKEND = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const REMOVE_IDS = {
   "Burgers":    [1,2,3,4,5,8,9,11,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,29,31,32,35,36,37],
@@ -23,7 +25,7 @@ function EditItemModal({ item, onClose, onSave }) {
   useEffect(() => {
     const id = item.databaseId || item.item_id || item.id;
     if (!id) return;
-    axios.get(`${BACKEND}/item-extras/${id}`)
+    axios.get(`${BACKEND}/api/extras`)
       .then(res => {
         const all = res.data || [];
         setItemExtras(all);
@@ -196,10 +198,11 @@ function Cart({ cart, addToCart, removeFromCart, setCart, isJoinMode = false }) 
   const [menuMap,      setMenuMap]      = useState({});
 
   useEffect(() => {
-    axios.get(`${BACKEND}/menu`)
+    axios.get(`${BACKEND}/api/menu`)
       .then(res => {
         const map = {};
-        (res.data || []).forEach(m => { map[m.id] = m; });
+        const items = res.data?.menu || [];
+        items.forEach(m => { map[m.id] = m; });
         setMenuMap(map);
       })
       .catch(() => {});
@@ -257,7 +260,7 @@ const getLinePrice = (item) => {
   useEffect(() => {
     if (!urlOrderId || initialFetchDone.current) return;
     initialFetchDone.current = true;
-    axios.get(`${BACKEND}/orders/${urlOrderId}`)
+    axios.get(`${BACKEND}/api/orders/${urlOrderId}`)
       .then(res => {
         if (res.data) {
           setDisplayCart(Array.isArray(res.data.items) ? res.data.items : []);
@@ -275,7 +278,7 @@ const getLinePrice = (item) => {
     if (activeId && isWaiting && isJoinMode) {
       interval = setInterval(async () => {
         try {
-          const res           = await axios.get(`${BACKEND}/orders/${activeId}`);
+          const res           =await axios.get(`${BACKEND}/api/orders/${activeId}`)
           const currentStatus = res.data.order?.status || "";
           setOrderStatus(currentStatus);
           if (Array.isArray(res.data.items) && Date.now() > ignorePollUntil.current)
@@ -340,11 +343,12 @@ const getLinePrice = (item) => {
           customOrderData: item.customOrderData || null,
         };
       });
-      const res = await axios.post(`${BACKEND}/place-order`, {
-        customer: { name: "Guest", phone: "000000" },
-        items: mappedItems, total_price: totalPrice.toFixed(2),
-        table_id: activeTable || "1", payment_splits: [], status: "Requested",
-      });
+     const res = await axios.post(`${BACKEND}/api/orders`, {
+      tableId: activeTable || "1",
+      items: mappedItems,
+      totalPrice: parseFloat(totalPrice.toFixed(2)),
+      specialNotes: null
+    });
       if (res.data && res.data.success) {
         localStorage.removeItem("cart");
         navigate("/checkout", {
@@ -362,7 +366,7 @@ const getLinePrice = (item) => {
     const activeId = orderId || urlOrderId;
     if (!activeId) return;
     try {
-      await axios.post(`${BACKEND}/orders/${activeId}/update-item`, { action, item });
+      await axios.post(`${BACKEND}/api/orders/${activeId}/update-item`, { action, item });
     } catch (err) { console.error("Error updating shared cart", err); }
   };
 
@@ -374,7 +378,8 @@ const getLinePrice = (item) => {
     setEditingItem(null);
     setEditingIndex(null);
     if (activeId) {
-      axios.put(`${BACKEND}/admin/orders/${activeId}/status`, { items: newItems })
+     await axios.put(`${BACKEND}/api/orders/${activeId}/items`,
+  { items: newItems })
         .catch(err => console.error("Error saving item edits:", err));
     }
   };
@@ -386,7 +391,7 @@ const getLinePrice = (item) => {
     const lineTotal     = lineUnitPrice * Number(item.quantity || 1);
 
     return (
-      <div key={String(item.id || globalIndex)} className="cart-item">
+      <div key={`${globalIndex}-${item.id || item.name}`} className="cart-item">
         <div className="cart-item-left">
           <span className="cart-item-name">{item.name || "Item"}</span>
           {Array.isArray(item.selectedExtras) && item.selectedExtras.length > 0 && (

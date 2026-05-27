@@ -175,8 +175,7 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
             <img src="/logo.png" alt="Snack Attack" />
           </Link>
 
-          {/* Divider */}
-          <div className="nav-divider" aria-hidden="true" />
+        
 
           {/* Desktop links */}
           <div className="nav-links">

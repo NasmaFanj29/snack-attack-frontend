@@ -14,11 +14,15 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    await new Promise(r => setTimeout(r, 400));
-    const role = login(form.username, form.password);
-    setLoading(false);
-    if (!role) { setError('Wrong credentials. Try again! ❌'); return; }
-    navigate(role === 'admin' ? '/admin' : role === 'waiter' ? '/waiter' : '/kitchen');
+    try {
+      const role = await login(form.username, form.password);
+      setLoading(false);
+      if (!role) { setError('Wrong credentials. Try again! ❌'); return; }
+      navigate(role === 'admin' ? '/admin' : role === 'waiter' ? '/waiter' : '/kitchen');
+    } catch (err) {
+      setLoading(false);
+      setError('Login failed. Please try again.');
+    }
   };
 
   return (

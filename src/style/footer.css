@@ -1,151 +1,236 @@
-/* ================================================================
-   FOOTER.CSS — Snack Attack · Themed
-   ================================================================ */
+/* src/style/footer.css */
 
-.footer {
+/* ═══════════════════════════════════════════════════
+   FOOTER — Snack Attack · Glass Theme
+   Matches cart.css / menu glass style
+   ═══════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&display=swap');
+
+/* ═════════ MAIN FOOTER ═════════ */
+
+.sa-footer {
   width: 100%;
-  background: var(--nav-bg);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  border-top: 1px solid var(--nav-border);
   position: relative;
-  z-index: 100;
+  font-family: 'DM Sans', sans-serif;
+  z-index: 10; 
   flex-shrink: 0;
+
+  /* light — frosted glass strip */
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(18px) saturate(1.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  border-top: 1px solid rgba(255, 255, 255, 0.45);
+
+  /* green accent line via box-shadow trick */
+  box-shadow: inset 0 2px 0 0 var(--green, #95b508);
+
+  overflow: hidden;
+  transition: background 0.3s, border-color 0.3s;
 }
 
-/* Gold shimmer line — mirrors navbar */
-.footer::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 194, 14, 0.3) 40%,
-    rgba(255, 194, 14, 0.3) 60%,
-    transparent
-  );
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s;
+/* dark mode */
+[data-theme="dark"] .sa-footer {
+  background: rgba(14, 14, 16, 0.72);
+  backdrop-filter: blur(22px) saturate(1.2);
+  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+  border-top-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 2px 0 0 var(--green, #95b508),
+    0 -1px 0 rgba(255, 255, 255, 0.04);
 }
-[data-theme="dark"] .footer::before { opacity: 1; }
 
-/* ── Main row ── */
+/* mobile fallback — no backdrop-filter */
+@media (max-width: 900px) {
+  .sa-footer {
+    background: rgba(235, 230, 222, 0.88) !important;
+  }
+  [data-theme="dark"] .sa-footer {
+    background: rgba(12, 12, 14, 0.90) !important;
+  }
+}
+
+/* ═════════ INNER LAYOUT ═════════ */
+
 .footer-inner {
-  max-width: 1400px;
+  position: relative;
+  z-index: 2;
+  max-width: 1320px;
   margin: 0 auto;
-  padding: 20px 28px;
+  padding: 28px 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 24px;
 }
 
-/* ── Brand ── */
+/* ═════════ BRAND ═════════ */
+
 .footer-brand {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 3px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(32px, 4.5vw, 56px);
+  letter-spacing: 5px;
   text-transform: uppercase;
-  color: var(--gold);
-  opacity: 0.9;
-  white-space: nowrap;
+  line-height: 0.95;
+  user-select: none;
   flex-shrink: 0;
+
+  /* light — dark gradient so it reads on light glass */
+  background: linear-gradient(90deg, #5a7a00 0%, #7f9905 40%, #c8a800 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
-/* ── Info pills ── */
+[data-theme="dark"] .footer-brand {
+  background: linear-gradient(
+    90deg,
+    #95b508 0%,
+    #b8c90a 30%,
+    #d9c70b 60%,
+    #FFC20E 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ═════════ INFO SECTION ═════════ */
+
 .footer-info {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  flex-wrap: wrap;
   justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
 }
+
+/* ═════════ PILLS ═════════ */
 
 .footer-pill {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 11px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-  background: var(--border);
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 12px;
   white-space: nowrap;
-  font-size: 0.75rem;
-  transition: border-color 0.18s;
+  font-size: 12px;
+  font-weight: 600;
+
+  /* light */
+  background: rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.09);
+  color: rgba(0, 0, 0, 0.58);
+
+  transition:
+    border-color 0.22s,
+    background 0.22s,
+    color 0.22s,
+    transform 0.22s,
+    box-shadow 0.22s;
 }
-.footer-pill:hover { border-color: var(--border-2); }
+
+[data-theme="dark"] .footer-pill {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.52);
+}
+
+.footer-pill:hover {
+  background: rgba(149, 181, 8, 0.10);
+  border-color: rgba(149, 181, 8, 0.35);
+  color: #4a7c00;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(149, 181, 8, 0.12);
+}
+
+[data-theme="dark"] .footer-pill:hover {
+  background: rgba(255, 194, 14, 0.08);
+  border-color: rgba(255, 194, 14, 0.28);
+  color: rgba(255, 255, 255, 0.90);
+  box-shadow: 0 6px 18px rgba(255, 194, 14, 0.08);
+}
+
+/* ═════════ PILL ICONS ═════════ */
 
 .footer-pill-icon {
   font-size: 12px;
   line-height: 1;
+  opacity: 0.85;
 }
+
+/* ═════════ LINKS ═════════ */
 
 .footer-pill a {
   color: inherit;
   text-decoration: none;
   font-weight: 700;
 }
-.footer-pill a:hover { color: var(--gold); }
+.footer-pill a:hover { color: #4a7c00; }
+[data-theme="dark"] .footer-pill a:hover { color: var(--gold, #ffc20e); }
+
+/* ═════════ DOTS ═════════ */
 
 .footer-dot {
-  width: 3px; height: 3px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
-  background: var(--gold);
-  opacity: 0.3;
   flex-shrink: 0;
+  margin: 0 3px;
+  background: rgba(0, 0, 0, 0.20);
 }
 
-/* ── Copyright ── */
+[data-theme="dark"] .footer-dot {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ═════════ COPYRIGHT ═════════ */
+
 .footer-copy {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.68rem;
-  font-weight: 500;
-  color: var(--text-faint);
-  opacity: 0.45;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.7px;
   white-space: nowrap;
   flex-shrink: 0;
-  letter-spacing: 0.3px;
+  color: rgba(0, 0, 0, 0.30);
 }
 
-/* ═══════════════════════════════════════════
-   MOBILE ≤ 768px
-═══════════════════════════════════════════ */
+[data-theme="dark"] .footer-copy {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+/* ═════════ MOBILE ═════════ */
+
 @media (max-width: 768px) {
   .footer-inner {
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-    padding: 18px 16px 20px;
+    gap: 16px;
+    padding: 24px 18px;
     text-align: center;
   }
-
-  .footer-info {
-    gap: 6px;
+  .footer-brand {
+    font-size: clamp(36px, 10vw, 52px);
+    letter-spacing: 4px;
   }
-
-  .footer-dot { display: none; }
-
+  .footer-info { gap: 8px; }
+  .footer-dot  { display: none; }
   .footer-pill {
-    font-size: 0.72rem;
-    padding: 5px 10px;
+    font-size: 11.5px;
+    padding: 7px 12px;
   }
-
-  .footer-copy {
-    font-size: 0.65rem;
-  }
+  .footer-copy { font-size: 10px; }
 }
+
+/* ═════════ EXTRA SMALL ═════════ */
 
 @media (max-width: 400px) {
   .footer-info {
     flex-direction: column;
     align-items: center;
+  }
+  .footer-pill {
+    width: 100%;
+    justify-content: center;
   }
 }

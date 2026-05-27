@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import ordersService from '../services/ordersService';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import '../style/waiter.css';
+import toast from 'react-hot-toast';
 
-const API = 'https://snack-attack-backend.onrender.com';
+ 
 const toDateStr = (d) => d.toISOString().slice(0,10);
 const today = () => toDateStr(new Date());
 const fmtDisplay = (str) => {
@@ -25,11 +26,12 @@ export default function Waiter() {
 
   const fetchOrders = async () => {
     try {
-      const res = await axios.get(`${API}/admin/orders`);
-      setOrders(res.data);
+      const res = await ordersService.getAdminOrders();
+      if (res?.success) setOrders(res.data);
+      else { setOrders([]); toast.error(res?.error || 'Failed to fetch orders'); }
 
       // ── Cash notification: detect new PaymentPending cash orders ──
-      const newCashOrders = res.data.filter(o => {
+      const newCashOrders = (res?.success ? res.data : []).filter(o => {
         if (o.status !== 'PaymentPending') return false;
         try {
           const splits = typeof o.payment_splits==='string' ? JSON.parse(o.payment_splits) : (o.payment_splits||[]);
@@ -55,8 +57,8 @@ export default function Waiter() {
 
   const update = async (id, status) => {
     try {
-      await axios.put(`${API}/admin/orders/${id}/status`, { status });
-      setOrders(prev => prev.map(o => o.id===id ? {...o, status} : o));
+      const res = await ordersService.updateOrderStatus(id, { status });
+      if (res?.success) setOrders(prev => prev.map(o => o.id===id ? {...o, status} : o));
     } catch { alert('Error!'); }
   };
 
