@@ -27,11 +27,12 @@ export default function Waiter() {
   const fetchOrders = async () => {
     try {
       const res = await ordersService.getAdminOrders();
-      if (res?.success) setOrders(res.data);
+      if (res?.success) setOrders(Array.isArray(res.data?.orders) ? res.data.orders : Array.isArray(res.data) ? res.data : []);
+
       else { setOrders([]); toast.error(res?.error || 'Failed to fetch orders'); }
 
       // ── Cash notification: detect new PaymentPending cash orders ──
-      const newCashOrders = (res?.success ? res.data : []).filter(o => {
+      const newCashOrders = (res?.success ? (Array.isArray(res.data?.orders) ? res.data.orders : Array.isArray(res.data) ? res.data : []) : []).filter(o => {
         if (o.status !== 'PaymentPending') return false;
         try {
           const splits = typeof o.payment_splits==='string' ? JSON.parse(o.payment_splits) : (o.payment_splits||[]);
