@@ -42,7 +42,7 @@ export default function Kitchen() {
   const fetchOrders = async () => {
     try {
       const res = await ordersService.getAdminOrders();
-      if (res?.success) setAllOrders(res.data);
+      if (res?.success) setAllOrders(Array.isArray(res.data?.orders) ? res.data.orders : Array.isArray(res.data) ? res.data : []);
       else { setAllOrders([]); toast.error(res?.error || 'Failed to fetch orders'); }
     } catch {}
   };

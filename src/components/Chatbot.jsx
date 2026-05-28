@@ -351,13 +351,19 @@ function Chatbot({ menuItems = [], extras = [], addToCart }) {
   window.dispatchEvent(new CustomEvent("snackCartAddByName", { detail: customItem }));
 };
   /* ── Check auto-rules before hitting the API ──────────────── */
- const checkAutoRules = (text) => {
+const isFranco = (text) =>
+  /\b(bde|shu|3andi|kifak|yalla|mni7|hek|wallah|3anna|kmn|tyb|eza|la2|akid|msh|ahla|tfaddal|7abib|ktir|marhaba|salam|3ammeh|3amo|sa3at|awkat|wa2t|7ammam|shukran|ysalmo)\b/i.test(text);
+
+const checkAutoRules = (text) => {
+  const franco = isFranco(text);
   for (const rule of AUTO_RULES) {
-    if (rule.match.test(text.trim())) return rule.reply;
+    if (rule.match.test(text.trim())) {
+      if (rule.en && rule.fr) return franco ? rule.fr : rule.en;
+      return rule.reply;
+    }
   }
   return null;
 };
-  
 
   /* ── Main send handler ────────────────────────────────────── */
   const handleSend = async () => {
