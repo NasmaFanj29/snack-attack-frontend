@@ -345,7 +345,7 @@ const getLinePrice = (item) => {
         };
       });
      const res = await axios.post(`${BACKEND}/api/orders`, {
-        tableNumber: activeTable || "1",  // ✅ بدّلنا tableId → tableNumber
+        tableId: activeTable || "1",
         items: mappedItems,
         totalPrice: parseFloat(totalPrice.toFixed(2)),
         specialNotes: null
