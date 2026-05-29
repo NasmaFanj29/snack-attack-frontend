@@ -506,17 +506,38 @@ if (raw.includes("CART_ADD:")) {
    } catch (err) {
   console.error("Chat error:", err.message);
   
-  const isTimeout = err.message?.includes('timeout');
-  const isQuota = err.message?.includes('busy') || err.response?.status === 429;
+  // ✅ Smart fallback - try to match menu items
+  const lowerText = text.toLowerCase();
+  const franco = isFranco(text);
   
-  const errMsg = {
-    sender: "bot",
-    text: isTimeout 
-      ? "Sorry, took too long to respond. Please try again!"
-      : isQuota
-      ? "I'm a bit busy right now, try again in a moment!"
-      : "Something went wrong. Ask a staff member for help!",
-  };
+  // Try fuzzy match with menu
+  const matchedItem = menuItems.find(m => 
+    lowerText.includes(m.name?.toLowerCase()) || 
+    m.name?.toLowerCase().split(' ').some(w => lowerText.includes(w))
+  );
+  
+  let fallbackText;
+  if (matchedItem) {
+    fallbackText = `${matchedItem.name} $${Number(matchedItem.price).toFixed(2)}${matchedItem.description ? ' — ' + matchedItem.description : ''}`;
+  } else if (lowerText.match(/\b(price|kam|how much|2adde|2addesh|kaddesh)\b/i)) {
+    fallbackText = franco 
+      ? "Shu baddak ta3reflo l se3r? 2elne l esem!"
+      : "Which item would you like the price for?";
+  } else if (lowerText.match(/\b(order|bde|i want|want|baddi)\b/i)) {
+    fallbackText = franco
+      ? "Akid! Roo7 3al menu w 5tar shu baddak."
+      : "Sure! Browse the menu and pick what you'd like.";
+  } else if (lowerText.match(/\b(burger|sandwich|salad|drink|fries)\b/i)) {
+    fallbackText = franco
+      ? "3anna burgers, sandwiches, salads, appetizers w drinks. Shu baddak tshouf?"
+      : "We have burgers, sandwiches, salads, appetizers and drinks. What would you like to see?";
+  } else {
+    fallbackText = franco
+      ? "Ma fhemet 3laik mni7. Jarreb tes2alne 3l menu, prices, aw l hours!"
+      : "I didn't quite get that. Try asking about our menu, prices, or hours!";
+  }
+  
+  const errMsg = { sender: "bot", text: fallbackText };
   setMessages(prev => [...prev, errMsg]);
   addMessage(tableId, errMsg);
 }
