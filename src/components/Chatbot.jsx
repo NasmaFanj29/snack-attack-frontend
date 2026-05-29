@@ -7,6 +7,19 @@ import {
 import chatService from '../services/chatService';
 
 /* ================================================================
+   FLOW STATES
+   ================================================================ */
+const FLOW = {
+  IDLE: 'idle',
+  ASK_TYPE: 'ask_type',
+  CUSTOM_PROTEIN: 'custom_protein',
+  CUSTOM_CHEESE: 'custom_cheese',
+  CUSTOM_SAUCE: 'custom_sauce',
+  CUSTOM_VEGGIES: 'custom_veggies',
+  CUSTOM_CONFIRM: 'custom_confirm',
+};
+
+/* ================================================================
    AUTO-RESPONSE RULES
    Quick keyword matches handled locally — no API call needed.
    ================================================================ */
@@ -156,9 +169,8 @@ const AUTO_RULES = [
     reply: "Iced Tea $2 — Refreshing cold iced tea!" },
   { match: /\b(small water|water)\b/i,
     reply: "Small Water $0.40 — Chilled bottled water!" },
-
- 
 ];
+
 const checkMenuDescription = (text, menuItems) => {
   if (!menuItems || menuItems.length === 0) return null;
   const found = menuItems.find(item =>
@@ -169,10 +181,11 @@ const checkMenuDescription = (text, menuItems) => {
   }
   return null;
 };
+
 /* Welcome message shown on first visit */
 const welcome = {
   sender: "bot",
-  text: "Welcome to Snack Attack! I’m ready to help you build your perfect burger, browse the menu, or assist with any questions. How can I help you today?",
+  text: "Welcome to Snack Attack! I'm ready to help you build your perfect burger, browse the menu, or assist with any questions. How can I help you today?",
 };
 
 /* ================================================================
@@ -188,15 +201,17 @@ function Chatbot({ menuItems = [], extras = [], addToCart }) {
   const [chatStatus,     setChatStatus]     = useState("bot");
   const [hasNewAdminMsg, setHasNewAdminMsg] = useState(false);
 
+  // ✅ NEW: Flow state for custom burger
+  const [flowState, setFlowState] = useState(FLOW.IDLE);
+  const customBurgerRef = useRef({});
+
   const conversationHistory = useRef([]);
   const prevMsgCount        = useRef(0);
   const messagesEndRef      = useRef(null);
-  const chatStatusRef       = useRef("bot"); // ref mirrors state for use inside async callbacks
+  const chatStatusRef       = useRef("bot");
 
-  // Keep ref in sync with state
   useEffect(() => { chatStatusRef.current = chatStatus; }, [chatStatus]);
 
-  /* ── Load saved conversation on mount ─────────────────────── */
   useEffect(() => {
     const conv = getTableConversation(tableId);
 
@@ -205,20 +220,17 @@ function Chatbot({ menuItems = [], extras = [], addToCart }) {
       setChatStatus(conv.status || "bot");
       chatStatusRef.current = conv.status || "bot";
 
-      // Rebuild conversation history for the AI
       conv.messages.forEach((msg) => {
         if (msg.sender === "user")
-          conversationHistory.current.push({ role: "user",      content: msg.text });
+          conversationHistory.current.push({ role: "user", content: msg.text });
         else if (msg.sender === "bot")
-        conversationHistory.current.push({ role: "assistant", content: msg.text });
-        // ✅ احفظ الـ history
+          conversationHistory.current.push({ role: "assistant", content: msg.text });
         try {
           localStorage.setItem(`chatHistory_${tableId}`, JSON.stringify(conversationHistory.current.slice(-20)));
         } catch(e) {}
-
         prevMsgCount.current = conv.messages.length;
       });
-        // ✅ أضف هون
+
       const savedHistory = localStorage.getItem(`chatHistory_${tableId}`);
       if (savedHistory) {
         try { conversationHistory.current = JSON.parse(savedHistory); } catch(e) {}
@@ -229,44 +241,36 @@ function Chatbot({ menuItems = [], extras = [], addToCart }) {
     }
   }, [tableId]);
 
-  /* ── Subscribe to real-time admin replies ─────────────────── */
   useEffect(() => {
     const unsub = subscribeToChats((conversations) => {
       const conv = conversations[tableId];
       if (!conv) return;
 
       setMessages([...conv.messages]);
-
       const newStatus = conv.status || "bot";
       setChatStatus(newStatus);
       chatStatusRef.current = newStatus;
 
-      // Show notification dot when chat is closed and a new admin message arrives
       if (!isOpen && conv.messages.length > prevMsgCount.current) {
         const latest = conv.messages[conv.messages.length - 1];
         if (latest?.sender === "admin") setHasNewAdminMsg(true);
       }
-
       prevMsgCount.current = conv.messages.length;
     });
 
     return unsub;
   }, [tableId, isOpen]);
 
-  // Clear notification dot when user opens the chat
   useEffect(() => { if (isOpen) setHasNewAdminMsg(false); }, [isOpen]);
 
-  // Scroll to bottom when chat opens
   useEffect(() => {
     if (isOpen) setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 80);
   }, [isOpen]);
 
-  // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  /* ── Escalate conversation to a staff member ──────────────── */
   const escalateToAdmin = (reason) => {
     setTableStatus(tableId, "admin");
     setChatStatus("admin");
@@ -280,7 +284,6 @@ function Chatbot({ menuItems = [], extras = [], addToCart }) {
     setMessages((prev) => [...prev, sysMsg]);
   };
 
-  /* ── Add a regular menu item to cart by name ──────────────── */
   const addItemToCartByName = (itemName) => {
     if (menuItems && menuItems.length > 0) {
       const found = menuItems.find(
@@ -290,82 +293,176 @@ function Chatbot({ menuItems = [], extras = [], addToCart }) {
       );
       if (found && addToCart) {
         addToCart({
-          id:             found.id,
-          databaseId:     found.id,
-          name:           found.name,
-          price:          Number(found.price),
-          image:          found.image,
-          quantity:       1,
-          selectedExtras: [],
+          id: found.id, databaseId: found.id, name: found.name,
+          price: Number(found.price), image: found.image,
+          quantity: 1, selectedExtras: [],
         });
         return true;
       }
     }
-
-    // Fallback: broadcast a custom event for the cart to handle
     window.dispatchEvent(new CustomEvent("snackCartAddByName", { detail: { name: itemName } }));
     return true;
   };
 
- /* ── Build a custom burger cart item and add it ───────────── */
   const addCustomOrderToCart = (orderData) => {
-  const ingredientsKey = `${orderData.bread}-${orderData.protein}-${orderData.cheese}-${orderData.veggies}-${orderData.sauce}`.replace(/\s+/g, '');
-  const customId = `custom_${ingredientsKey}`;
+    const ingredientsKey = `${orderData.bread}-${orderData.protein}-${orderData.cheese}-${orderData.veggies}-${orderData.sauce}`.replace(/\s+/g, '');
+    const customId = `custom_${ingredientsKey}`;
 
-  // ✅ احسب السعر من الـ extras
-  const findExtraPrice = (name) => {
-    if (!name) return 0;
-    const found = extras.find(e => 
-      e.name?.toLowerCase().includes(name.toLowerCase()) ||
-      name.toLowerCase().includes(e.name?.toLowerCase())
-    );
-    return Number(found?.price) || 0;
+    const findExtraPrice = (name) => {
+      if (!name) return 0;
+      const found = extras.find(e =>
+        e.name?.toLowerCase().includes(name.toLowerCase()) ||
+        name.toLowerCase().includes(e.name?.toLowerCase())
+      );
+      return Number(found?.price) || 0;
+    };
+
+    const basePrice = 5.00;
+    const cheesePrice = findExtraPrice(orderData.cheese);
+    const saucePrice = findExtraPrice(orderData.sauce);
+    const veggiesPrice = findExtraPrice(orderData.veggies);
+    const totalPrice = basePrice + cheesePrice + saucePrice + veggiesPrice;
+
+    const customItem = {
+      id: customId,
+      databaseId: null,
+      name: `Custom Burger (${orderData.protein})`,
+      price: orderData.price || totalPrice,
+      image: null,
+      quantity: 1,
+      selectedExtras: [
+        orderData.bread && `Bread: ${orderData.bread}`,
+        orderData.protein && `Protein: ${orderData.protein}`,
+        orderData.cheese && `Cheese: ${orderData.cheese}`,
+        orderData.veggies && `Veggies: ${orderData.veggies}`,
+        orderData.sauce && `Sauce: ${orderData.sauce}`,
+        orderData.notes && `Note: ${orderData.notes}`,
+      ].filter(Boolean),
+      isCustom: true,
+      customOrderData: orderData,
+    };
+
+    if (addToCart) addToCart(customItem);
+    window.dispatchEvent(new CustomEvent("snackCartAddByName", { detail: customItem }));
   };
 
-  const basePrice = 5.00; // سعر البيس burger
-  const cheesePrice = findExtraPrice(orderData.cheese);
-  const saucePrice  = findExtraPrice(orderData.sauce);
-  const veggiesPrice = findExtraPrice(orderData.veggies);
-  const totalPrice  = basePrice + cheesePrice + saucePrice + veggiesPrice;
+  const isFranco = (text) =>
+    /\b(bde|shu|3andi|kifak|yalla|mni7|hek|wallah|3anna|kmn|tyb|eza|la2|akid|msh|ahla|tfaddal|7abib|ktir|marhaba|salam|3ammeh|3amo|sa3at|awkat|wa2t|7ammam|shukran|ysalmo)\b/i.test(text);
 
-  const customItem = {
-    id: customId,
-    databaseId: null,
-    name: `Custom Burger (${orderData.protein})`,
-    price: orderData.price || totalPrice,
-    image: null,
-    quantity: 1,
-    selectedExtras: [
-      orderData.bread   && `Bread: ${orderData.bread}`,
-      orderData.protein && `Protein: ${orderData.protein}`,
-      orderData.cheese  && `Cheese: ${orderData.cheese}`,
-      orderData.veggies && `Veggies: ${orderData.veggies}`,
-      orderData.sauce   && `Sauce: ${orderData.sauce}`,
-      orderData.notes   && `Note: ${orderData.notes}`,
-    ].filter(Boolean),
-    isCustom: true,
-    customOrderData: orderData,
-  };
-
-  if (addToCart) addToCart(customItem);
-  window.dispatchEvent(new CustomEvent("snackCartAddByName", { detail: customItem }));
-};
-  /* ── Check auto-rules before hitting the API ──────────────── */
-const isFranco = (text) =>
-  /\b(bde|shu|3andi|kifak|yalla|mni7|hek|wallah|3anna|kmn|tyb|eza|la2|akid|msh|ahla|tfaddal|7abib|ktir|marhaba|salam|3ammeh|3amo|sa3at|awkat|wa2t|7ammam|shukran|ysalmo)\b/i.test(text);
-
-const checkAutoRules = (text) => {
-  const franco = isFranco(text);
-  for (const rule of AUTO_RULES) {
-    if (rule.match.test(text.trim())) {
-      if (rule.en && rule.fr) return franco ? rule.fr : rule.en;
-      return rule.reply;
+  const checkAutoRules = (text) => {
+    const franco = isFranco(text);
+    for (const rule of AUTO_RULES) {
+      if (rule.match.test(text.trim())) {
+        if (rule.en && rule.fr) return franco ? rule.fr : rule.en;
+        return rule.reply;
+      }
     }
-  }
-  return null;
-};
+    return null;
+  };
 
-  /* ── Main send handler ────────────────────────────────────── */
+  /* ✅ Send bot helper */
+  const sendBotMsg = (text) => {
+    const botMsg = { sender: "bot", text };
+    setMessages(prev => [...prev, botMsg]);
+    addMessage(tableId, botMsg);
+  };
+
+  /* ✅ Custom burger flow handler */
+  const handleOrderFlow = (text) => {
+    const lower = text.toLowerCase();
+
+    // Start flow
+    if (flowState === FLOW.IDLE) {
+      if (/^(bde|baddi|i want|want|order|3tene|a3tene)\s*(burger)?$/i.test(text.trim())) {
+        setFlowState(FLOW.ASK_TYPE);
+        sendBotMsg("Baddak menu burger aw tebne custom?");
+        return true;
+      }
+      return false;
+    }
+
+    if (flowState === FLOW.ASK_TYPE) {
+      if (/\b(custom|build|ebne|2ebne|tibne)\b/i.test(lower)) {
+        customBurgerRef.current = {};
+        setFlowState(FLOW.CUSTOM_PROTEIN);
+        sendBotMsg("Step 1: Beef wala Chicken?");
+        return true;
+      }
+      if (/\b(menu|3ade|regular)\b/i.test(lower)) {
+        setFlowState(FLOW.IDLE);
+        sendBotMsg("3anna Beef burgers: Classic $7, Cheese $7.50, BBQ $7, Mushroom Swiss $9. Chicken: Grilled $7, Spicy $7, Club $7, BBQ $7. Shu baddak?");
+        return true;
+      }
+      sendBotMsg("Menu wala custom?");
+      return true;
+    }
+
+    if (flowState === FLOW.CUSTOM_PROTEIN) {
+      if (/\b(beef|la7em|3jel)\b/i.test(lower)) {
+        customBurgerRef.current.protein = "Beef";
+        setFlowState(FLOW.CUSTOM_CHEESE);
+        sendBotMsg("Step 2: Shu naw3 l jebne? (Cheddar, Mozzarella, Swiss, aw blesh)");
+        return true;
+      }
+      if (/\b(chicken|djeje|djej)\b/i.test(lower)) {
+        customBurgerRef.current.protein = "Chicken";
+        setFlowState(FLOW.CUSTOM_CHEESE);
+        sendBotMsg("Step 2: Shu naw3 l jebne? (Cheddar, Mozzarella, Swiss, aw blesh)");
+        return true;
+      }
+      sendBotMsg("Beef wala Chicken?");
+      return true;
+    }
+
+    if (flowState === FLOW.CUSTOM_CHEESE) {
+      const m = lower.match(/\b(cheddar|mozzarella|swiss|none|blesh|bala)\b/i);
+      customBurgerRef.current.cheese = m ? m[0] : "Cheddar";
+      setFlowState(FLOW.CUSTOM_SAUCE);
+      sendBotMsg("Step 3: Shu naw3 l sauce? (BBQ, Garlic Mayo, Honey Mustard, Classic)");
+      return true;
+    }
+
+    if (flowState === FLOW.CUSTOM_SAUCE) {
+      const m = lower.match(/\b(bbq|garlic mayo|honey mustard|classic|mayo|ranch)\b/i);
+      customBurgerRef.current.sauce = m ? m[0] : "Classic";
+      setFlowState(FLOW.CUSTOM_VEGGIES);
+      sendBotMsg("Step 4: Shu khodra baddak? (Lettuce, Tomato, Onions, Pickles)");
+      return true;
+    }
+
+    if (flowState === FLOW.CUSTOM_VEGGIES) {
+      customBurgerRef.current.veggies = text.trim() || "Lettuce, Tomato";
+      const c = customBurgerRef.current;
+      setFlowState(FLOW.CUSTOM_CONFIRM);
+      sendBotMsg(`Tamem! Custom Burger:\n• ${c.protein}\n• Cheese: ${c.cheese}\n• Sauce: ${c.sauce}\n• Veggies: ${c.veggies}\n\nAdd to cart? (yes/no)`);
+      return true;
+    }
+
+    if (flowState === FLOW.CUSTOM_CONFIRM) {
+      if (/\b(yes|yalla|ok|akid|na3am|sure|add)\b/i.test(lower)) {
+        const c = customBurgerRef.current;
+        addCustomOrderToCart({
+          protein: c.protein, cheese: c.cheese, sauce: c.sauce,
+          veggies: c.veggies, bread: "brioche", price: 7.00,
+        });
+        sendBotMsg("✅ Custom Burger added to your cart! Anything else?");
+        setFlowState(FLOW.IDLE);
+        customBurgerRef.current = {};
+        return true;
+      }
+      if (/\b(no|la2|cancel)\b/i.test(lower)) {
+        sendBotMsg("Ma fi mushkele. Baddak shi tene?");
+        setFlowState(FLOW.IDLE);
+        customBurgerRef.current = {};
+        return true;
+      }
+      sendBotMsg("Yes wala no?");
+      return true;
+    }
+
+    return false;
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -376,184 +473,159 @@ const checkAutoRules = (text) => {
     setMessages((prev) => [...prev, userMsg]);
     addMessage(tableId, userMsg);
 
-    // When a staff member is active, just save the message — no AI reply
     if (chatStatusRef.current === "admin") return;
 
+    // ✅ Check custom burger flow FIRST
+    if (handleOrderFlow(text)) return;
+
     const autoReply = checkAutoRules(text);
-if (autoReply) {
-  conversationHistory.current.push({ role: "user", content: text });
-  conversationHistory.current.push({ role: "assistant", content: autoReply });
-  const botMsg = { sender: "bot", text: autoReply };
-  setMessages((prev) => [...prev, botMsg]);
-  addMessage(tableId, botMsg);
-  return;
-}
+    if (autoReply) {
+      conversationHistory.current.push({ role: "user", content: text });
+      conversationHistory.current.push({ role: "assistant", content: autoReply });
+      const botMsg = { sender: "bot", text: autoReply };
+      setMessages((prev) => [...prev, botMsg]);
+      addMessage(tableId, botMsg);
+      return;
+    }
 
-// ✅ Menu item description check
-const menuDesc = checkMenuDescription(text, menuItems);
-if (menuDesc) {
-  conversationHistory.current.push({ role: "user", content: text });
-  conversationHistory.current.push({ role: "assistant", content: menuDesc });
-  const botMsg = { sender: "bot", text: menuDesc };
-  setMessages((prev) => [...prev, botMsg]);
-  addMessage(tableId, botMsg);
-  return;
-}
+    const menuDesc = checkMenuDescription(text, menuItems);
+    if (menuDesc) {
+      conversationHistory.current.push({ role: "user", content: text });
+      conversationHistory.current.push({ role: "assistant", content: menuDesc });
+      const botMsg = { sender: "bot", text: menuDesc };
+      setMessages((prev) => [...prev, botMsg]);
+      addMessage(tableId, botMsg);
+      return;
+    }
 
-conversationHistory.current.push({ role: "user", content: text });
-setIsLoading(true);
+    conversationHistory.current.push({ role: "user", content: text });
+    setIsLoading(true);
 
     try {
-     const userMessageCount = conversationHistory.current.filter(m => m.role === "user").length;
-    const resp = await chatService.sendChat(conversationHistory.current, menuItems, userMessageCount, extras);
+      const userMessageCount = conversationHistory.current.filter(m => m.role === "user").length;
+      const resp = await chatService.sendChat(conversationHistory.current, menuItems, userMessageCount, extras);
       if (!resp || !resp.success) throw new Error(resp?.error || 'Empty response from backend');
-     let raw = resp.reply || resp.data?.reply;
+      let raw = resp.reply || resp.data?.reply;
       if (!raw) throw new Error('Empty response from backend');
 
-     try {
-  localStorage.setItem(`chatHistory_${tableId}`, JSON.stringify(conversationHistory.current.slice(-20)));
-} catch(e) {}
+      try {
+        localStorage.setItem(`chatHistory_${tableId}`, JSON.stringify(conversationHistory.current.slice(-20)));
+      } catch(e) {}
 
-      /* ── Handle CUSTOM_ORDER action ─────────────────────────── */
       if (raw.includes("CUSTOM_ORDER:")) {
         const match = raw.match(/CUSTOM_ORDER:(\{[\s\S]*?\})/);
         if (match) {
           try {
             const orderData = JSON.parse(match[1]);
-
-            // Persist to store and add to cart
             addCustomOrder(tableId, orderData);
             addCustomOrderToCart(orderData);
-
-            // Display the AI's confirmation text (summary box is part of it)
             const confirmText = raw.replace(/CUSTOM_ORDER:[\s\S]*/, "").trim();
             if (confirmText) {
               const confirmMsg = { sender: "bot", text: confirmText };
               setMessages((prev) => [...prev, confirmMsg]);
               addMessage(tableId, confirmMsg);
             }
-
             setIsLoading(false);
             return;
           } catch (e) {
             console.error("Failed to parse CUSTOM_ORDER JSON:", e);
           }
         }
-        // Strip malformed action tag and fall through
         raw = raw.replace(/CUSTOM_ORDER:[\s\S]*/, "").trim();
       }
 
-      /* ── Handle CART_ADD action ─────────────────────────────── */
-     /* ── Handle CART_ADD action ─────────────────────────────── */
-if (raw.includes("CART_ADD:")) {
-  const itemName = raw.match(/CART_ADD:([^\n]+)/)?.[1]?.trim();
-  if (itemName) {
-    if (itemName.toLowerCase().includes("custom")) {
-      const lastCustom = conversationHistory.current
-        .filter(m => m.role === "assistant")
-        .reverse()
-        .find(m => m.content?.includes("beef") || m.content?.includes("chicken") || 
-                   m.content?.includes("Beef") || m.content?.includes("Chicken"));
-      addCustomOrderToCart({
-        bread: "brioche",
-        protein: lastCustom?.content?.toLowerCase().includes("chicken") ? "Chicken" : "Beef",
-        cheese: "",
-        veggies: "",
-        sauce: "",
-        price: 12.99,
-      });
-    } else {
-      addItemToCartByName(itemName);
-    }
-  }
-  raw = raw.replace(/CART_ADD:[^\n]+/, "").trim();
-}
+      if (raw.includes("CART_ADD:")) {
+        const itemName = raw.match(/CART_ADD:([^\n]+)/)?.[1]?.trim();
+        if (itemName) {
+          if (itemName.toLowerCase().includes("custom")) {
+            const lastCustom = conversationHistory.current
+              .filter(m => m.role === "assistant")
+              .reverse()
+              .find(m => m.content?.includes("beef") || m.content?.includes("chicken") ||
+                         m.content?.includes("Beef") || m.content?.includes("Chicken"));
+            addCustomOrderToCart({
+              bread: "brioche",
+              protein: lastCustom?.content?.toLowerCase().includes("chicken") ? "Chicken" : "Beef",
+              cheese: "", veggies: "", sauce: "", price: 12.99,
+            });
+          } else {
+            addItemToCartByName(itemName);
+          }
+        }
+        raw = raw.replace(/CART_ADD:[^\n]+/, "").trim();
+      }
 
-      // If admin took over while we were waiting, discard the AI reply
       if (chatStatusRef.current === "admin") { setIsLoading(false); return; }
 
-      /* ── Handle NEED_ADMIN action ───────────────────────────── */
       if (raw.includes("NEED_ADMIN:")) {
         const reason = raw.match(/NEED_ADMIN:(\w+)/)?.[1] || "assistance";
         raw = raw.replace(/NEED_ADMIN:\w+/, "").trim();
-
         const reasonMap = {
-          confused:  "Customer needs clarification",
+          confused: "Customer needs clarification",
           offensive: "Inappropriate language detected",
           complaint: "Food or service complaint",
-          request:   "Customer requested staff assistance",
+          request: "Customer requested staff assistance",
         };
-
-        // Show the AI's message first, then escalate
         if (raw) {
           const botMsg = { sender: "bot", text: raw };
           setMessages((prev) => [...prev, botMsg]);
           addMessage(tableId, botMsg);
         }
-
         escalateToAdmin(reasonMap[reason] || reason);
         setIsLoading(false);
         return;
       }
 
-      // Normal reply
       if (raw) {
         const botMsg = { sender: "bot", text: raw };
         setMessages((prev) => [...prev, botMsg]);
         addMessage(tableId, botMsg);
       }
 
-   } catch (err) {
-  console.error("Chat error:", err.message);
-  
-  // ✅ Smart fallback - try to match menu items
-  const lowerText = text.toLowerCase();
-  const franco = isFranco(text);
-  
-  // Try fuzzy match with menu
-  const matchedItem = menuItems.find(m => 
-    lowerText.includes(m.name?.toLowerCase()) || 
-    m.name?.toLowerCase().split(' ').some(w => lowerText.includes(w))
-  );
-  
-  let fallbackText;
-  if (matchedItem) {
-    fallbackText = `${matchedItem.name} $${Number(matchedItem.price).toFixed(2)}${matchedItem.description ? ' — ' + matchedItem.description : ''}`;
-  } else if (lowerText.match(/\b(price|kam|how much|2adde|2addesh|kaddesh)\b/i)) {
-    fallbackText = franco 
-      ? "Shu baddak ta3reflo l se3r? 2elne l esem!"
-      : "Which item would you like the price for?";
-  } else if (lowerText.match(/\b(order|bde|i want|want|baddi)\b/i)) {
-    fallbackText = franco
-      ? "Akid! Roo7 3al menu w 5tar shu baddak."
-      : "Sure! Browse the menu and pick what you'd like.";
-  } else if (lowerText.match(/\b(burger|sandwich|salad|drink|fries)\b/i)) {
-    fallbackText = franco
-      ? "3anna burgers, sandwiches, salads, appetizers w drinks. Shu baddak tshouf?"
-      : "We have burgers, sandwiches, salads, appetizers and drinks. What would you like to see?";
-  } else {
-    fallbackText = franco
-      ? "Ma fhemet 3laik mni7. Jarreb tes2alne 3l menu, prices, aw l hours!"
-      : "I didn't quite get that. Try asking about our menu, prices, or hours!";
-  }
-  
-  const errMsg = { sender: "bot", text: fallbackText };
-  setMessages(prev => [...prev, errMsg]);
-  addMessage(tableId, errMsg);
-}
+    } catch (err) {
+      console.error("Chat error:", err.message);
+
+      const lowerText = text.toLowerCase();
+      const franco = isFranco(text);
+
+      const matchedItem = menuItems.find(m =>
+        lowerText.includes(m.name?.toLowerCase()) ||
+        m.name?.toLowerCase().split(' ').some(w => lowerText.includes(w))
+      );
+
+      let fallbackText;
+      if (matchedItem) {
+        fallbackText = `${matchedItem.name} $${Number(matchedItem.price).toFixed(2)}${matchedItem.description ? ' — ' + matchedItem.description : ''}`;
+      } else if (lowerText.match(/\b(price|kam|how much|2adde|2addesh|kaddesh)\b/i)) {
+        fallbackText = franco
+          ? "Shu baddak ta3reflo l se3r? 2elne l esem!"
+          : "Which item would you like the price for?";
+      } else if (lowerText.match(/\b(order|bde|i want|want|baddi)\b/i)) {
+        fallbackText = franco
+          ? "Akid! Roo7 3al menu w 5tar shu baddak."
+          : "Sure! Browse the menu and pick what you'd like.";
+      } else if (lowerText.match(/\b(burger|sandwich|salad|drink|fries)\b/i)) {
+        fallbackText = franco
+          ? "3anna burgers, sandwiches, salads, appetizers w drinks. Shu baddak tshouf?"
+          : "We have burgers, sandwiches, salads, appetizers and drinks. What would you like to see?";
+      } else {
+        fallbackText = franco
+          ? "Ma fhemet 3laik mni7. Jarreb tes2alne 3l menu, prices, aw l hours!"
+          : "I didn't quite get that. Try asking about our menu, prices, or hours!";
+      }
+
+      const errMsg = { sender: "bot", text: fallbackText };
+      setMessages(prev => [...prev, errMsg]);
+      addMessage(tableId, errMsg);
+    }
 
     setIsLoading(false);
   };
 
   const isAdminActive = chatStatus === "admin";
-  // Note: .bot-message uses white-space: pre-wrap in CSS so the ┌─┐ summary box renders correctly
 
-  /* ================================================================
-     RENDER
-     ================================================================ */
   return (
     <>
-      {/* Floating chat button */}
       <button className="chat-bubble-btn" onClick={() => setIsOpen((o) => !o)}>
         {isOpen ? "✖" : "💬"}
         {(hasNewAdminMsg || (isAdminActive && !isOpen)) && (
@@ -563,8 +635,6 @@ if (raw.includes("CART_ADD:")) {
 
       {isOpen && (
         <div className="chat-window glass-effect-chat">
-
-          {/* Header */}
           <div className={`chat-header ${isAdminActive ? "chat-header--admin" : ""}`}>
             <div className="chat-header-inner">
               <h3>{isAdminActive ? "Staff Connected" : "Snack Assistant"}</h3>
@@ -572,10 +642,8 @@ if (raw.includes("CART_ADD:")) {
             </div>
           </div>
 
-          {/* Message list */}
           <div className="chat-body">
             {messages.map((msg, i) => {
-              // System notification (e.g. staff escalation)
               if (msg.sender === "system") {
                 return (
                   <div key={i} className="system-message-row">
@@ -583,33 +651,19 @@ if (raw.includes("CART_ADD:")) {
                   </div>
                 );
               }
-
               return (
-                <div
-                  key={i}
-                  className={`chat-message-wrapper ${
-                    msg.sender === "user" ? "user-wrapper" : "bot-wrapper"
-                  }`}
-                >
-                  {msg.sender === "admin" && (
-                    <span className="admin-label">Staff</span>
-                  )}
-                  <div
-                    className={`chat-message ${
-                      msg.sender === "user"
-                        ? "user-message"
-                        : msg.sender === "admin"
-                        ? "admin-message"
-                        : "bot-message"
-                    }`}
-                  >
+                <div key={i} className={`chat-message-wrapper ${msg.sender === "user" ? "user-wrapper" : "bot-wrapper"}`}>
+                  {msg.sender === "admin" && <span className="admin-label">Staff</span>}
+                  <div className={`chat-message ${
+                    msg.sender === "user" ? "user-message" :
+                    msg.sender === "admin" ? "admin-message" : "bot-message"
+                  }`}>
                     {msg.text}
                   </div>
                 </div>
               );
             })}
 
-            {/* Typing indicator */}
             {isLoading && (
               <div className="chat-message-wrapper bot-wrapper">
                 <div className="chat-message bot-message">
@@ -623,29 +677,19 @@ if (raw.includes("CART_ADD:")) {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input area */}
           <div className="chat-footer">
             <input
               className="chat-input"
               type="text"
-              placeholder={
-                isAdminActive
-                  ? "A staff member will reply shortly..."
-                  : "Ask me anything..."
-              }
+              placeholder={isAdminActive ? "A staff member will reply shortly..." : "Ask me anything..."}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
             />
-            <button
-              className="chat-send-btn"
-              onClick={handleSend}
-              disabled={isLoading}
-            >
+            <button className="chat-send-btn" onClick={handleSend} disabled={isLoading}>
               ➤
             </button>
           </div>
-
         </div>
       )}
     </>
