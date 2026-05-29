@@ -287,7 +287,8 @@ const getLinePrice = (item) => {
           if (s === "paid") {
             setIsWaiting(false); setIsOrdered(true);
             clearInterval(interval);
-            localStorage.removeItem("cart");
+            localStorage.removeItem(`snackAttackCart_${activeTable}`);
+            localStorage.removeItem("snackAttackCart");
             navigate(`/checkout?orderId=${activeId}`);
           }
           if (["preparing","paid-accepted","paid-preparing","paid-ready","ready","served"].includes(s)) {
@@ -305,7 +306,7 @@ const getLinePrice = (item) => {
     const newCart = displayCart.filter(item => !item?.isCustom);
     setDisplayCart(newCart);
     if (setCart) setCart(newCart);
-    try { localStorage.setItem("cart", JSON.stringify(newCart)); } catch {}
+  try { localStorage.setItem(`snackAttackCart_${activeTable}`, JSON.stringify(newCart)); } catch {}
   };
 
   // ── Clear ALL regular items ──
@@ -313,14 +314,14 @@ const getLinePrice = (item) => {
     const newCart = displayCart.filter(item => item?.isCustom);
     setDisplayCart(newCart);
     if (setCart) setCart(newCart);
-    try { localStorage.setItem("cart", JSON.stringify(newCart)); } catch {}
+    try { localStorage.setItem(`snackAttackCart_${activeTable}`, JSON.stringify(newCart)); } catch {}
   };
 
   // ── Clear EVERYTHING ──
   const handleClearAll = () => {
     setDisplayCart([]);
     if (setCart) setCart([]);
-    try { localStorage.removeItem("cart"); } catch {}
+    try { localStorage.removeItem(`snackAttackCart_${activeTable}`); } catch {}
   };
 
   // ── Place Order ──
@@ -350,8 +351,10 @@ const getLinePrice = (item) => {
       specialNotes: null
     });
       if (res.data && res.data.success) {
-        localStorage.removeItem("cart");
-        navigate("/checkout", {
+      localStorage.removeItem("snackAttackCart");
+      localStorage.removeItem(`snackAttackCart_${activeTable}`);
+      if (setCart) setCart([]);
+      navigate("/checkout", {
           state: { orderId: res.data.orderId, cartItems: validItems, tableId: activeTable || "1", totalPrice: totalPrice.toFixed(2) },
         });
       } else { alert("Backend issue, order not placed."); }

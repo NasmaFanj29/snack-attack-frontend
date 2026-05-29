@@ -503,12 +503,14 @@ function Checkout({ setCart }) {
   const ignoreUpdatesUntil = useRef(0);
   const syncTimerRef = useRef(null);
   const cartClearedRef = useRef(false);
-  const myUserId = useRef(localStorage.getItem("userId"));
+  
+  const tableKey = `userId_table_${activeOrderId || 'default'}`;
+  const myUserId = useRef(localStorage.getItem(tableKey));
 
-  if (!myUserId.current) {
-    myUserId.current = Date.now().toString();
-    localStorage.setItem("userId", myUserId.current);
-  }
+if (!myUserId.current) {
+  myUserId.current = Date.now().toString();
+  localStorage.setItem(tableKey, myUserId.current);
+}
 
   const rawSubtotal     = (orderedItems || []).reduce(
     (acc, item) => acc + Number(item.price || item.price_at_time || 0) * (item.quantity || 1), 0

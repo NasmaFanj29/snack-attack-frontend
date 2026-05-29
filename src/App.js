@@ -80,13 +80,15 @@ function AppContent({ cart, setCart, addToCart, removeFromCart, setMenuItems, me
 }
 
 function App() {
-  const [cart, setCart] = useState(() => {
-    try {
-      const s = localStorage.getItem('snackAttackCart');
-      const p = JSON.parse(s || '[]');
-      return Array.isArray(p) ? p : [];
-    } catch { return []; }
-  });
+ const getTableId = () => localStorage.getItem('activeTable') || '1';
+
+const [cart, setCart] = useState(() => {
+  try {
+    const s = localStorage.getItem(`snackAttackCart_${getTableId()}`);
+    const p = JSON.parse(s || '[]');
+    return Array.isArray(p) ? p : [];
+  } catch { return []; }
+});
 
   const [menuItems, setMenuItems] = useState([]);
   const [extras, setExtras]       = useState([]);
@@ -118,8 +120,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('snackAttackCart', JSON.stringify(cart));
-  }, [cart]);
+  localStorage.setItem(`snackAttackCart_${getTableId()}`, JSON.stringify(cart));
+}, [cart]);
 
   const addToCart = (item) => {
     setCart(prev => {
