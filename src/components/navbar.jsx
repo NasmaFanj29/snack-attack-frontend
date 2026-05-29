@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "../hooks/useTheme";
+import socket from "../socket";
 import "../style/navbar.css";
 
 /* ── SVG Icons ── */
@@ -13,15 +14,15 @@ const IconCart = () => (
 );
 const IconMenu = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-    <line x1="3" y1="7"  x2="21" y2="7"/>
+    <line x1="3" y1="7" x2="21" y2="7"/>
     <line x1="3" y1="12" x2="21" y2="12"/>
     <line x1="9" y1="17" x2="21" y2="17"/>
   </svg>
 );
 const IconClose = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <line x1="18" y1="6"  x2="6"  y2="18"/>
-    <line x1="6"  y1="6"  x2="18" y2="18"/>
+    <line x1="18" y1="6" x2="6" y2="18"/>
+    <line x1="6" y1="6" x2="18" y2="18"/>
   </svg>
 );
 const IconPhone = () => (
@@ -32,14 +33,28 @@ const IconPhone = () => (
 
 export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, addToCart }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [cartOpen,   setCartOpen]   = useState(false);
-  const [scrolled,   setScrolled]   = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [tableCount, setTableCount] = useState(1);
   const desktopCartRef = useRef(null);
-  const mobileCartRef  = useRef(null);
+  const mobileCartRef = useRef(null);
   const { isDark, toggle } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
-  const isHome   = location.pathname === "/";
+  const isHome = location.pathname === "/";
+
+  const tableId = localStorage.getItem('activeTable') || '1';
+
+  /* ── Live table counter ── */
+  useEffect(() => {
+    socket.emit('joinTable', tableId);
+    
+    const handler = ({ tableId: tid, count }) => {
+      if (String(tid) === String(tableId)) setTableCount(count);
+    };
+    socket.on('tableCount', handler);
+    return () => socket.off('tableCount', handler);
+  }, [tableId]);
 
   /* ── Scroll shadow ── */
   useEffect(() => {
@@ -48,45 +63,39 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  /* ── Lock body scroll when drawer open ── */
   useEffect(() => {
     document.body.style.overflow = drawerOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [drawerOpen]);
 
-  /* ── Close cart on outside click ── */
   useEffect(() => {
     const handler = (e) => {
       const inDesktop = desktopCartRef.current?.contains(e.target);
-      const inMobile  = mobileCartRef.current?.contains(e.target);
+      const inMobile = mobileCartRef.current?.contains(e.target);
       if (!inDesktop && !inMobile) setCartOpen(false);
     };
     if (cartOpen) document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [cartOpen]);
 
-  /* ── Close cart/drawer on route change ── */
   useEffect(() => {
     setCartOpen(false);
     setDrawerOpen(false);
   }, [location.pathname]);
 
-  /* ── Totals ── */
   const totalPrice = cartItems.reduce((acc, item) => {
-    const base   = Number(item.price) || 0;
+    const base = Number(item.price) || 0;
     const extras = Array.isArray(item.selectedExtras)
       ? item.selectedExtras.reduce((s, e) => s + (Number(e.price) || 0), 0) : 0;
     return acc + (base + extras) * (Number(item.quantity) || 1);
   }, 0);
 
-  /* ── Cart popup ── */
   const CartPopup = () => (
     <div className="nav-cart-popup">
       <div className="ncp-header">
         <span className="ncp-title">Your Order</span>
         <span className="ncp-total">${totalPrice.toFixed(2)}</span>
       </div>
-
       <div className="ncp-body">
         {cartItems.length === 0 ? (
           <div className="ncp-empty">
@@ -95,11 +104,11 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
           </div>
         ) : (
           cartItems.map((item, idx) => {
-            const base   = Number(item.price) || 0;
+            const base = Number(item.price) || 0;
             const extras = Array.isArray(item.selectedExtras)
               ? item.selectedExtras.reduce((s, e) => s + (Number(e.price) || 0), 0) : 0;
-            const qty    = Number(item.quantity) || 1;
-            const total  = (base + extras) * qty;
+            const qty = Number(item.quantity) || 1;
+            const total = (base + extras) * qty;
             return (
               <div key={idx} className="ncp-item">
                 <div className="ncp-item-info">
@@ -127,7 +136,6 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
           })
         )}
       </div>
-
       <div className="ncp-footer">
         <div className="ncp-subtotal">
           <span>Order Total</span>
@@ -143,7 +151,6 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
     </div>
   );
 
-  /* ── Theme toggle ── */
   const ThemeToggle = () => (
     <button
       className="nav-theme-btn"
@@ -161,36 +168,56 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
 
   return (
     <>
-      {/* ══════════════════ NAVBAR BAR ══════════════════ */}
       <nav className={[
         "navbar",
-        isHome   ? "navbar--home"     : "navbar--page",
+        isHome ? "navbar--home" : "navbar--page",
         scrolled ? "navbar--scrolled" : "",
       ].filter(Boolean).join(" ")}>
 
         <div className="navbar-inner">
 
-          {/* Logo */}
-          <Link to="/" className="nav-logo" aria-label="Snack Attack Home">
-            <img src="/logo.png" alt="Snack Attack" />
+          {/* ✅ Live Table Counter (replaces logo) */}
+          <Link to="/" className="nav-logo" aria-label="Snack Attack Home" style={{ textDecoration: 'none' }}>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center',
+              background: 'linear-gradient(135deg, rgba(255,194,14,0.2), rgba(255,194,14,0.05))',
+              border: '1px solid rgba(255,194,14,0.4)',
+              borderRadius: '12px', 
+              padding: '6px 14px',
+              minWidth: '90px',
+            }}>
+              <span style={{ 
+                fontSize: '10px', 
+                color: 'rgba(255,255,255,0.6)', 
+                fontWeight: 700, 
+                letterSpacing: '1.5px',
+                textTransform: 'uppercase',
+              }}>
+                Table {tableId}
+              </span>
+              <span style={{ 
+                fontSize: '14px', 
+                color: '#FFC20E', 
+                fontWeight: 900,
+                marginTop: '2px',
+              }}>
+                👥 {tableCount} {tableCount === 1 ? 'guest' : 'guests'}
+              </span>
+            </div>
           </Link>
 
-        
-
-          {/* Desktop links */}
           <div className="nav-links">
-            <Link to="/"     className={`nav-link ${isActive("/")     ? "nav-link--active" : ""}`}>Home</Link>
+            <Link to="/" className={`nav-link ${isActive("/") ? "nav-link--active" : ""}`}>Home</Link>
             <Link to="/menu" className={`nav-link ${isActive("/menu") ? "nav-link--active" : ""}`}>Menu</Link>
           </div>
 
-          {/* Desktop actions */}
           <div className="nav-actions">
-
             <a href="tel:+96103231506" className="nav-phone-link">
               <IconPhone /> 03 231 506
             </a>
 
-            {/* Desktop cart */}
             <div className="nav-cart-wrap" ref={desktopCartRef}>
               <button
                 className="nav-cart-btn"
@@ -211,11 +238,9 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
             <ThemeToggle />
           </div>
 
-          {/* Mobile buttons */}
           <div className="nav-mobile-actions">
             <ThemeToggle />
 
-            {/* Mobile cart */}
             <div className="nav-cart-wrap" ref={mobileCartRef}>
               <button
                 className="nav-cart-btn nav-cart-btn--mobile"
@@ -234,7 +259,6 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
               )}
             </div>
 
-            {/* Hamburger */}
             <button
               className="nav-hamburger"
               onClick={() => setDrawerOpen(true)}
@@ -247,7 +271,6 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
         </div>
       </nav>
 
-      {/* ══════════════════ MOBILE DRAWER ══════════════════ */}
       <div
         className={`nav-overlay ${drawerOpen ? "nav-overlay--open" : ""}`}
         onClick={() => setDrawerOpen(false)}
@@ -267,7 +290,6 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
         </div>
 
         <div className="nav-drawer-body">
-
           <div className="nav-drawer-theme">
             <span>{isDark ? "Dark mode" : "Light mode"}</span>
             <ThemeToggle />
@@ -277,7 +299,7 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
 
           <Link
             to="/"
-            className={`nav-drawer-link ${isActive("/")     ? "nav-drawer-link--active" : ""}`}
+            className={`nav-drawer-link ${isActive("/") ? "nav-drawer-link--active" : ""}`}
             onClick={() => setDrawerOpen(false)}
           >
             <span>🏠</span> Home

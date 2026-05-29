@@ -41,9 +41,8 @@ const AUTO_RULES = [
     reply: "L 7ammam maojoud b ekher l mat3am, 3a yamin l counter." },
   { match: /\b(recommend|what do you recommend|shu btensa7)\b/i,
     reply: "Bensa7ak tjarreb l Classic Burger, l Grilled Chicken Sandwich, aw l Chicken Strips — ktir taybeen!" },
-  { match: /^(menu|shu 3andkon|what do you have|show menu|shu fi)$/i,
+  { match: /\b(menu|shu 3andkon|what do you have|show menu|shu fi|shu fi bel menu|categories|3anna shu)\b/i,
     reply: "3anna: Burgers, Sandwiches, Salads, Appetizers, Dips, w Beverages! Shu baddak?" },
-
   // ── Burgers — Categories ──
   { match: /\b(beef burger|beef burgers|shu 3andkon beef|what beef)\b/i,
     reply: "Beef burgers: Classic $7, Cheese $7.50, Mushroom Swiss $9, BBQ $7, Double Beef $9, w Mozzarella Beef $9!" },
