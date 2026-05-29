@@ -24,7 +24,7 @@ function CheckoutForm({ amount, orderId, onSuccess, onCancel }) {
 
   useEffect(() => {
     if (!orderId || !amount || Number(amount) <= 0) return;
-    const payload = { orderId };
+    const payload = { orderId, timestamp: Date.now() };
 
     setClientSecret("");
     setIntentError("");
@@ -147,7 +147,7 @@ function CheckoutForm({ amount, orderId, onSuccess, onCancel }) {
 
       <button
         type="button"
-        onClick={onCancel}
+        onClick={() => { onCancel(); }}
         style={{ width: "100%", marginTop: "10px", padding: "12px" }}
       >
         Cancel

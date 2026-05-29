@@ -594,8 +594,8 @@ function Checkout({ setCart }) {
 
 const defaultPayer = (id) => ({
   id: id || Date.now(),
-  name: localStorage.getItem('guestName') || "",  // ✅
-  phone: localStorage.getItem('guestPhone') || "", // ✅
+  name: "",
+  phone: "",
   amount: 0,
   method: "cash", currency: "USD",
   cashHasSplit: false, cashSecondAmount: 0,
@@ -1292,7 +1292,10 @@ const handleConfirmPayment = async (e) => {
                     amount={Number(activeCardPayer.amount || 0)}
                     orderId={activeOrderId}
                     onSuccess={handleCardPaymentSuccess}
-                    onCancel={() => { setShowCardGateway(false); setActiveCardPayer(null); }}
+                   onCancel={() => { 
+                    setShowCardGateway(false); 
+                    setActiveCardPayer(null);
+                  }}
                   />
                 )}
               </div>
