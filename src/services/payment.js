@@ -5,11 +5,12 @@ export async function createPaymentIntent(orderIdOrPayload) {
     ? { orderId: orderIdOrPayload } 
     : orderIdOrPayload;
   
-  // backend بيجيب الـ amount من الـ DB بنفسه
-  // بس الـ validator بيطلبه — حطه كـ placeholder
   if (!payload.amount) payload.amount = 0.01;
   
-  const res = await axios.post('/api/payment-intent', payload);
+  const res = await axios.post('/api/payment-intent', {
+    ...payload,
+    orderId: parseInt(payload.orderId), // ✅ string → integer
+  });
   return res.data;
 }
 

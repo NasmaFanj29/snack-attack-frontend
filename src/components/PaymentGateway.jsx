@@ -22,7 +22,7 @@ function CheckoutForm({ amount, orderId, onSuccess, onCancel }) {
   // mobile WebViews where alert() can be suppressed entirely.
   const [cardError, setCardError] = useState("");
 
-  useEffect(() => {
+ useEffect(() => {
     if (!orderId || !amount || Number(amount) <= 0) return;
     const payload = { orderId, timestamp: Date.now() };
 
@@ -33,19 +33,21 @@ function CheckoutForm({ amount, orderId, onSuccess, onCancel }) {
     paymentService
       .createPaymentIntent(payload)
       .then((res) => {
-        if (res?.data?.success && res?.data?.clientSecret) setClientSecret(res.data.clientSecret);
-        else setIntentError(res?.data?.error || "Could not initialize payment. Try again.");
+        if (res?.success && res?.data?.clientSecret) {
+          setClientSecret(res.data.clientSecret);
+        } else {
+          setIntentError(res?.error || "Could not initialize payment. Try again.");
+        }
       })
       .catch((err) => {
         console.error("API ERROR:", err);
-        // Hide backend error details from customers
         let msg = err?.response?.data?.error || err.message || 'Payment setup failed';
         if (msg.includes('test')) {
           msg = 'Payment service temporarily unavailable. Please try again.';
         }
         setIntentError(msg);
       });
-        }, [amount, orderId]);
+}, [amount, orderId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
