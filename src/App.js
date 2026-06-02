@@ -33,7 +33,7 @@ function AppContent({ cart, setCart, addToCart, removeFromCart, setMenuItems, me
   const isStaff  = STAFF_PATHS.some(p => location.pathname.startsWith(p));
   const isHomePage = location.pathname === '/';
   const queryParams  = new URLSearchParams(location.search);
-  const tableFromQR  = queryParams.get('table') || localStorage.getItem('activeTable') || 1;
+  const tableFromQR  = queryParams.get('table') || 1;
 
  const isScannerJoin = new URLSearchParams(location.search).get('mode') === 'add';
 
@@ -52,7 +52,9 @@ useEffect(() => {
 
   useEffect(() => {
     const tableId = queryParams.get('table');
-    if (tableId) localStorage.setItem('activeTable', tableId);
+    if (tableId) {
+  localStorage.setItem('activeTable', tableId);
+}
   }, [location.search]);
 
   return (
