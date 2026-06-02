@@ -447,15 +447,24 @@ if (data.success && Array.isArray(data.orders)) {
     return () => clearInterval(t);
   }, []);
 
-  useEffect(() => {
-    const updateCount = (conversations) => {
-      const count = Object.values(conversations).filter(c => c?.status === 'admin').length;
-      setNeedsAdminCount(count);
-    };
-    updateCount(getAllConversations());
-    const unsub = subscribeToChats(updateCount);
-    return unsub;
-  }, []);
+ useEffect(() => {
+  const updateCount = (conversations) => {
+    const count = Object.values(conversations).filter(c =>
+      c?.messages?.some(m =>m.from === 'user' && !m.seenByAdmin)
+    ).length;
+
+    setNeedsAdminCount(count);
+  };
+
+  const unsub = subscribeToChats((conversations) => {
+    updateCount(conversations); // 👈 استخدم البيانات مباشرة
+  });
+
+  // initial load
+  updateCount(getAllConversations());
+
+  return unsub;
+}, []);
 
   const orders = allOrders;
   const totalOrders  = orders.length;
