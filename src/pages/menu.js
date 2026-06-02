@@ -243,7 +243,7 @@ function ItemModal({ item, onClose, onAddToCart }) {
 
         {/* Add-on extras */}
         <div className="modal-scroll">
-          {itemExtras.length > 0 && (
+           {itemExtras.length > 0 && !["Beverages", "Appetizers", "Dips"].includes(item.category) && (
             <div className="extras-section">
               <p className="extras-label">Add extras</p>
               <div className="extras-list">
