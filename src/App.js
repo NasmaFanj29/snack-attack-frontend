@@ -92,7 +92,13 @@ useEffect(() => {
 }
 
 function App() {
- const getTableId = () => localStorage.getItem('activeTable') || '1';
+  
+const getTableId = () => {
+  return new URLSearchParams(window.location.search).get('table')
+    || localStorage.getItem('activeTable')
+    || '1';
+};
+
 
 const [cart, setCart] = useState(() => {
   try {

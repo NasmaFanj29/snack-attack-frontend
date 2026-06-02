@@ -6,8 +6,8 @@ export default function GuestWelcome({ onDone }) {
 
   const handleStart = () => {
     if (!name.trim() || !phone.trim()) return;
-    localStorage.setItem('guestName', name.trim());
-    localStorage.setItem('guestPhone', phone.trim());
+    sessionStorage.setItem('guestName', name.trim());
+    sessionStorage.setItem('guestPhone', phone.trim());
     onDone();
   };
 
