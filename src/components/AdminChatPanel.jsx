@@ -77,19 +77,25 @@ console.log('TABLE IDS:', tableIds);
           </button>
         </div>
         <div className="acp-list">
-          <div style={{ color: 'red', fontSize: '20px' }}>
-            Found {tableIds.length} chats
-          </div>
-        <div className="acp-list">
+       
   <div style={{ color: 'red', fontSize: '20px' }}>
     Found {tableIds.length} chats
   </div>
-          {tableIds.length === 0 && <p className="acp-empty">No active chats yet.</p>}
+
+  {tableIds.length === 0 && (
+    <p className="acp-empty">No active chats yet.</p>
+  )}
           {tableIds.map((tid) => {
+             console.log('RENDERING CHAT', tid);
             const conv       = conversations[tid];
             const isAdmin    = conv?.status === 'admin';
             const isSelected = selectedTable === tid;
             const unread     = getUnread(tid);
+          
+            console.log('SELECTED TABLE:', selectedTable);
+          console.log('ACTIVE CONV:', activeConv);
+          
+          
             return (
               <div
                 key={tid}
@@ -114,10 +120,10 @@ console.log('TABLE IDS:', tableIds);
               </div>
             );
           })}
-        </div>
+        
       </div>
       </div>
-      
+
 
       <div className="acp-main">
         {!selectedTable || !activeConv ? (
