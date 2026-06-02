@@ -55,12 +55,16 @@ function Home() {
   const [loaded, setLoaded] = useState(false);
   const [wifiOpen, setWifiOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const scrollHintRef = useRef(null);
 
   // refs for the scroll-zoom hero
   const zoneRef = useRef(null);     // tall scroll zone
   const burgerRef = useRef(null);   // the image that zooms
   const heroLeftRef = useRef(null); // text that fades out
+  const backToTopRef = useRef(null);
+
+  const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
     const timer = setTimeout(() => setLoaded(true), 80);
@@ -69,6 +73,11 @@ function Home() {
 
  useEffect(() => {
   const handleScroll = () => {
+    setScrollY(window.scrollY);
+    
+    // Show back-to-top only after scrolling down 500px
+    setShowBackToTop(window.scrollY > 500);
+    
     if (scrollHintRef.current) {
       scrollHintRef.current.classList.toggle("fade-out", window.scrollY > 200);
     }
@@ -97,6 +106,16 @@ function Home() {
   handleScroll();
   return () => window.removeEventListener("scroll", handleScroll);
 }, []);
+
+  useEffect(() => {
+    if (backToTopRef.current) {
+      if (showBackToTop) {
+        backToTopRef.current.classList.add("show");
+      } else {
+        backToTopRef.current.classList.remove("show");
+      }
+    }
+  }, [showBackToTop]);
 
   const copyPassword = () => {
     navigator.clipboard.writeText(WIFI_PASS).then(() => {
@@ -153,7 +172,7 @@ function Home() {
     <p className="about-text">
   More than just a restaurant, Snack Attack is a place where cravings meet quality. 
   We bring together fresh ingredients, creative recipes, and a fun atmosphere to deliver 
-  food that’s fast, flavorful, and impossible to resist.
+  food that's fast, flavorful, and impossible to resist.
 </p>
     <a href="/menu" className="about-link">Explore Our Menu →</a>
   </div>
@@ -198,7 +217,7 @@ function Home() {
         <div className="cta-content">
           <h2>Hungry? Order Now</h2>
           <p>Fresh food, fast delivery, unforgettable taste</p>
-          <Link to="/menu" className="btn-primary btn-large">
+          <Link to="/menu" className="btn-primary btn-large" onClick={() => window.scrollTo(0, 0)}>
             Start Your Order 🚀
           </Link>
         </div>
@@ -210,8 +229,19 @@ function Home() {
         </div>
         <span>Scroll to Explore</span>
       </div>
-    </div>
-  );
+
+      {/* Back to Top Button */}
+      <button
+        ref={backToTopRef}
+        className="back-to-top"
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        title="Back to top"
+      >
+        ↑
+      </button>
+
+    </div>  
+  );        
 }
 
 export default Home;

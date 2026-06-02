@@ -40,7 +40,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 background: linear-gradient(135deg, #f7d83f 10%, rgba(245, 208, 32, 0.15) 50%, #a8d021 100%);
   background-size: 200% 200%;
@@ -644,6 +644,7 @@ background: linear-gradient(135deg, #f7d83f 10%, rgba(245, 208, 32, 0.15) 50%, #
   text-transform: uppercase;
   transition: all 0.5s ease;
   animation: scrollFloat 2.8s ease infinite 1.8s;
+ 
 }
 
 .scroll-hint.fade-out {
@@ -710,7 +711,37 @@ background: linear-gradient(135deg, #f7d83f 10%, rgba(245, 208, 32, 0.15) 50%, #
   pointer-events: none;
 }
 
+/* ── BACK TO TOP BUTTON ──────────────────────────────────────── */
+.back-to-top {
+  position: fixed;
+  bottom: 24px;
+  right: 24px !important;
+  left: auto !important;
+  z-index: 100;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--ink);
+  border: none;
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.3s ease;
+  opacity: 0;
+  pointer-events: none;
+}
 
+.back-to-top.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.back-to-top:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
 
 /* ================================================================
    RESPONSIVE
@@ -788,7 +819,7 @@ background: linear-gradient(135deg, #f7d83f 10%, rgba(245, 208, 32, 0.15) 50%, #
   .btn-hero {
     position: relative;
     z-index: 1;
-    margin-top: 360px;
+    bottom:-250px;
     width: 80% !important;
     padding: 15px 25px !important;
     font-size: 0.92rem !important;
@@ -814,8 +845,5 @@ background: linear-gradient(135deg, #f7d83f 10%, rgba(245, 208, 32, 0.15) 50%, #
   .section-title { font-size: 1.7rem; }
   .stats-grid { grid-template-columns: 1fr; }
   .cta-content h2 { font-size: 2.2rem; }
-}
-.home-wrapper {
-  overflow-x: hidden;
-  max-width: 100vw;
+  .back-to-top { bottom: 20px; right: 16px !important; }
 }
