@@ -473,10 +473,22 @@ if (data.success && Array.isArray(data.orders)) {
     if (next <= today()) setSelectedDate(next);
   };
 
-  const parseSplits = (raw) => {
-    try { const p = typeof raw === 'string' ? JSON.parse(raw) : raw; return Array.isArray(p) ? p : []; }
-    catch { return []; }
-  };
+  // REPLACE الـ function كاملة بـ:
+const parseSplits = (raw) => {
+  try {
+    const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!Array.isArray(p)) return [];
+    return p.map(s => ({
+      ...s,
+      payment_id:     s.payment_id    || s.id,
+      payer_name:     s.payer_name    || s.name,
+      payer_phone:    s.payer_phone   || s.phone,
+      amount_usd:     s.amount_usd    || s.amount || 0,
+      method:         s.method        || 'cash',
+      payment_status: s.payment_status || (s.paid ? 'paid' : 'pending'),
+    }));
+  } catch { return []; }
+};
 
   const handleStatusUpdate = async (orderId, newStatus) => {
     let reason = null;
@@ -992,7 +1004,7 @@ if (data.success && Array.isArray(data.orders)) {
                   )}
 
                   {/* Card payment — Show CONFIRM & REJECT & REFUND */}
-                  {isPaymentPending && splits.some(s => s.payment_status === 'paid') && (
+                  {isPaymentPending && splits.some(s => s.method === 'card' && s.payment_status === 'paid') && (
                     <div className="action-row">
                       <button 
                         className="btn-action start" 
@@ -1015,7 +1027,7 @@ if (data.success && Array.isArray(data.orders)) {
                   )}
 
                   {/* Cash payment — Show CONFIRM & REJECT */}
-                  {isPaymentPending && !splits.some(s => s.payment_status === 'paid') && (
+                  {isPaymentPending && !splits.some(s => s.method === 'card' && s.payment_status === 'paid') && (
                     <div className="action-row">
                       <button 
                         className="btn-action start" 

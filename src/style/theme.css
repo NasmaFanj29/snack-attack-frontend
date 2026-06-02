@@ -85,9 +85,9 @@
 /* ── DARK MODE — Softer slate, not pitch black ─────────────────── */
 [data-theme="dark"] {
   /* Backgrounds — lifted from #080808 to warmer slate */
-  --bg:             #1a1814;
-  --surface:        #242220;
-  --surface-2:      #2a2826;
+  --bg:             #2a2a1a;
+  --surface:        #333320;
+  --surface-2:      #3a3a28;
   --surface-3:      #302e2b;
   --surface-4:      #3a3835;
 

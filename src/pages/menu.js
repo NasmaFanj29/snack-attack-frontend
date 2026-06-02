@@ -369,15 +369,24 @@ function Menu({ addToCart, removeFromCart, setMenuItems, cartItems }) {
   const allCategories = [...new Set(menuData.map(i => i.category))];
   const categories = categoryOrder.filter(cat => allCategories.includes(cat));
 
-  const filteredItems = menuData
-    .filter(i => i.category === activeCategory)
-    .filter(i =>
-      activeCategory === "Burgers" && burgerType !== "All"
-        ? i.type?.toLowerCase() === burgerType.toLowerCase()
-        : true
+ const searchTerm = search.trim().toLowerCase();
+ 
+const filteredItems = searchTerm
+  // When searching: look across ALL categories (ignore the open tab),
+  // match on name OR description so "chicken strip" finds it from any tab.
+  ? menuData.filter(i =>
+      i.name.toLowerCase().includes(searchTerm) ||
+      (i.description || "").toLowerCase().includes(searchTerm)
     )
-    .filter(i => i.name.toLowerCase().includes(search.toLowerCase()));
-
+  // No search: normal behaviour — filter by the active category + burger type.
+  : menuData
+      .filter(i => i.category === activeCategory)
+      .filter(i =>
+        activeCategory === "Burgers" && burgerType !== "All"
+          ? i.type?.toLowerCase() === burgerType.toLowerCase()
+          : true
+      );
+      
   /* Cart price helpers */
   const getLinePrice = item => {
     const extras = Array.isArray(item.selectedExtras)

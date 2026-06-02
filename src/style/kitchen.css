@@ -186,3 +186,64 @@
   .kf-btn { padding: 7px 14px; font-size: 10px; }
   .kitchen-grid { grid-template-columns: 1fr; gap: 14px; padding: 14px 16px; }
 }
+.k-item-removed {
+  font-size: 12px;
+  font-weight: 700;
+  color: #c0392b;                          /* dark red — visible on light bg */
+  background: rgba(192, 57, 43, 0.10);
+  border: 1px solid rgba(192, 57, 43, 0.25);
+  border-radius: 5px;
+  padding: 2px 7px;
+  display: inline-block;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+ 
+/* ➕ Added extras — keep gold but slightly bolder */
+.k-item-extras {
+  font-size: 12px;
+  font-weight: 600;
+  color: #b8860b;                          /* darker gold — readable */
+  display: block;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+ 
+/* 📝 Special note — already good, small tweak */
+.k-item-note {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #7a6000;                          /* dark gold text */
+  background: rgba(255, 194, 14, 0.15);
+  border: 1px solid rgba(255, 194, 14, 0.35);
+  border-radius: 6px;
+  padding: 3px 8px;
+  line-height: 1.4;
+}
+ 
+/* ── Item qty — make it readable (was too dark) ── */
+.k-item-qty {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.4rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: var(--text);         /* white/light — visible on dark card */
+  min-width: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+ 
+/* ── Items list bg — keep dark so colors pop ── */
+.k-items-list {
+  background: rgba(0, 0, 0, 0.35);
+  margin: 0 14px 14px;
+  border-radius: var(--r14);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 60px;
+}

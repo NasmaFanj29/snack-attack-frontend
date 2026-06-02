@@ -35,10 +35,13 @@ function AppContent({ cart, setCart, addToCart, removeFromCart, setMenuItems, me
   const queryParams  = new URLSearchParams(location.search);
   const tableFromQR  = queryParams.get('table') || localStorage.getItem('activeTable') || 1;
 
-  const [showWelcome, setShowWelcome] = useState(() => {
-    if (isStaff) return false;
-    return !localStorage.getItem('guestName') || !localStorage.getItem('guestPhone');
-  });
+ const isScannerJoin = new URLSearchParams(location.search).get('mode') === 'add';
+
+const [showWelcome, setShowWelcome] = useState(() => {
+  if (isStaff) return false;
+  if (isScannerJoin) return false;  // scanner has own JoinForm
+  return !localStorage.getItem('guestName') || !localStorage.getItem('guestPhone');
+});
 
   useEffect(() => {
     const tableId = queryParams.get('table');
@@ -64,7 +67,7 @@ function AppContent({ cart, setCart, addToCart, removeFromCart, setMenuItems, me
           <Route path="/menu"      element={<MenuPage addToCart={addToCart} removeFromCart={removeFromCart} setMenuItems={setMenuItems} cartItems={cart} />} />
           <Route path="/customize" element={<CustomBurger addToCart={addToCart} />} />
           <Route path="/cart"      element={<Cart cart={cart} setCart={setCart} addToCart={addToCart} removeFromCart={removeFromCart} />} />
-          <Route path="/checkout"  element={<Checkout cart={cart} setCart={setCart} tableId={tableFromQR} />} />
+          <Route path="/checkout" element={<Checkout setCart={setCart} />} />
           <Route path="/cart/:orderId" element={<Cart isJoinMode={true} addToCart={addToCart} removeFromCart={removeFromCart} setCart={setCart} />} />
           <Route path="/login"     element={<Login />} />
           <Route path="/admin"     element={<ProtectedRoute allowedRoles={['admin']}><Admin /></ProtectedRoute>} />
@@ -72,7 +75,7 @@ function AppContent({ cart, setCart, addToCart, removeFromCart, setMenuItems, me
           <Route path="/waiter"    element={<ProtectedRoute allowedRoles={['waiter']}><Waiter /></ProtectedRoute>} />
           <Route path="/qr-generator" element={<ProtectedRoute allowedRoles={['admin']}><QRGenerator /></ProtectedRoute>} />
         </Routes>
-        <Chatbot menuItems={menuItems} extras={extras} addToCart={addToCart} />
+      <Chatbot menuItems={menuItems} extras={extras} addToCart={addToCart} removeFromCart={removeFromCart} cart={cart} setCart={setCart}/>
       </main>
       {!isStaff && <Footer className={isHomePage ? 'home-footer' : 'general-footer'} />}
     </div>
@@ -154,8 +157,10 @@ const [cart, setCart] = useState(() => {
       );
 
       if (existing) {
-        return cur.map(i => i === existing ? { ...i, quantity: i.quantity + 1 } : i);
-      }
+      return cur.map(i => i === existing 
+        ? { ...i, quantity: i.quantity + (item.quantity || 1) }  // ← هيدا
+        : i);
+    }
 
       return [...cur, {
         id:             item.id || Date.now(),

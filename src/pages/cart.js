@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import "../style/menu.css";
 import "../style/cart.css";
 
 // FIX: was hardcoded production URL — now reads from env like every other service.
@@ -13,7 +14,7 @@ const REMOVE_IDS = {
   "Sandwiches": [1,2,3,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,31,32,35,36,37],
 };
 
-// ── Item Edit Modal ───────────────────────────────────────────────
+// ── Item Edit Modal — REDESIGNED WITH HERO IMAGE OVERLAY ───────
 function EditItemModal({ item, onClose, onSave }) {
   const [selectedExtras,  setSelectedExtras]  = useState(Array.isArray(item.selectedExtras) ? item.selectedExtras : []);
   const [pendingNote,     setPendingNote]      = useState(item.specialNote || item.special_note || "");
@@ -21,13 +22,14 @@ function EditItemModal({ item, onClose, onSave }) {
   const [itemExtras,      setItemExtras]       = useState([]);
   const [removableExtras, setRemovableExtras]  = useState([]);
   const [subView,         setSubView]          = useState("main");
+  const [imgLoaded,       setImgLoaded]        = useState(false);
 
   useEffect(() => {
     const id = item.databaseId || item.item_id || item.id;
     if (!id) return;
     axios.get(`${BACKEND}/api/extras`)
       .then(res => {
-        const all = res.data || [];
+        const all = res.data?.extras || res.data || [];
         setItemExtras(all);
         const ids = REMOVE_IDS[item.category] || [];
         setRemovableExtras(all.filter(e => ids.includes(e.id)));
@@ -47,22 +49,31 @@ function EditItemModal({ item, onClose, onSave }) {
 
   if (subView === "note") return (
     <div className="modal-overlay" onClick={() => setSubView("main")}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <button className="close-modal" onClick={() => setSubView("main")}>×</button>
-        <div className="modal-header">
-          <h2>Special Instructions</h2>
-          <p style={{ color:"#666", fontSize:"14px" }}>For {item.name}</p>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={() => setSubView("main")}>×</button>
+        <div className="modal-subheader">
+          <p className="modal-subtitle">Special instructions</p>
+          <h2 className="modal-subitem">{item.name}</h2>
         </div>
-        <div className="modal-scroll-area">
-          <textarea className="notes-textarea" placeholder="e.g., Cut in half, No onions..."
-            value={pendingNote} onChange={e => setPendingNote(e.target.value)} rows="5" />
+        <div className="modal-scroll">
+          <textarea
+            className="modal-textarea"
+            placeholder="e.g. No onions, extra sauce, cut in half…"
+            value={pendingNote}
+            onChange={e => setPendingNote(e.target.value)}
+            rows={5}
+            autoFocus
+          />
         </div>
-        <div className="modal-footer" style={{ display:"flex", gap:"8px" }}>
-          <button className="add-btn-final"
-            style={{ background:"var(--surface-3)", color:"var(--text-muted)", flex:"0 0 auto", width:"auto", padding:"16px 20px" }}
-            onClick={() => setSubView("main")}>← Back</button>
-          <button className="add-btn-final" onClick={() => setSubView("main")} disabled={!pendingNote.trim()}>
-            Save Note ✓</button>
+        <div className="modal-footer modal-footer--row">
+          <button className="modal-btn modal-btn--ghost" onClick={() => setSubView("main")}>← Back</button>
+          <button
+            className="modal-btn modal-btn--primary"
+            onClick={() => setSubView("main")}
+            disabled={!pendingNote.trim()}
+          >
+            Save Note ✓
+          </button>
         </div>
       </div>
     </div>
@@ -70,107 +81,148 @@ function EditItemModal({ item, onClose, onSave }) {
 
   if (subView === "remove") return (
     <div className="modal-overlay" onClick={() => setSubView("main")}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <button className="close-modal" onClick={() => setSubView("main")}>×</button>
-        <div className="modal-header">
-          <h2>Remove Ingredients</h2>
-          <p style={{ color:"var(--text-muted)", fontSize:"13px", textAlign:"center" }}>from {item.name}</p>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={() => setSubView("main")}>×</button>
+        <div className="modal-subheader">
+          <p className="modal-subtitle">Remove ingredients</p>
+          <h2 className="modal-subitem">{item.name}</h2>
         </div>
-        <div className="modal-scroll-area">
+        <div className="modal-scroll">
           {removableExtras.length > 0 ? (
-            <div className="extras-section">
-              <div className="extra-group">
-                {removableExtras.map(extra => (
-                  <label key={extra.id} className="extra-label">
-                    <div className="extra-info">
-                      <input type="checkbox"
-                        checked={pendingRemoved.some(e => e.id === extra.id)}
-                        onChange={() => toggleRemove(extra)} />
-                      <span>{extra.name}</span>
+            <div className="extras-list">
+              {removableExtras.map(extra => (
+                <label key={extra.id} className="extra-row extra-row--remove">
+                  <div className="extra-row-left">
+                    <div className={`extra-checkbox extra-checkbox--remove ${pendingRemoved.some(e => e.id === extra.id) ? "checked" : ""}`}>
+                      {pendingRemoved.some(e => e.id === extra.id) && <span>✕</span>}
                     </div>
-                  </label>
-                ))}
-              </div>
+                    <span className="extra-name">{extra.name}</span>
+                  </div>
+                  <input
+                    type="checkbox" hidden
+                    checked={pendingRemoved.some(e => e.id === extra.id)}
+                    onChange={() => toggleRemove(extra)}
+                  />
+                </label>
+              ))}
             </div>
           ) : (
-            <p style={{ textAlign:"center", color:"#999", padding:"20px" }}>No removable ingredients</p>
+            <p className="modal-empty">No removable ingredients for this item.</p>
           )}
         </div>
-        <div className="modal-footer" style={{ display:"flex", gap:"8px" }}>
-          <button className="add-btn-final"
-            style={{ background:"var(--surface-3)", color:"var(--text-muted)", flex:"0 0 auto", width:"auto", padding:"16px 20px" }}
-            onClick={() => setSubView("main")}>← Back</button>
-          <button className="add-btn-final" onClick={() => setSubView("main")}
+        <div className="modal-footer modal-footer--row">
+          <button className="modal-btn modal-btn--ghost" onClick={() => setSubView("main")}>← Back</button>
+          <button
+            className="modal-btn modal-btn--danger"
+            onClick={() => setSubView("main")}
             disabled={pendingRemoved.length === 0}
-            style={{ backgroundColor: pendingRemoved.length > 0 ? "#d90d0d" : "var(--surface-3)",
-              color: pendingRemoved.length > 0 ? "#fff" : "var(--text-muted)" }}>
-            Confirm Remove ✕</button>
+          >
+            Confirm ✕
+          </button>
         </div>
       </div>
     </div>
   );
 
+  /* ── MAIN VIEW — REDESIGNED WITH HERO IMAGE OVERLAY ── */
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <button className="close-modal" onClick={onClose}>×</button>
-        <div className="modal-header">
-          {item.image && <img src={`${BACKEND}/images/${item.image}`} alt={item.name} />}
-          <h2>{item.name}</h2>
-          {item.description && <p>{item.description}</p>}
+      <div className="modal-box modal-box--hero" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>×</button>
+
+        {/* ✅ HERO IMAGE WITH OVERLAY TITLE + PRICE */}
+        <div className="modal-hero-wrap">
+          {!imgLoaded && <div className="modal-img-skeleton" />}
+          <img
+            src={`${BACKEND}/images/${item.image}`}
+            alt={item.name}
+            className={`modal-hero-img ${imgLoaded ? "modal-hero-img--loaded" : ""}`}
+            onLoad={() => setImgLoaded(true)}
+          />
+          {/* Gradient overlay */}
+          <div className="modal-hero-overlay" />
+          
+          {/* Title + Price overlaid on image */}
+          <div className="modal-hero-content">
+            <h2 className="modal-hero-title">{item.name}</h2>
+            <span className="modal-hero-price">${Number(item.price).toFixed(2)}</span>
+          </div>
         </div>
-        <div className="modal-actions">
-          <button className="menu-action-btn notes-btn" onClick={() => setSubView("note")}>
-            📝 {pendingNote ? "Edit Note" : "Add Note"}
+
+        {/* Description */}
+        {item.description && (
+          <p className="modal-desc" style={{ padding: "12px 18px 0" }}>{item.description}</p>
+        )}
+
+        {/* Action chips */}
+        <div className="modal-chips" style={{ padding: "14px 18px 0" }}>
+          <button
+            className={`modal-chip ${pendingNote ? "modal-chip--active" : ""}`}
+            onClick={() => setSubView("note")}
+          >
+            <span className="chip-icon">📝</span>
+            {pendingNote ? "Edit note" : "Add note"}
           </button>
+
           {!["Beverages","Appetizers","Dips"].includes(item.category) && (
-            <button className="menu-action-btn remove-btn" onClick={() => setSubView("remove")}>
-              ✕ {pendingRemoved.length > 0 ? "Edit Remove" : "Remove Ingredients"}
+            <button
+              className={`modal-chip modal-chip--red ${pendingRemoved.length > 0 ? "modal-chip--active-red" : ""}`}
+              onClick={() => setSubView("remove")}
+            >
+              <span className="chip-icon">✕</span>
+              {pendingRemoved.length > 0 ? `Remove (${pendingRemoved.length})` : "Remove ingredients"}
             </button>
           )}
         </div>
+
+        {/* Active selections preview */}
         {(pendingRemoved.length > 0 || pendingNote) && (
-          <div style={{ padding:"0 20px 12px" }}>
+          <div className="modal-selections" style={{ padding: "10px 18px 0" }}>
             {pendingRemoved.length > 0 && (
-              <div style={{ padding:"8px 12px", borderRadius:"8px", marginBottom:"6px",
-                background:"rgba(255,80,80,0.08)", border:"1px solid rgba(255,80,80,0.2)",
-                fontSize:"12px", color:"rgba(255,90,90,0.9)" }}>
+              <div className="selection-tag selection-tag--red">
                 ✕ No {pendingRemoved.map(e => e.name).join(", ")}
               </div>
             )}
             {pendingNote && (
-              <div style={{ padding:"8px 12px", borderRadius:"8px",
-                background:"rgba(255,194,14,0.08)", border:"1px solid rgba(255,194,14,0.2)",
-                fontSize:"12px", color:"rgba(255,194,14,0.95)" }}>
+              <div className="selection-tag selection-tag--gold">
                 📝 {pendingNote}
               </div>
             )}
           </div>
         )}
-        <div className="modal-scroll-area">
+
+        {/* Extras scroll area */}
+        <div className="modal-scroll">
           {itemExtras.length > 0 && (
             <div className="extras-section">
-              <h3>Customize Your Order</h3>
-              <div className="extra-group">
-                <div className="extra-group-title">Add Extras</div>
+              <p className="extras-label">Add extras</p>
+              <div className="extras-list">
                 {itemExtras.map(extra => (
-                  <label key={extra.id} className="extra-label">
-                    <div className="extra-info">
-                      <input type="checkbox"
-                        checked={selectedExtras.some(e => e.id === extra.id)}
-                        onChange={() => toggleExtra(extra)} />
-                      <span>{extra.name}</span>
+                  <label key={extra.id} className="extra-row">
+                    <div className="extra-row-left">
+                      <div className={`extra-checkbox ${selectedExtras.some(e => e.id === extra.id) ? "checked" : ""}`}>
+                        {selectedExtras.some(e => e.id === extra.id) && <span>✓</span>}
+                      </div>
+                      <span className="extra-name">{extra.name}</span>
                     </div>
                     <span className="extra-price">+${Number(extra.price).toFixed(2)}</span>
+                    <input
+                      type="checkbox" hidden
+                      checked={selectedExtras.some(e => e.id === extra.id)}
+                      onChange={() => toggleExtra(extra)}
+                    />
                   </label>
                 ))}
               </div>
             </div>
           )}
         </div>
+
+        {/* CTA */}
         <div className="modal-footer">
-          <button className="add-btn-final" onClick={handleSave}>
-            Save Changes — ${modalPrice.toFixed(2)}
+          <button className="modal-cta" onClick={handleSave}>
+            <span>Add to order</span>
+            <span className="modal-cta-price">${modalPrice.toFixed(2)}</span>
           </button>
         </div>
       </div>

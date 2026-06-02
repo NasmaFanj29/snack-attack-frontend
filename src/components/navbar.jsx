@@ -158,9 +158,7 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
       title={isDark ? "Switch to Light" : "Switch to Dark"}
       aria-label="Toggle theme"
     >
-      <span className="nav-theme-track">
-        <span className="nav-theme-thumb">{isDark ? "🌙" : "☀️"}</span>
-      </span>
+     
     </button>
   );
 
@@ -190,7 +188,7 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
             }}>
               <span style={{ 
                 fontSize: '10px', 
-                color: 'rgba(255,255,255,0.6)', 
+                color: 'rgba(0,0,0,0.5)', 
                 fontWeight: 700, 
                 letterSpacing: '1.5px',
                 textTransform: 'uppercase',
@@ -199,7 +197,7 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
               </span>
               <span style={{ 
                 fontSize: '14px', 
-                color: '#FFC20E', 
+                color: '#5a7a00', 
                 fontWeight: 900,
                 marginTop: '2px',
               }}>
@@ -235,11 +233,11 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
               )}
             </div>
 
-            <ThemeToggle />
+            
           </div>
 
           <div className="nav-mobile-actions">
-            <ThemeToggle />
+            
 
             <div className="nav-cart-wrap" ref={mobileCartRef}>
               <button
@@ -291,8 +289,8 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
 
         <div className="nav-drawer-body">
           <div className="nav-drawer-theme">
-            <span>{isDark ? "Dark mode" : "Light mode"}</span>
-            <ThemeToggle />
+            
+            
           </div>
 
           <div className="nav-drawer-divider" />
