@@ -45,11 +45,36 @@ const parseItems = (order) => {
 const extrasStr = (arr) =>
   (arr||[]).map(e => typeof e==='object' ? e.name||'' : String(e)).filter(Boolean).join(', ');
 
+/* Reusable: items list inside an expanded card */
+function ItemsList({ items }) {
+  if (items.length === 0) return <p className="w-no-items">No items</p>;
+  return (
+    <>
+      {items.map((item,i) => (
+        <div key={i} className="w-item-row">
+          <span className="w-item-qty">{item.quantity}×</span>
+          <div className="w-item-detail">
+            <span className="w-item-name">{item.name}</span>
+            {item.selectedExtras?.length > 0 && (
+              <span className="w-item-extras">➕ {extrasStr(item.selectedExtras)}</span>
+            )}
+            {item.removedExtras?.length > 0 && (
+              <span className="w-item-removed">✕ No {extrasStr(item.removedExtras)}</span>
+            )}
+            {item.specialNote && (
+              <span className="w-item-note">📝 {item.specialNote}</span>
+            )}
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
 export default function Waiter() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders]             = useState([]);
-  const [tab, setTab]                   = useState('cash');
   const [selectedDate, setSelectedDate] = useState(today());
   const [collected, setCollected]       = useState(new Set()); // order ids marked collected
   const [expandedId, setExpandedId]     = useState(null);
@@ -86,6 +111,8 @@ export default function Waiter() {
     if (next <= today()) setSelectedDate(next);
   };
 
+  const toggleExpand = (id) => setExpandedId(prev => prev === id ? null : id);
+
   /* ── derived ── */
   const dateOrders   = orders.filter(o => o.created_at?.slice(0,10) === selectedDate);
   const activeOrders = dateOrders.filter(o => !['Paid','Rejected','Cancelled'].includes(o.status));
@@ -102,9 +129,9 @@ export default function Waiter() {
 
   const STATUS_COLOR = {
     Requested:'#6b7280', Accepted:'#f59e0b', 'Paid-Accepted':'#f59e0b',
-    'Paid-Preparing':'#f97316', 'Paid-Ready':'#95b508',
+    'Paid-Preparing':'#f97316', 'Paid-Ready':'#7a9905',
     Paid:'#3b82f6', PaymentPending:'#a855f7',
-    Rejected:'#ef4444', Cancelled:'#ef4444',
+    Rejected:'#e5484d', Cancelled:'#e5484d',
   };
 
   return (
@@ -156,26 +183,16 @@ export default function Waiter() {
         </div>
       </div>
 
-      {/* TABS */}
-      <div className="waiter-tabs">
-        {[
-          { key:'deliver', label:'🚀 Deliver',      count: readyOrders.length },
-          { key:'cash',    label:'💵 Collect Cash',  count: cashOrders.length  },
-          { key:'all',     label:'📋 Track All',     count: activeOrders.length },
-        ].map(t => (
-          <button key={t.key} className={`w-tab ${tab===t.key?'active':''}`} onClick={() => setTab(t.key)}>
-            {t.label}
-            {t.count > 0 && <span className="w-tab-badge">{t.count}</span>}
-          </button>
-        ))}
-      </div>
-
-      {/* CONTENT */}
+      {/* CONTENT — 3 sections stacked */}
       <div className="waiter-content">
 
         {/* ── DELIVER ── */}
-        {tab==='deliver' && (
-          readyOrders.length === 0
+        <section className="w-section">
+          <h2 className="w-section-title s-deliver">
+            🚀 Deliver
+            {readyOrders.length > 0 && <span className="w-section-badge">{readyOrders.length}</span>}
+          </h2>
+          {readyOrders.length === 0
             ? <div className="w-empty">
                 <div className="w-empty-icon">✅</div>
                 <p>All orders delivered!</p>
@@ -183,12 +200,11 @@ export default function Waiter() {
               </div>
             : <div className="w-order-list">
                 {readyOrders.map(order => {
-                  const items    = parseItems(order);
-                  const isExp    = expandedId === order.id;
+                  const items = parseItems(order);
+                  const isExp = expandedId === order.id;
                   return (
                     <div key={order.id} className="w-order-card w-card-ready">
-                      {/* Top bar */}
-                      <div className="w-order-header" onClick={() => setExpandedId(isExp ? null : order.id)}>
+                      <div className="w-order-header" onClick={() => toggleExpand(order.id)}>
                         <div className="w-order-header-left">
                           <span className="w-order-id">#ORD-{order.id}</span>
                           <span className="w-table-chip">TABLE {order.table_id}</span>
@@ -199,34 +215,7 @@ export default function Waiter() {
                           <span className="w-expand">{isExp ? '▲' : '▼'}</span>
                         </div>
                       </div>
-
-                      {/* Items (expanded) */}
-                      {isExp && (
-                        <div className="w-items-list">
-                          {items.length === 0
-                            ? <p className="w-no-items">No items</p>
-                            : items.map((item,i) => (
-                              <div key={i} className="w-item-row">
-                                <span className="w-item-qty">{item.quantity}×</span>
-                                <div className="w-item-detail">
-                                  <span className="w-item-name">{item.name}</span>
-                                  {item.selectedExtras?.length > 0 && (
-                                    <span className="w-item-extras">➕ {extrasStr(item.selectedExtras)}</span>
-                                  )}
-                                  {item.removedExtras?.length > 0 && (
-                                    <span className="w-item-removed">✕ No {extrasStr(item.removedExtras)}</span>
-                                  )}
-                                  {item.specialNote && (
-                                    <span className="w-item-note">📝 {item.specialNote}</span>
-                                  )}
-                                </div>
-                              </div>
-                            ))
-                          }
-                        </div>
-                      )}
-
-                      {/* Action */}
+                      {isExp && <div className="w-items-list"><ItemsList items={items} /></div>}
                       <div className="w-order-footer">
                         <button className="w-btn green" onClick={() => update(order.id, 'Paid')}>
                           ✅ DELIVERED TO TABLE
@@ -236,11 +225,16 @@ export default function Waiter() {
                   );
                 })}
               </div>
-        )}
+          }
+        </section>
 
         {/* ── COLLECT CASH ── */}
-        {tab==='cash' && (
-          cashOrders.length === 0
+        <section className="w-section">
+          <h2 className="w-section-title s-cash">
+            💵 Collect Cash
+            {cashOrders.length > 0 && <span className="w-section-badge">{cashOrders.length}</span>}
+          </h2>
+          {cashOrders.length === 0
             ? <div className="w-empty">
                 <div className="w-empty-icon">💳</div>
                 <p>No cash collections pending</p>
@@ -253,11 +247,9 @@ export default function Waiter() {
                   const items     = parseItems(order);
                   const isExp     = expandedId === order.id;
                   const isColl    = collected.has(order.id);
-
                   return (
                     <div key={order.id} className={`w-order-card w-card-cash ${isColl ? 'w-card-collected' : ''}`}>
-                      {/* Top bar */}
-                      <div className="w-order-header" onClick={() => setExpandedId(isExp ? null : order.id)}>
+                      <div className="w-order-header" onClick={() => toggleExpand(order.id)}>
                         <div className="w-order-header-left">
                           <span className="w-order-id">#ORD-{order.id}</span>
                           <span className="w-table-chip">TABLE {order.table_id}</span>
@@ -268,8 +260,6 @@ export default function Waiter() {
                           <span className="w-expand">{isExp ? '▲' : '▼'}</span>
                         </div>
                       </div>
-
-                      {/* Payers */}
                       <div className="w-payers-row">
                         {splits.map((s,i) => (
                           <span key={i} className="w-payer-chip">
@@ -277,34 +267,7 @@ export default function Waiter() {
                           </span>
                         ))}
                       </div>
-
-                      {/* Items (expanded) */}
-                      {isExp && (
-                        <div className="w-items-list">
-                          {items.length === 0
-                            ? <p className="w-no-items">No items</p>
-                            : items.map((item,i) => (
-                              <div key={i} className="w-item-row">
-                                <span className="w-item-qty">{item.quantity}×</span>
-                                <div className="w-item-detail">
-                                  <span className="w-item-name">{item.name}</span>
-                                  {item.selectedExtras?.length > 0 && (
-                                    <span className="w-item-extras">➕ {extrasStr(item.selectedExtras)}</span>
-                                  )}
-                                  {item.removedExtras?.length > 0 && (
-                                    <span className="w-item-removed">✕ No {extrasStr(item.removedExtras)}</span>
-                                  )}
-                                  {item.specialNote && (
-                                    <span className="w-item-note">📝 {item.specialNote}</span>
-                                  )}
-                                </div>
-                              </div>
-                            ))
-                          }
-                        </div>
-                      )}
-
-                      {/* Action */}
+                      {isExp && <div className="w-items-list"><ItemsList items={items} /></div>}
                       <div className="w-order-footer">
                         {!isColl
                           ? <button className="w-btn gold"
@@ -318,11 +281,16 @@ export default function Waiter() {
                   );
                 })}
               </div>
-        )}
+          }
+        </section>
 
         {/* ── TRACK ALL ── */}
-        {tab==='all' && (
-          activeOrders.length === 0
+        <section className="w-section">
+          <h2 className="w-section-title s-track">
+            📋 Track All
+            {activeOrders.length > 0 && <span className="w-section-badge">{activeOrders.length}</span>}
+          </h2>
+          {activeOrders.length === 0
             ? <div className="w-empty">
                 <div className="w-empty-icon">😴</div>
                 <p>No active orders</p>
@@ -335,7 +303,7 @@ export default function Waiter() {
                   const col   = STATUS_COLOR[order.status] || '#9ca3af';
                   return (
                     <div key={order.id} className="w-order-card w-card-track">
-                      <div className="w-order-header" onClick={() => setExpandedId(isExp ? null : order.id)}>
+                      <div className="w-order-header" onClick={() => toggleExpand(order.id)}>
                         <div className="w-order-header-left">
                           <span className="w-order-id">#ORD-{order.id}</span>
                           <span className="w-table-chip">TABLE {order.table_id}</span>
@@ -350,35 +318,13 @@ export default function Waiter() {
                           <span className="w-expand">{isExp ? '▲' : '▼'}</span>
                         </div>
                       </div>
-                      {isExp && (
-                        <div className="w-items-list">
-                          {items.length === 0
-                            ? <p className="w-no-items">No items</p>
-                            : items.map((item,i) => (
-                              <div key={i} className="w-item-row">
-                                <span className="w-item-qty">{item.quantity}×</span>
-                                <div className="w-item-detail">
-                                  <span className="w-item-name">{item.name}</span>
-                                  {item.selectedExtras?.length > 0 && (
-                                    <span className="w-item-extras">➕ {extrasStr(item.selectedExtras)}</span>
-                                  )}
-                                  {item.removedExtras?.length > 0 && (
-                                    <span className="w-item-removed">✕ No {extrasStr(item.removedExtras)}</span>
-                                  )}
-                                  {item.specialNote && (
-                                    <span className="w-item-note">📝 {item.specialNote}</span>
-                                  )}
-                                </div>
-                              </div>
-                            ))
-                          }
-                        </div>
-                      )}
+                      {isExp && <div className="w-items-list"><ItemsList items={items} /></div>}
                     </div>
                   );
                 })}
               </div>
-        )}
+          }
+        </section>
 
       </div>
     </div>
