@@ -77,6 +77,13 @@ console.log('TABLE IDS:', tableIds);
           </button>
         </div>
         <div className="acp-list">
+          <div style={{ color: 'red', fontSize: '20px' }}>
+            Found {tableIds.length} chats
+          </div>
+        <div className="acp-list">
+  <div style={{ color: 'red', fontSize: '20px' }}>
+    Found {tableIds.length} chats
+  </div>
           {tableIds.length === 0 && <p className="acp-empty">No active chats yet.</p>}
           {tableIds.map((tid) => {
             const conv       = conversations[tid];
@@ -109,6 +116,8 @@ console.log('TABLE IDS:', tableIds);
           })}
         </div>
       </div>
+      </div>
+      
 
       <div className="acp-main">
         {!selectedTable || !activeConv ? (
