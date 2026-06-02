@@ -4,7 +4,13 @@
 import axios from './apiClient';
 
 export async function sendChat(messages, menuItems, userMessageCount = 0, extras = []) {
-  const limitedMessages = messages.slice(-12).filter(m => m.content?.trim());
+  const limitedMessages = messages
+  .slice(-12)
+  .filter(m => m.text?.trim())
+  .map(m => ({
+    role: m.sender,
+    content: m.text
+  }));
 
   const languageHint = userMessageCount <= 2
     ? 'OVERRIDE: Reply in ENGLISH ONLY for this message, no exceptions.'
