@@ -4,10 +4,10 @@ export default function GuestWelcome({ onDone }) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
 
-  const handleStart = () => {
+ const handleStart = () => {
     if (!name.trim() || !phone.trim()) return;
-    sessionStorage.setItem('guestName', name.trim());
-    sessionStorage.setItem('guestPhone', phone.trim());
+    localStorage.setItem('guestName', name.trim());
+    localStorage.setItem('guestPhone', phone.trim());
     onDone();
   };
 

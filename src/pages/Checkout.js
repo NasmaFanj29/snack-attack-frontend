@@ -11,6 +11,7 @@ import PaymentGateway from "../components/PaymentGateway";
 import logo from "../assets/logo.png";
 import "../style/checkout.css";
 import "../style/menu.css";
+import { endSession } from '../utils/sessionReset';
 
 const API_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:5000'
@@ -222,8 +223,8 @@ function Checkout({ setCart }) {
   // Create default payer object
   const dp = id => ({
     id: id || Date.now(),
-    name: "",
-    phone: "",
+    name:  localStorage.getItem('guestName')  || "",
+    phone: localStorage.getItem('guestPhone') || "",
     amount: 0,
     method: "cash",
     currency: "USD",
@@ -436,6 +437,11 @@ function Checkout({ setCart }) {
     setEditingItem(null);
     setEditingIndex(null);
   };
+   useEffect(() => {
+    if (step === "receipt") {
+      endSession();
+    }
+  }, [step]);
 
   // ========== WAITING SCREEN ==========
   if (step === "waiting" || step === "waitingForPayment" || step === "cooking") return (

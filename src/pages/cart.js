@@ -403,9 +403,6 @@ const getLinePrice = (item) => {
         specialNotes: null
       });
       if (res.data && res.data.success) {
-      localStorage.removeItem("snackAttackCart");
-      localStorage.removeItem(`snackAttackCart_${activeTable}`);
-      if (setCart) setCart([]);
       navigate("/checkout", {
           state: { orderId: res.data.orderId, cartItems: validItems, tableId: activeTable || "1", totalPrice: totalPrice.toFixed(2) },
         });

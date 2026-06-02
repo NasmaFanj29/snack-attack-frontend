@@ -8,6 +8,9 @@ const SESSION_FLAG = 'snack_session_active';
 function clearCustomerData() {
   localStorage.removeItem(CHATS_KEY);
   localStorage.removeItem(ORDERS_KEY);
+  localStorage.removeItem('guestName');
+  localStorage.removeItem('guestPhone');
+
   for (let i = localStorage.length - 1; i >= 0; i--) {
     const key = localStorage.key(i);
     if (!key) continue;
