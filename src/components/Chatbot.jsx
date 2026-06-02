@@ -1483,20 +1483,25 @@ function Chatbot({ menuItems = [], extras = [], addToCart, removeFromCart, cart 
 
   return (
     <>
-      <button className="chat-bubble-btn" onClick={() => setIsOpen((o) => !o)}>
-        {isOpen ? "✖" : "💬"}
-        {(hasNewAdminMsg || (isAdminActive && !isOpen)) && (
-          <span className="chat-bubble-dot" />
-        )}
-      </button>
+      {!isOpen && (
+  <button className="chat-bubble-btn" onClick={() => setIsOpen(true)}>
+    💬
+    {(hasNewAdminMsg || isAdminActive) && (
+      <span className="chat-bubble-dot" />
+    )}
+  </button>
+)}
 
       {isOpen && (
         <div className="chat-window glass-effect-chat">
           <div className={`chat-header ${isAdminActive ? "chat-header--admin" : ""}`}>
-            <div className="chat-header-inner">
-              <h3>{isAdminActive ? "Staff Connected" : "Snack Assistant"}</h3>
+           <div className="chat-header-inner">
+            <h3>{isAdminActive ? "Staff Connected" : "Snack Assistant"}</h3>
+            <div className="chat-header-right">
               <span className="table-badge">Table {tableId}</span>
+              <button className="chat-close-btn" onClick={() => setIsOpen(false)} aria-label="Close chat">✕</button>
             </div>
+          </div>
           </div>
 
           <div className="chat-body">
