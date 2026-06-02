@@ -335,6 +335,9 @@ function Chatbot({ menuItems = [], extras = [], addToCart, removeFromCart, cart 
   const prevMsgCount        = useRef(0);
   const messagesEndRef      = useRef(null);
   const chatStatusRef       = useRef("bot");
+  const inputRef            = useRef(null);
+
+
 
   useEffect(() => { chatStatusRef.current = chatStatus; }, [chatStatus]);
 
@@ -1241,6 +1244,7 @@ function Chatbot({ menuItems = [], extras = [], addToCart, removeFromCart, cart 
 
     const text = input.trim();
     setInput("");
+    inputRef.current?.focus();
 
     const userMsg = { sender: "user", text };
     setMessages((prev) => [...prev, userMsg]);
@@ -1541,6 +1545,7 @@ function Chatbot({ menuItems = [], extras = [], addToCart, removeFromCart, cart 
 
           <div className="chat-footer">
             <input
+              ref={inputRef}
               className="chat-input"
               type="text"
               placeholder={isAdminActive ? "A staff member will reply shortly..." : "Ask me anything..."}
