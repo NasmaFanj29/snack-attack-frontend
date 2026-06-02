@@ -45,6 +45,7 @@ function QRGenerator() {
       <div className="qr-grid" ref={printRef}>
         {tables.map(num => {
           const tableUrl = `${RESTAURANT_URL}/?table=${num}`;
+          <p>{tableUrl}</p>
           return (
             <div key={num} className="qr-card">
               {/* Print header */}
