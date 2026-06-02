@@ -217,7 +217,7 @@ function Home() {
         <div className="cta-content">
           <h2>Hungry? Order Now</h2>
           <p>Fresh food, fast delivery, unforgettable taste</p>
-          <Link to="/menu" className="btn-primary btn-large" onClick={() => window.scrollTo(0, 0)}>
+          <Link to="/menu" className="btn-primary btn-large" >
             Start Your Order 🚀
           </Link>
         </div>
@@ -230,16 +230,7 @@ function Home() {
         <span>Scroll to Explore</span>
       </div>
 
-      {/* Back to Top Button */}
-      <button
-        ref={backToTopRef}
-        className="back-to-top"
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        title="Back to top"
-      >
-        ↑
-      </button>
-
+  
     </div>  
   );        
 }

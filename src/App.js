@@ -43,6 +43,13 @@ const [showWelcome, setShowWelcome] = useState(() => {
   return !localStorage.getItem('guestName') || !localStorage.getItem('guestPhone');
 });
 
+useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+useEffect(() => {
+  window.history.scrollRestoration = "manual";
+}, []);
+
   useEffect(() => {
     const tableId = queryParams.get('table');
     if (tableId) localStorage.setItem('activeTable', tableId);
