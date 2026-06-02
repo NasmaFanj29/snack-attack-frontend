@@ -32,6 +32,8 @@ function AdminChatPanel() {
   const tableIds = Object.keys(conversations).filter(
     (tid) => conversations[tid]?.messages?.length > 0
   );
+  console.log('CONVERSATIONS:', conversations);
+console.log('TABLE IDS:', tableIds);
   const activeConv    = selectedTable ? conversations[selectedTable] : null;
   const isAdminActive = activeConv?.status === 'admin';
   const needsAdmin    = tableIds.filter(tid => conversations[tid]?.status === 'admin');
