@@ -438,10 +438,11 @@ function Checkout({ setCart }) {
     setEditingIndex(null);
   };
    useEffect(() => {
-    if (step === "receipt") {
-      endSession();
-    }
-  }, [step]);
+  if (step === "receipt") {
+    endSession();
+    if (setCart) setCart([]);
+  }
+}, [step]);
 
   // ========== WAITING SCREEN ==========
   if (step === "waiting" || step === "waitingForPayment" || step === "cooking") return (

@@ -612,7 +612,7 @@ const parseSplits = (raw) => {
     const whishRef = `ORD-${orderId}-${s.whishCode || '???'}`;
 
     if (method === 'cash') {
-      const firstAmt   = Number(s.amount_usd || 0);
+      const firstAmt   = Number(s.amount || s.amount_usd || 0);
       const secondAmt  = Number(s.cashSecondAmount || 0);
       const firstCurr  = s.currency || 'USD';
       const secondCurr = firstCurr === 'USD' ? 'LBP' : 'USD';

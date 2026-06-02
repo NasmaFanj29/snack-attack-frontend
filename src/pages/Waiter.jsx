@@ -261,11 +261,22 @@ export default function Waiter() {
                         </div>
                       </div>
                       <div className="w-payers-row">
-                        {splits.map((s,i) => (
-                          <span key={i} className="w-payer-chip">
-                            {s.payer_name||s.name||`Person ${i+1}`}: ${Number(s.amount_usd||s.amount||0).toFixed(2)}
-                          </span>
-                        ))}
+                        {splits.map((s,i) => {
+  const name = s.payer_name || s.name || `Person ${i+1}`;
+  const curr = s.currency || 'USD';
+  const amt  = Number(s.amount || s.amount_usd || 0);
+  const hasSecond = s.cashHasSplit && Number(s.cashSecondAmount) > 0;
+  const secondCurr = curr === 'USD' ? 'LBP' : 'USD';
+  const fmt = (v, c) => c === 'LBP'
+    ? `${Number(v).toLocaleString()} LBP`
+    : `$${Number(v).toFixed(2)}`;
+  return (
+    <span key={i} className="w-payer-chip">
+      {name}: {fmt(amt, curr)}
+      {hasSecond && ` + ${fmt(s.cashSecondAmount, secondCurr)}`}
+    </span>
+  );
+})}
                       </div>
                       {isExp && <div className="w-items-list"><ItemsList items={items} /></div>}
                       <div className="w-order-footer">
