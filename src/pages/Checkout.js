@@ -301,7 +301,7 @@ function Checkout({ setCart }) {
       if (!resp?.success) return;
       const o = resp.data?.order || {};
       setOrderedItems(o.items || []);
-      setTableId(o.table_id || "1");
+      setTableId(o.table_number || o.table_id || "1");
       setServerTotal(Number(o.total_price || 0));
       let sp = [];
       try {

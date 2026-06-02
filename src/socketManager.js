@@ -109,8 +109,26 @@ class SocketManager {
   // ── state ─────────────────────────────────────────────────────────────────
   isConnected() { return this.socket.connected === true; }
 
-  // ── disconnect ───────────────────────────────────────────────────────────
-  // Public — called from AuthContext on logout.
+ connectGuest() {
+    if (!this.url) return;
+    if (this.socket !== NOOP_SOCKET && this.socket.connected) return;
+    this._destroy();
+    this.socket = io(this.url, {
+      transports: ['websocket', 'polling'],
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: this.maxReconnect,
+    });
+    this.socket.on('connect', () => {
+      this.reconnectAttempts = 0;
+      console.info('[SocketManager] Guest connected.');
+    });
+    this.socket.on('connect_error', (err) => {
+      console.warn('[SocketManager] guest connect_error:', err.message);
+    });
+  }
+
+
   disconnect() {
     this._destroy();
     console.info('[SocketManager] Disconnected and reset.');

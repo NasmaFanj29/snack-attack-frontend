@@ -46,14 +46,24 @@ export default function Navbar({ cartCount = 0, cartItems = [], removeFromCart, 
   const tableId = localStorage.getItem('activeTable') || '1';
 
   /* ── Live table counter ── */
+  /* ── Live table counter ── */
   useEffect(() => {
-    socket.emit('joinTable', tableId);
-    
+    // Guests aren't logged in — make sure the socket is connected
+    if (!socket.isConnected()) socket.connectGuest();
+
+    const join = () => socket.emit('joinTable', tableId);
+    join();
+    socket.on('connect', join);   // re-join if socket reconnects
+
     const handler = ({ tableId: tid, count }) => {
       if (String(tid) === String(tableId)) setTableCount(count);
     };
     socket.on('tableCount', handler);
-    return () => socket.off('tableCount', handler);
+
+    return () => {
+      socket.off('tableCount', handler);
+      socket.off('connect', join);
+    };
   }, [tableId]);
 
   /* ── Scroll shadow ── */
